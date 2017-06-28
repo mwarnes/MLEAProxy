@@ -2,7 +2,10 @@ package com.marklogic.authenticators;
 
 import com.duoauth.client.Http;
 import com.marklogic.configuration.DuoConfig;
+import com.unboundid.ldap.listener.LDAPListenerClientConnection;
 import com.unboundid.ldap.protocol.BindRequestProtocolOp;
+import com.unboundid.ldap.protocol.LDAPMessage;
+import com.unboundid.ldap.protocol.SearchRequestProtocolOp;
 import com.unboundid.ldap.sdk.*;
 import org.aeonbits.owner.Config;
 import org.apache.commons.lang3.StringUtils;
@@ -213,5 +216,11 @@ public class DuoAuthenticator implements IAuthenticator{
 
         return bindResult;
     }
+
+    @Override
+    public SearchResult search(int messageID, SearchRequest request, LDAPListenerClientConnection listenerConnection) {
+        return null;
+    }
+
 
 }

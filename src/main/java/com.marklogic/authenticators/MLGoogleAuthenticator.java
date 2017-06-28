@@ -4,7 +4,10 @@ import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.DatabaseClientFactory;
 import com.marklogic.client.eval.ServerEvaluationCall;
 import com.marklogic.configuration.MLGoogleConfig;
+import com.unboundid.ldap.listener.LDAPListenerClientConnection;
 import com.unboundid.ldap.protocol.BindRequestProtocolOp;
+import com.unboundid.ldap.protocol.LDAPMessage;
+import com.unboundid.ldap.protocol.SearchRequestProtocolOp;
 import com.unboundid.ldap.sdk.*;
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import org.aeonbits.owner.Config;
@@ -113,4 +116,10 @@ public class MLGoogleAuthenticator implements IAuthenticator {
 
         return bindResult;
     }
+
+    @Override
+    public SearchResult search(int messageID, SearchRequest request, LDAPListenerClientConnection listenerConnection) {
+        return null;
+    }
+
 }

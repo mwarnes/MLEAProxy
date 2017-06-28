@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<ldap>
+    <users basedn="ou=users,dc=marklogic,dc=local">
+        <user dn="cn=manager">
+            <sAMAccountName>manager</sAMAccountName>
+            <userPassword>password</userPassword>
+        </user>
+        <user dn="cn=user1">
+            <sAMAccountName>user1</sAMAccountName>
+            <memberOf>cn=appreader,ou=groups,dc=marklogic,dc=local</memberOf>
+            <memberOf>cn=appwriter,ou=groups,dc=marklogic,dc=local</memberOf>
+            <memberOf>cn=appadmin,ou=groups,dc=marklogic,dc=local</memberOf>
+            <userPassword>password</userPassword>
+        </user>
+        <user dn="cn=user2">
+            <sAMAccountName>user2</sAMAccountName>
+            <memberOf>cn=appreader,ou=groups,dc=marklogic,dc=local</memberOf>
+            <memberOf>cn=appwriter,ou=groups,dc=marklogic,dc=local</memberOf>
+            <userPassword>password</userPassword>
+        </user>
+        <user dn="cn=user3">
+            <sAMAccountName>user3</sAMAccountName>
+            <memberOf>cn=appreader,ou=groups,dc=marklogic,dc=local</memberOf>
+            <userPassword>password</userPassword>
+        </user>
+        <user dn="cn=user4">
+            <sAMAccountName>user4</sAMAccountName>
+            <userPassword>password</userPassword>
+        </user>
+    </users>
+</ldap>
