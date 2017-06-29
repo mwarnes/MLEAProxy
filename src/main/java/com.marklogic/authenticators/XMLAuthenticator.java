@@ -18,6 +18,7 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by mwarnes on 05/02/2017.
@@ -116,6 +117,8 @@ public class XMLAuthenticator implements IAuthenticator {
 
         // Search for User based on LDAP Filter
         SearchResult searchResult=null;
+        List attributeList = request.getAttributeList();
+        logger.debug("Attributes: " + attributeList);
         XPath xpath = xpathFactory.newXPath();
         StringBuilder sb = new StringBuilder();
         sb.append("/ldap/users[@basedn=").append("\"").append(request.getBaseDN().toString()).append("\"").append("]/user[" + request.getFilter().getAttributeName() + "=\"" + request.getFilter().getAssertionValue()).append("\"]/@dn");
@@ -127,18 +130,21 @@ public class XMLAuthenticator implements IAuthenticator {
 
             // If User not found return
             if (entry.isEmpty()) {
-                logger.error("User not found (" + request.getFilter().getAssertionValue() +") " );
-                searchResult = new SearchResult(messageID,ResultCode.NO_SUCH_OBJECT,"User Not found.",null,null, null, null, 0,0,null);
+                logger.error("Not found ( " + request.getFilter() +" ) " );
+                searchResult = new SearchResult(messageID,ResultCode.SUCCESS,null,null,null, null, null, 0,0,null);
                 return searchResult;
             }
 
             // Build Attribute list to return
-            logger.debug("UserDN " + entry + "," + request.getBaseDN().toString());
+            String userdn = entry + "," + request.getBaseDN().toString();
+            logger.debug("UserDN " + userdn);
 
-            // Standard Object class
-            Attribute objClass = new Attribute("objectClass", "top", "person", "organizationalPerson", "inetOrgPerson");
             ArrayList retAttr = new ArrayList();
-            retAttr.add(objClass);
+            if (attributeList.contains("objectClass")) {
+                // Standard Object class
+                Attribute objClass = new Attribute("objectClass", "top", "person", "organizationalPerson", "inetOrgPerson");
+                retAttr.add(objClass);
+            }
 
             // Add Attributes for ech XML Element in user entry including any memberOf attributes required for Group roles
             sb = new StringBuilder();
@@ -150,19 +156,29 @@ public class XMLAuthenticator implements IAuthenticator {
                 for (int i = 0;null!=nodeList && i < nodeList.getLength(); i++) {
                     Node nod = nodeList.item(i);
                     if(nod.getNodeType() == Node.ELEMENT_NODE) {
-                        Attribute attr = new Attribute(nodeList.item(i).getNodeName(), nod.getFirstChild().getNodeValue());
-                        retAttr.add(attr);
-                        logger.debug(nodeList.item(i).getNodeName() + " : " + nod.getFirstChild().getNodeValue());
+                        if (attributeList.isEmpty()) {
+                            // If no specific attributes requested then return everything
+                            Attribute attr = new Attribute(nodeList.item(i).getNodeName(), nod.getFirstChild().getNodeValue());
+                            retAttr.add(attr);
+                            logger.debug(nodeList.item(i).getNodeName() + " : " + nod.getFirstChild().getNodeValue());
+                        } else {
+                            // Else return only requested attributes
+                            if (attributeList.contains(nodeList.item(i).getNodeName())) {
+                                Attribute attr = new Attribute(nodeList.item(i).getNodeName(), nod.getFirstChild().getNodeValue());
+                                retAttr.add(attr);
+                                logger.debug(nodeList.item(i).getNodeName() + " : " + nod.getFirstChild().getNodeValue());
+                            }
+                        }
                     }
                 }
             }
 
             // Build and send new Search Result Entry to client
-            SearchResultEntry sre = new SearchResultEntry(request.getLastMessageID(),entry + "," + request.getBaseDN().toString(),retAttr);
+            SearchResultEntry sre = new SearchResultEntry(request.getLastMessageID(),userdn,retAttr);
             ArrayList entries = new ArrayList();
             entries.add(sre);
             logger.debug("Response Attribute  " + entries);
-            SearchResultEntryProtocolOp searchResultEntryProtocolOp = new SearchResultEntryProtocolOp(request.getBaseDN().toString(),retAttr);
+            SearchResultEntryProtocolOp searchResultEntryProtocolOp = new SearchResultEntryProtocolOp(userdn,retAttr);
             logger.info(searchResultEntryProtocolOp.toString());
             listenerConnection.sendSearchResultEntry(messageID,searchResultEntryProtocolOp,null);
 

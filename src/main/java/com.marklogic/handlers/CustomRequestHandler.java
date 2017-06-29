@@ -111,7 +111,7 @@ public final class CustomRequestHandler
     public LDAPMessage processAddRequest(final int messageID,
                                          final AddRequestProtocolOp request,
                                          final List<Control> controls) {
-        logger.error("LDAP ADD request not accepted by proxy.");
+        logger.error("LDAP ADD request not accepted by CustomRequestHandler.");
         logger.debug("LDAP Request: " + request);
 
         final AddResponseProtocolOp addResponseProtocolOp =
@@ -200,7 +200,7 @@ public final class CustomRequestHandler
     public LDAPMessage processCompareRequest(final int messageID,
                                              final CompareRequestProtocolOp request,
                                              final List<Control> controls) {
-        logger.error("LDAP COMPARE request not accepted by proxy.");
+        logger.error("LDAP COMPARE request not accepted by CustomRequestHandler.");
         logger.debug("LDAP Request: " + request);
 
         final CompareResponseProtocolOp compareResponseProtocolOp =
@@ -222,7 +222,7 @@ public final class CustomRequestHandler
     public LDAPMessage processDeleteRequest(final int messageID,
                                             final DeleteRequestProtocolOp request,
                                             final List<Control> controls) {
-        logger.error("LDAP DELETE request not accepted by proxy.");
+        logger.error("LDAP DELETE request not accepted by CustomRequestHandler.");
         logger.debug("LDAP Request: " + request);
 
         final DeleteResponseProtocolOp deleteResponseProtocolOp =
@@ -243,7 +243,7 @@ public final class CustomRequestHandler
     public LDAPMessage processExtendedRequest(final int messageID,
                                               final ExtendedRequestProtocolOp request,
                                               final List<Control> controls) {
-        logger.error("LDAP EXTENDED request not accepted by proxy.");
+        logger.error("LDAP EXTENDED request not accepted by CustomRequestHandler.");
         logger.debug("LDAP Request: " + request);
 
         final ExtendedResponseProtocolOp extendedResponseProtocolOp =
@@ -265,7 +265,7 @@ public final class CustomRequestHandler
     public LDAPMessage processModifyRequest(final int messageID,
                                             final ModifyRequestProtocolOp request,
                                             final List<Control> controls) {
-        logger.error("LDAP MODIFY request not accepted by proxy.");
+        logger.error("LDAP MODIFY request not accepted by CustomRequestHandler.");
         logger.debug("LDAP Request: " + request);
 
         final ModifyResponseProtocolOp modifyResponseProtocolOp =
@@ -286,7 +286,7 @@ public final class CustomRequestHandler
     public LDAPMessage processModifyDNRequest(final int messageID,
                                               final ModifyDNRequestProtocolOp request,
                                               final List<Control> controls) {
-        logger.error("LDAP MODIFYDN request not accepted by proxy.");
+        logger.error("LDAP MODIFYDN request not accepted by CustomRequestHandler.");
         logger.debug("LDAP Request: " + request);
 
         final ModifyDNResponseProtocolOp modifyDNResponseProtocolOp =
