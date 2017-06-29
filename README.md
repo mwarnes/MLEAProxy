@@ -7,7 +7,7 @@ MLEAProxy was primarily written as a support tool to aide in diagnosing issue wi
 
 ### Installation
 
-Download the latest version from ![download](./download.png) 
+Download the latest version from <img src="./download.png" width="48">
 
 c
 
