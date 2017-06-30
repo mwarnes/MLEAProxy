@@ -203,3 +203,135 @@ Sample log output
 2017-06-30 12:55:37.194  INFO 86215 --- [logic.local:389] com.unboundid.ldap.sdk                   : level="INFO" threadID=19 threadName="Connection reader for connection 0 to kerberos.marklogic.local:389" revision=24201 connectionID=0 connectedTo="kerberos.marklogic.local:389" readLDAPResult="SearchResult(resultCode=0 (success), messageID=2)"
 
 ````
+
+#### Secure LDAP Proxy server (1)
+
+An example configuration building on the simple LDAP proxy but securing the back-end connection to the LDAP server using LDAPS security.
+This is a useful configuration for diagnosing external security problems where the back-end LDAP server requires a TLS encrypted session. 
+With the MLEAProxy in place LDAP traffic can be seen in the output display and also makes it possible to capture network traffic between the client and MLEAProxy for further diagnosis using the Wireshark LDAP dissector.
+
+<img src="./secureproxy1.png">
+
+````
+ldap.debug=true
+## Listeners
+listeners=proxy
+## Listener
+listener.proxy.ipaddress=0.0.0.0
+listener.proxy.port=30389
+listener.proxy.debuglevel=DEBUG
+listener.proxy.secure=false
+listener.proxy.requestHandler=com.marklogic.handlers.ProxyRequestHandler
+listener.proxy.ldapset=set1
+listener.proxy.ldapmode=single
+listener.proxy.description=LDAP proxy with LDAPS connection to back-end server.
+## LDAP Server set
+ldapset.set1.servers=server1
+ldapset.set1.secure=true
+## LDAP Server
+ldapserver.server1.host=kerberos.marklogic.local
+ldapserver.server1.port=636
+````
+
+Sample output
+
+````
+2017-06-30 14:02:47.259  INFO 89193 --- [           main] com.marklogic.MLEAProxy                  : Starting MLEAProxy on MacPro-4505.local with PID 89193 (/Users/mwarnes/IdeaProjects/MLEAProxy/target/classes started by mwarnes in /Users/mwarnes/IdeaProjects/MLEAProxy)
+2017-06-30 14:02:48.035 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : IP Address: 0.0.0.0
+2017-06-30 14:02:48.035 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : Port: 30389
+2017-06-30 14:02:48.035 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : Request handler: com.marklogic.handlers.ProxyRequestHandler
+2017-06-30 14:02:48.036 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
+2017-06-30 14:02:48.036 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : Building server sets
+2017-06-30 14:02:48.036 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
+2017-06-30 14:02:48.040 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: kerberos.marklogic.local
+2017-06-30 14:02:48.040 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 636
+2017-06-30 14:02:48.041 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : Creating SSL Socket Factory.
+2017-06-30 14:02:48.042 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : Creating SSLUtil.
+2017-06-30 14:02:48.042 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : Keystore: 
+2017-06-30 14:02:48.042 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : Keystore password: 
+2017-06-30 14:02:48.042 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : Truststore: 
+2017-06-30 14:02:48.042 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : Truststore password: 
+2017-06-30 14:02:48.042 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : Using default TrustAllTrustManager.
+2017-06-30 14:02:48.210 DEBUG 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : SingleServerSet(server=kerberos.marklogic.local:636)
+2017-06-30 14:02:48.216  INFO 89193 --- [           main] com.marklogic.handlers.LDAPlistener      : Listening on: 0.0.0.0:30389 ( LDAP proxy with LDAPS connection to back-end server )
+2017-06-30 14:02:48.217  INFO 89193 --- [           main] com.marklogic.MLEAProxy                  : Started MLEAProxy in 1.322 seconds (JVM running for 1.583)
+2017-06-30 14:04:58.903  INFO 89193 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=17 threadName="LDAPListener client connection reader for connection from 127.0.0.1:53989 to 127.0.0.1:30389" revision=24201 sendingLDAPRequest="SimpleBindRequest(dn='cn=Manager,dc=MarkLogic,dc=Local')"
+2017-06-30 14:04:59.311  INFO 89193 --- [logic.local:636] com.unboundid.ldap.sdk                   : level="INFO" threadID=19 threadName="Connection reader for connection 0 to kerberos.marklogic.local:636" revision=24201 connectionID=0 connectedTo="kerberos.marklogic.local:636" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
+````
+
+This configuration can be further enhanced for cases where a TrustAll TrustManager is not acceptable by adding a user created truststore containing the required CA certificates.
+
+````
+ldapset.set1.truststore=/path/to/mlproxytrust.jks
+ldapset.set1.truststorepasswd=password
+````
+
+If the back-end LDAPS server also requires TLS Client Authentication then a user created keystore containing a certificate and private key can be added.
+
+````
+ldapset.set1.keystore=/path/to/mlproxykey.jks
+ldapset.set1.keystorepasswd=password
+````
+
+#### Secure LDAP Proxy server (2)
+
+The following configuration add TLS Secure transport support to the MLEAProxy listening port, with this both front-end and back-end connection will user LDAPS.
+
+<img src="./secureproxy2.png">
+
+````
+ldap.debug=true
+## Listeners
+listeners=proxy
+## Listener
+listener.proxy.ipaddress=0.0.0.0
+listener.proxy.port=30636
+listener.proxy.debuglevel=DEBUG
+listener.proxy.secure=true
+listener.proxy.keystore=/Users/mwarnes/mlproxy.jks
+listener.proxy.keystorepasswd=password
+listener.proxy.requestHandler=com.marklogic.handlers.ProxyRequestHandler
+listener.proxy.ldapset=set1
+listener.proxy.ldapmode=single
+listener.proxy.description=LDAP proxy with LDAPS connection to front-end and back-end servers.
+## LDAP Server set
+ldapset.set1.servers=server1
+ldapset.set1.secure=true
+## LDAP Server
+ldapserver.server1.host=kerberos.marklogic.local
+ldapserver.server1.port=636
+````
+
+Sample output
+
+````
+2017-06-30 14:33:42.957  INFO 90645 --- [           main] com.marklogic.MLEAProxy                  : Starting MLEAProxy on MacPro-4505.local with PID 90645 (/Users/mwarnes/IdeaProjects/MLEAProxy/target/classes started by mwarnes in /Users/mwarnes/IdeaProjects/MLEAProxy)
+2017-06-30 14:33:43.724 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : IP Address: 0.0.0.0
+2017-06-30 14:33:43.725 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Port: 30636
+2017-06-30 14:33:43.725 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Request handler: com.marklogic.handlers.ProxyRequestHandler
+2017-06-30 14:33:43.725 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
+2017-06-30 14:33:43.726 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Building server sets
+2017-06-30 14:33:43.726 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
+2017-06-30 14:33:43.729 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: kerberos.marklogic.local
+2017-06-30 14:33:43.730 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 636
+2017-06-30 14:33:43.730 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Creating SSL Socket Factory.
+2017-06-30 14:33:43.731 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Creating SSLUtil.
+2017-06-30 14:33:43.731 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Keystore: 
+2017-06-30 14:33:43.731 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Keystore password: 
+2017-06-30 14:33:43.731 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Truststore: 
+2017-06-30 14:33:43.731 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Truststore password: 
+2017-06-30 14:33:43.731 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Using default TrustAllTrustManager.
+2017-06-30 14:33:43.882 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : SingleServerSet(server=kerberos.marklogic.local:636)
+2017-06-30 14:33:43.886 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Creating Server Socket Factory.
+2017-06-30 14:33:43.888 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Creating SSLUtil.
+2017-06-30 14:33:43.888 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Keystore: /Users/mwarnes/mlproxy.jks
+2017-06-30 14:33:43.888 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Keystore password: password
+2017-06-30 14:33:43.888 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Truststore: 
+2017-06-30 14:33:43.888 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Truststore password: 
+2017-06-30 14:33:43.892 DEBUG 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : No Trust managers created using defined KeyManager & TrustAllTrustManager.
+2017-06-30 14:33:43.897  INFO 90645 --- [           main] com.marklogic.handlers.LDAPlistener      : Listening on: 0.0.0.0:30636 ( Simple LDAP proxy )
+2017-06-30 14:33:43.899  INFO 90645 --- [           main] com.marklogic.MLEAProxy                  : Started MLEAProxy in 1.262 seconds (JVM running for 1.524)
+2017-06-30 14:34:34.413  INFO 90645 --- [127.0.0.1:30636] com.unboundid.ldap.sdk                   : level="INFO" threadID=17 threadName="LDAPListener client connection reader for connection from 127.0.0.1:54351 to 127.0.0.1:30636" revision=24201 sendingLDAPRequest="SimpleBindRequest(dn='cn=Manager,dc=MarkLogic,dc=Local')"
+2017-06-30 14:34:34.428  INFO 90645 --- [logic.local:636] com.unboundid.ldap.sdk                   : level="INFO" threadID=19 threadName="Connection reader for connection 0 to kerberos.marklogic.local:636" revision=24201 connectionID=0 connectedTo="kerberos.marklogic.local:636" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
+
+````
