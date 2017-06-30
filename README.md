@@ -157,6 +157,8 @@ ldap.debug=true
 #### Simple LDAP Proxy server
 The following configuration will start a simple proxy listener to relay LDAP request back and forth between a client such as a MarkLogic server and a back-end LDAP server. In addition both LDAP and Listener debugging is enabled to write detailed LDAP Request/Response information.
 
+<img src="./simpleproxy.png">
+
 ````
 ldap.debug=true
 ## Listeners
@@ -173,6 +175,31 @@ listener.proxy.description=Simple LDAP proxy
 ## LDAP Server set
 ldapset.set1.servers=server1
 ## LDAP Server
-ldapserver.server1.host=192.168.0.50
+ldapserver.server1.host=kerberos.marklogic.local
 ldapserver.server1.port=10389
+````
+Sample log output
+
+````
+2017-06-30 12:55:23.157  INFO 86215 --- [           main] com.marklogic.MLEAProxy                  : Starting MLEAProxy on MacPro-4505.local with PID 86215 (/Users/mwarnes/IdeaProjects/MLEAProxy/target/classes started by mwarnes in /Users/mwarnes/IdeaProjects/MLEAProxy)
+2017-06-30 12:55:23.159  INFO 86215 --- [           main] com.marklogic.MLEAProxy                  : No active profile set, falling back to default profiles: default
+2017-06-30 12:55:23.200  INFO 86215 --- [           main] s.c.a.AnnotationConfigApplicationContext : Refreshing org.springframework.context.annotation.AnnotationConfigApplicationContext@7e0e6aa2: startup date [Fri Jun 30 12:55:23 BST 2017]; root of context hierarchy
+2017-06-30 12:55:24.001  INFO 86215 --- [           main] o.s.j.e.a.AnnotationMBeanExporter        : Registering beans for JMX exposure on startup
+2017-06-30 12:55:24.030 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : IP Address: 0.0.0.0
+2017-06-30 12:55:24.031 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : Port: 30389
+2017-06-30 12:55:24.031 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : Request handler: com.marklogic.handlers.ProxyRequestHandler
+2017-06-30 12:55:24.031 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
+2017-06-30 12:55:24.032 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : Building server sets
+2017-06-30 12:55:24.032 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
+2017-06-30 12:55:24.035 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: kerberos.marklogic.local
+2017-06-30 12:55:24.036 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 389
+2017-06-30 12:55:24.039 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : SingleServerSet(server=kerberos.marklogic.local:389)
+2017-06-30 12:55:24.045  INFO 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : Listening on: 0.0.0.0:30389 ( Simple LDAP proxy )
+2017-06-30 12:55:24.047  INFO 86215 --- [           main] com.marklogic.MLEAProxy                  : Started MLEAProxy in 1.216 seconds (JVM running for 1.494)
+2017-06-30 12:55:37.171  INFO 86215 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=17 threadName="LDAPListener client connection reader for connection from 127.0.0.1:52578 to 127.0.0.1:30389" revision=24201 sendingLDAPRequest="SimpleBindRequest(dn='cn=Manager,dc=MarkLogic,dc=Local')"
+2017-06-30 12:55:37.182  INFO 86215 --- [logic.local:389] com.unboundid.ldap.sdk                   : level="INFO" threadID=19 threadName="Connection reader for connection 0 to kerberos.marklogic.local:389" revision=24201 connectionID=0 connectedTo="kerberos.marklogic.local:389" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
+2017-06-30 12:55:37.191  INFO 86215 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=17 threadName="LDAPListener client connection reader for connection from 127.0.0.1:52578 to 127.0.0.1:30389" revision=24201 sendingLDAPRequest="SearchRequest(baseDN='', scope=BASE, deref=ALWAYS, sizeLimit=0, timeLimit=0, filter='(objectClass=*)', attrs={subschemaSubentry})"
+2017-06-30 12:55:37.194  INFO 86215 --- [logic.local:389] com.unboundid.ldap.sdk                   : level="INFO" threadID=19 threadName="Connection reader for connection 0 to kerberos.marklogic.local:389" revision=24201 connectionID=0 connectedTo="kerberos.marklogic.local:389" readLDAPResult="SearchResultEntry(dn='', messageID=2, attributes={Attribute(name=subschemaSubentry, values={'cn=Subschema'})}, controls={})"
+2017-06-30 12:55:37.194  INFO 86215 --- [logic.local:389] com.unboundid.ldap.sdk                   : level="INFO" threadID=19 threadName="Connection reader for connection 0 to kerberos.marklogic.local:389" revision=24201 connectionID=0 connectedTo="kerberos.marklogic.local:389" readLDAPResult="SearchResult(resultCode=0 (success), messageID=2)"
+
 ````
