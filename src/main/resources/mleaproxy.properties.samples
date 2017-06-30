@@ -1,0 +1,97 @@
+
+# Set LDAP debug true/false
+ldap.debug=false
+
+# Proxy Listeners
+listeners=custom
+
+listener.proxy.ipaddress=0.0.0.0
+listener.proxy.port=30389
+listener.proxy.secure=false
+listener.proxy.requestHandler=com.marklogic.handlers.ProxyRequestHandler
+listener.proxy.ldapset=set7
+#listener.proxy.ldapmode=roundrobin
+listener.proxy.ldapmode=single
+listener.proxy.description=General LDAP proxy with no authenticator.
+
+listener.proxyssl.ipaddress=0.0.0.0
+listener.proxyssl.port=50636
+listener.proxyssl.secure=true
+listener.proxyssl.keystore=/Users/mwarnes/mlproxy.jks
+listener.proxyssl.keystorepasswd=password
+listener.proxyssl.requestHandler=com.marklogic.handlers.ProxyRequestHandler
+listener.proxyssl.ldapset=set1
+listener.proxyssl.ldapmode=single
+listener.proxyssl.description=General LDAP proxy with no authenticator and LDAPS back-end.
+
+listener.proxymixed.ipaddress=0.0.0.0
+listener.proxymixed.port=60389
+listener.proxymixed.secure=false
+listener.proxymixed.requestHandler=com.marklogic.handlers.ProxyRequestHandler
+listener.proxymixed.ldapset=set1,set5
+listener.proxymixed.ldapmode=single
+listener.proxymixed.description=General LDAP proxy with no authenticator and mixed LDAP/LDAPS back-end.
+
+listener.custom.ipaddress=0.0.0.0
+listener.custom.port=20389
+listener.custom.debuglevel=DEBUG
+listener.custom.requestHandler=com.marklogic.handlers.CustomRequestHandler
+listener.custom.authenticator=xmlauthenticator
+listener.custom.ldapset=set1
+listener.custom.ldapmode=single
+listener.custom.description=LDAP with Custom Authenticator
+
+# LDAP Server Sets
+# serverset="single|failover|roundrobin|roundrobindns|fewest|fastest"
+ldapset.set1.servers=server1
+
+ldapset.set2.servers=server1,server2
+
+ldapset.set3.servers=server1,server2,server3,server4
+
+ldapset.set4.servers=server5
+
+ldapset.set5.servers=server6
+ldapset.set5.secure=true
+ldapset.set5.keystore=/Users/mwarnes/mlproxy.jks
+ldapset.set5.keystorepasswd=password
+ldapset.set5.truststore=/Users/mwarnes/mlproxy.jks
+ldapset.set5.truststorepasswd=password
+
+ldapset.set6.servers=ad1
+
+ldapset.set7.servers=dirsrv
+
+# LDAP Servers
+
+ldapserver.server1.host=192.168.0.50
+ldapserver.server1.port=10389
+
+ldapserver.server2.host=192.168.0.51
+ldapserver.server2.port=10389
+
+ldapserver.server3.host=192.168.0.52
+ldapserver.server3.port=10389
+
+ldapserver.server4.host=192.168.0.53
+ldapserver.server4.port=10389
+
+ldapserver.server5.host=ldap.dns.org
+ldapserver.server5.port=10389
+
+ldapserver.server6.host=localhost
+ldapserver.server6.port=11636
+
+ldapserver.ad1.host=192.168.0.60
+ldapserver.ad1.port=389
+
+ldapserver.dirsrv.host=192.168.66.240
+ldapserver.dirsrv.port=389
+
+authenticator.xmlauthenticator.authclass=com.marklogic.authenticators.XMLAuthenticator
+#authenticator.xmlauthenticator.configclass=com.marklogic.configuration.CustomConfig
+authenticator.xmlauthenticator.parm1=/Users/mwarnes/IdeaProjects/MLEAProxy/src/main/resources/users.xml
+
+
+
+

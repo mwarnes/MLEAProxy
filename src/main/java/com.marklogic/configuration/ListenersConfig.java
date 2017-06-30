@@ -20,6 +20,10 @@ public interface ListenersConfig extends Config {
     @DefaultValue("false")
     boolean secureListener();
 
+    @Key("listener.${listener}.debuglevel")
+    @DefaultValue("INFO")
+    String debugLevel();
+
     @Key("listener.${listener}.keystore")
     @DefaultValue("")
     String listenerKeyStore();
@@ -55,6 +59,5 @@ public interface ListenersConfig extends Config {
     String listenerDescription();
 
     @Key("listener.${listener}.requestHandler")
-    @DefaultValue("com.marklogic.handlers.MarkLogicMultiFactorRequestHandler")
     String listenerRequestHandler();
 }

@@ -12,7 +12,7 @@ import com.unboundid.util.Debug;
 
 /**
  * This class provides an implementation of a search result listener that will
- * be used by the {@link MarkLogicMultiFactorRequestHandler} class in the course of returning
+ * be used by the {@link CustomRequestHandler} class in the course of returning
  * entries to the client.
  */
 final class SearchResultListener

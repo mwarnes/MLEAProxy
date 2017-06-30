@@ -1,5 +1,7 @@
 package com.marklogic.handlers;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
 import com.marklogic.configuration.ApplicationConfig;
 import com.marklogic.configuration.ListenersConfig;
 import com.marklogic.configuration.ServersConfig;
@@ -55,6 +57,9 @@ class LDAPlistener implements ApplicationRunner {
             expVars.put("listener", l);
             ListenersConfig listenerCfg = ConfigFactory
                     .create(ListenersConfig.class, expVars);
+
+            LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+            context.getLogger(LDAPlistener.class).setLevel(Level.valueOf(listenerCfg.debugLevel()));
 
             logger.debug("IP Address: " + listenerCfg.listenerIpAddress());
             logger.debug("Port: " + listenerCfg.listenerPort());

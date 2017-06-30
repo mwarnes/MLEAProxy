@@ -13,6 +13,7 @@ public interface AuthenticatorsConfig extends Config {
     String authenticatorClass();
 
     @Key("authenticator.${authenticator}.configclass")
+    @DefaultValue("com.marklogic.configuration.CustomConfig")
     String authenticatorConfigClass();
 
     @Key("authenticator.${authenticator}.separator")
