@@ -335,3 +335,135 @@ Sample output
 2017-06-30 14:34:34.428  INFO 90645 --- [logic.local:636] com.unboundid.ldap.sdk                   : level="INFO" threadID=19 threadName="Connection reader for connection 0 to kerberos.marklogic.local:636" revision=24201 connectionID=0 connectedTo="kerberos.marklogic.local:636" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
 
 ````
+
+#### Load balancing LDAP Proxy server (1)
+
+MLEAProxy can also be configured as a load balancing proxy to handle a number of different scenerios including failover.
+
+For this configuration MLEAProxy will balance between 3 back-end LDAP servers using a simple roundrobin algorithm
+
+<img src="./loadbalance1.png">
+
+````
+ldap.debug=true
+## Listeners
+listeners=proxy
+## Listener
+listener.proxy.ipaddress=0.0.0.0
+listener.proxy.port=30389
+listener.proxy.debuglevel=DEBUG
+listener.proxy.secure=false
+listener.proxy.requestHandler=com.marklogic.handlers.ProxyRequestHandler
+listener.proxy.ldapset=set1
+listener.proxy.ldapmode=roundrobin
+listener.proxy.description=General load balancing LDAP proxy.
+## LDAP Server set
+ldapset.set1.servers=server1,server2,server3
+## LDAP Server
+ldapserver.server1.host=192.168.0.50
+ldapserver.server1.port=10389
+ldapserver.server2.host=192.168.0.51
+ldapserver.server2.port=10389
+ldapserver.server3.host=192.168.0.52
+ldapserver.server3.port=10389
+````
+
+Sample output showing 3 bind requests directing to 3 back-end servers in turn.
+
+````
+2017-06-30 15:58:26.855  INFO 94596 --- [           main] com.marklogic.MLEAProxy                  : Starting MLEAProxy on MacPro-4505.local with PID 94596 (/Users/mwarnes/IdeaProjects/MLEAProxy/target/classes started by mwarnes in /Users/mwarnes/IdeaProjects/MLEAProxy)
+2017-06-30 15:58:27.636 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : IP Address: 0.0.0.0
+2017-06-30 15:58:27.636 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : Port: 30389
+2017-06-30 15:58:27.636 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : Request handler: com.marklogic.handlers.ProxyRequestHandler
+2017-06-30 15:58:27.637 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
+2017-06-30 15:58:27.637 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : Building server sets
+2017-06-30 15:58:27.637 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
+2017-06-30 15:58:27.641 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: 192.168.0.50
+2017-06-30 15:58:27.641 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 10389
+2017-06-30 15:58:27.642 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: 192.168.0.51
+2017-06-30 15:58:27.643 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 10389
+2017-06-30 15:58:27.643 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: 192.168.0.52
+2017-06-30 15:58:27.644 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 10389
+2017-06-30 15:58:27.647 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : RoundRobinServerSet(servers={192.168.0.50:10389, 192.168.0.51:10389, 192.168.0.52:10389})
+2017-06-30 15:58:27.653  INFO 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : Listening on: 0.0.0.0:30389 ( General load balancing LDAP proxy. )
+2017-06-30 15:58:27.654  INFO 94596 --- [           main] com.marklogic.MLEAProxy                  : Started MLEAProxy in 1.181 seconds (JVM running for 1.463)
+2017-06-30 15:59:40.119  INFO 94596 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=17 threadName="LDAPListener client connection reader for connection from 127.0.0.1:55788 to 127.0.0.1:30389" revision=24201 sendingLDAPRequest="SimpleBindRequest(dn='cn=Directory Manager')"
+2017-06-30 15:59:40.131  INFO 94596 --- [.168.0.50:10389] com.unboundid.ldap.sdk                   : level="INFO" threadID=19 threadName="Connection reader for connection 0 to 192.168.0.50:10389" revision=24201 connectionID=0 connectedTo="192.168.0.50:10389" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
+2017-06-30 15:59:40.137  INFO 94596 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=17 threadName="LDAPListener client connection reader for connection from 127.0.0.1:55788 to 127.0.0.1:30389" revision=24201 message="Sending LDAP unbind request."
+2017-06-30 15:59:44.346  INFO 94596 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=20 threadName="LDAPListener client connection reader for connection from 127.0.0.1:55790 to 127.0.0.1:30389" revision=24201 sendingLDAPRequest="SimpleBindRequest(dn='cn=Directory Manager')"
+2017-06-30 15:59:44.347  INFO 94596 --- [.168.0.51:10389] com.unboundid.ldap.sdk                   : level="INFO" threadID=22 threadName="Connection reader for connection 1 to 192.168.0.51:10389" revision=24201 connectionID=1 connectedTo="192.168.0.51:10389" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
+2017-06-30 15:59:44.348  INFO 94596 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=20 threadName="LDAPListener client connection reader for connection from 127.0.0.1:55790 to 127.0.0.1:30389" revision=24201 message="Sending LDAP unbind request."
+2017-06-30 15:59:47.384  INFO 94596 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=23 threadName="LDAPListener client connection reader for connection from 127.0.0.1:55795 to 127.0.0.1:30389" revision=24201 sendingLDAPRequest="SimpleBindRequest(dn='cn=Directory Manager')"
+2017-06-30 15:59:47.385  INFO 94596 --- [.168.0.52:10389] com.unboundid.ldap.sdk                   : level="INFO" threadID=25 threadName="Connection reader for connection 2 to 192.168.0.52:10389" revision=24201 connectionID=2 connectedTo="192.168.0.52:10389" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
+2017-06-30 15:59:47.386  INFO 94596 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=23 threadName="LDAPListener client connection reader for connection from 127.0.0.1:55795 to 127.0.0.1:30389" revision=24201 message="Sending LDAP unbind request."
+````
+
+In addition to the simple simple roundrobin load balancing algorithm, MLEAProxy also supports the following load balancing algorithms.
+
+* <b>single</b>        : No load balancing performed only the first server in the set will be used.
+* <b>failover</b>      : The first server in the set will be used while it is available, should the server become unavailable the next server in the set will be used.
+* <b>roundrobin</b>    : Servers in the set will be used in turn.
+* <b>roundrobindns</b> : Used when a hostname lookup returns multiple IP addresses, MLEAProxy will use each returned IP Address in turn the same as if they had been coded for roundrobin.
+* <b>fewest</b>        : Servers in the set will be used on a least used basis, this is useful when variable LDAP request load result in one or more servers handling more work when roundrobin is used.
+* <b>fastest</b>       : LDAP requests will be directed to the server that handles requests faster.
+
+#### Load balancing LDAP Proxy server (2)
+
+The following configuration is a more complex load balancing environment and shows how multiple server sets can be configured in a failover mode.
+
+Each server set is configured to use 2 servers, each using a round robin algorithm, when multiple server sets are defined each set acts as the failover set to the previous one. This scenario would suit an environment where the primary LDAP servers are at site and a secondary set of backup LDAP servers at another. MLEAProxy will load balance between the 2 servers at the primary site and failover to load balancing to the secondary site should the primary site become unavailable.
+
+<img src="./loadbalance2.png">
+
+````
+ldap.debug=true
+## Listeners
+listeners=proxy
+## Listener
+listener.proxy.ipaddress=0.0.0.0
+listener.proxy.port=30389
+listener.proxy.debuglevel=DEBUG
+listener.proxy.secure=false
+listener.proxy.requestHandler=com.marklogic.handlers.ProxyRequestHandler
+listener.proxy.ldapset=set1,set2
+listener.proxy.ldapmode=roundrobin
+listener.proxy.description=Load balancing LDAP proxy with failover to secondary set.
+## LDAP Server set
+ldapset.set1.servers=server1,server2
+ldapset.set2.servers=server3,server4
+## LDAP Server
+ldapserver.server1.host=192.168.0.50
+ldapserver.server1.port=10389
+ldapserver.server2.host=192.168.0.51
+ldapserver.server2.port=10389
+ldapserver.server3.host=192.168.0.52
+ldapserver.server3.port=10389
+ldapserver.server4.host=192.168.0.53
+ldapserver.server4.port=10389
+````
+
+Sample output
+
+````
+2017-06-30 16:23:43.076  INFO 95738 --- [           main] com.marklogic.MLEAProxy                  : Starting MLEAProxy on MacPro-4505.local with PID 95738 (/Users/mwarnes/IdeaProjects/MLEAProxy/target/classes started by mwarnes in /Users/mwarnes/IdeaProjects/MLEAProxy)
+2017-06-30 16:23:43.833 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : IP Address: 0.0.0.0
+2017-06-30 16:23:43.834 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : Port: 30389
+2017-06-30 16:23:43.834 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : Request handler: com.marklogic.handlers.ProxyRequestHandler
+2017-06-30 16:23:43.834 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
+2017-06-30 16:23:43.834 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set2
+2017-06-30 16:23:43.835 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : Building server sets
+2017-06-30 16:23:43.835 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
+2017-06-30 16:23:43.839 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: 192.168.0.50
+2017-06-30 16:23:43.839 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 10389
+2017-06-30 16:23:43.840 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: 192.168.0.51
+2017-06-30 16:23:43.840 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 10389
+2017-06-30 16:23:43.843 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set2
+2017-06-30 16:23:43.844 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: 192.168.0.52
+2017-06-30 16:23:43.845 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 10389
+2017-06-30 16:23:43.846 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: 192.168.0.53
+2017-06-30 16:23:43.846 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 10389
+2017-06-30 16:23:43.846 DEBUG 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : FailoverServerSet(serverSets={RoundRobinServerSet(servers={192.168.0.50:10389, 192.168.0.51:10389}), RoundRobinServerSet(servers={192.168.0.52:10389, 192.168.0.53:10389})})
+2017-06-30 16:23:43.852  INFO 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : Listening on: 0.0.0.0:30389 ( Load balancing LDAP proxy with failover to secondary set. )
+2017-06-30 16:23:43.854  INFO 95738 --- [           main] com.marklogic.MLEAProxy                  : Started MLEAProxy in 1.096 seconds (JVM running for 1.36)
+````
+
