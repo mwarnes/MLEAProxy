@@ -1,5 +1,6 @@
 package com.marklogic.authenticators;
 
+import com.marklogic.MLEAProxy;
 import com.marklogic.configuration.CustomConfig;
 import com.unboundid.ldap.listener.LDAPListenerClientConnection;
 import com.unboundid.ldap.protocol.*;
@@ -17,6 +18,8 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
+import java.io.File;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,7 +48,20 @@ public class XMLAuthenticator implements IAuthenticator {
                 DocumentBuilderFactory.newInstance();
         domFactory.setNamespaceAware(true);
         DocumentBuilder builder = domFactory.newDocumentBuilder();
-        document = builder.parse(appCfg.parm1());
+        if (appCfg.parm1().isEmpty()) {
+            logger.info("user.xml path missing using default LDAP configuration instead.");
+            document = builder.parse(ClassLoader.class.getResourceAsStream("/users.xml"));
+        } else {
+            File f = new File(appCfg.parm1());
+            if(f.exists() && !f.isDirectory()) {
+                logger.info("Using custom LDAP configuration from: " + appCfg.parm1());
+                document = builder.parse(appCfg.parm1());
+            } else {
+                logger.error("Custom LDAP configuration file not found.");
+                throw new Exception(appCfg.parm1() + " missing or invalid.");
+            }
+
+        }
         xpathFactory = XPathFactory.newInstance();
 
     }

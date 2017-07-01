@@ -118,11 +118,13 @@ class LDAPlistener implements ApplicationRunner {
                 ServersConfig serverCfg = ConfigFactory
                         .create(ServersConfig.class, serverVars);
 
-                logger.debug("LDAP Server host: " + serverCfg.serverHost());
-                logger.debug("LDAP Server Port: " + serverCfg.serverPort());
+                if (!mode.equalsIgnoreCase("DUMMY")) {
+                    logger.debug("LDAP Server host: " + serverCfg.serverHost());
+                    logger.debug("LDAP Server Port: " + serverCfg.serverPort());
+                    hostAddresses.add(serverCfg.serverHost());
+                    hostPorts.add(serverCfg.serverPort());
+                }
 
-                hostAddresses.add(serverCfg.serverHost());
-                hostPorts.add(serverCfg.serverPort());
             }
 
             // Convert Addresses and Port List to Array
@@ -133,6 +135,9 @@ class LDAPlistener implements ApplicationRunner {
             for (int i = 0; i < strAddresses.length; i++)
                 strAddresses[i] = hostAddresses.get(i);
 
+            if (mode.equalsIgnoreCase("DUMMY")) {
+                    ss = new DummyServerSet();
+            }
             if (mode.equalsIgnoreCase("SINGLE")) {
                 if (setsCfg.serverSetSecure()) {
                     ss = new SingleServerSet(hostAddresses.get(0), hostPorts.get(0), createSecureSocketFactory(setsCfg));

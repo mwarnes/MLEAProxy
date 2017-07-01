@@ -10,6 +10,7 @@ import org.aeonbits.owner.Config;
 public interface SetsConfig extends Config {
 
     @Key("ldapset.${serverSet}.servers")
+    @DefaultValue("dummy")
     public String[] servers();
 
     @Key("ldapset.${serverSet}.mode")

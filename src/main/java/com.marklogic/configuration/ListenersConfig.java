@@ -43,11 +43,11 @@ public interface ListenersConfig extends Config {
     String listenerTrustStorePassword();
 
     @Key("listener.${listener}.ldapset")
-    @DefaultValue("")
+    @DefaultValue("dummy")
     String[] listenerLDAPSet();
 
     @Key("listener.${listener}.ldapmode")
-    @DefaultValue("")
+    @DefaultValue("dummy")
     String listenerLDAPMode();
 
     @Key("listener.${listener}.authenticator")
