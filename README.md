@@ -329,6 +329,16 @@ Sample log output
 2017-07-02 11:50:03.991 DEBUG 88453 --- [127.0.0.1:20389] c.m.processors.ProxyRequestProcessor     : 1-+-BindResponseProtocolOp(resultCode=0)-+-[]
 ````
 
+The mleaproxy proxy server also supports mapping Attribute names, this can be used by a server running MakLogic version 8 or earlier which uses the "memberOf" Attribute to determine Group role permissions. To use this feature you can add a comma seperated list of mappings using parm1, the mleaproxy server will then map between the Attributes on the LDAP Requests and Response. 
+ 
+ Example: Mapping between "memberOf" used by MarkLogic and "isMemberOf" used by the back-end LDAP server.
+
+````
+requestProcessor.ldapproxy.parm1=memberOf:isMemberOf
+````
+
+Note: MarkLogic 9 has added the functionality to specify alternate search Attributes in place of "memberOf" witout the need to use a proxy.
+
 #### Secure LDAP Proxy server (1)
 
 An example configuration building on the simple LDAP proxy but securing the back-end connection to the LDAP server using LDAPS security.

@@ -11,8 +11,8 @@ import com.unboundid.util.StaticUtils;
 import org.aeonbits.owner.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.Arrays;
-import java.util.List;
+
+import java.util.*;
 
 /**
  * Created by mwarnes on 05/02/2017.
@@ -24,12 +24,26 @@ public class ProxyRequestProcessor implements IRequestProcessor, IntermediateRes
 
     private ProcessorConfig appCfg;
     private LDAPListenerClientConnection listenerConnection;
+    private Map<String, String> requestMap = new HashMap<String, String>();
+    private Map<String, String> responseMap = new HashMap<String, String>();
 
     @Override
     public void initialize(Config cfg) throws Exception {
         this.appCfg = (ProcessorConfig) cfg;
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
         context.getLogger(ProxyRequestProcessor.class).setLevel(Level.valueOf(((ProcessorConfig) cfg).debugLevel()));
+        context.getLogger(SearchResultListener.class).setLevel(Level.valueOf(((ProcessorConfig) cfg).debugLevel()));
+        // Parm1 should contain path to substitution string of the form fromAttribute:toAttribute,fromAttribute:toAttribute....
+        String mapString = ((ProcessorConfig) cfg).parm1();
+        if (!mapString.isEmpty()) {
+            String[] pairs = mapString.split(",");
+            for (int i = 0; i < pairs.length; i++) {
+                String pair = pairs[i];
+                String[] keyValue = pair.split(":");
+                requestMap.put(keyValue[0], keyValue[1]);
+                responseMap.put(keyValue[1], keyValue[0]);
+            }
+        }
     }
 
     @Override
@@ -77,16 +91,24 @@ public class ProxyRequestProcessor implements IRequestProcessor, IntermediateRes
     public LDAPMessage processSearchRequest(int messageID, SearchRequestProtocolOp request, List<Control> controls, LDAPConnection ldapConnection, LDAPListenerClientConnection listenerConnection) {
         logger.debug(messageID + "-+-" + request + "-+-" + controls);
         final String[] attrs;
+        final List<String> mappedList = new ArrayList<>();
         final List<String> attrList = request.getAttributes();
         if (attrList.isEmpty()) {
             attrs = StaticUtils.NO_STRINGS;
         } else {
-            attrs = new String[attrList.size()];
-            attrList.toArray(attrs);
+            for (String a : attrList) {
+                if (requestMap.containsKey(a)) {
+                    mappedList.add(requestMap.get(a));
+                } else {
+                    mappedList.add(a);
+                }
+            }
+            attrs = new String[mappedList.size()];
+            mappedList.toArray(attrs);
         }
 
         final SearchResultListener searchListener =
-                new SearchResultListener(listenerConnection, messageID);
+                new SearchResultListener(listenerConnection, messageID, responseMap);
 
         final SearchRequest searchRequest = new SearchRequest(searchListener,
                 request.getBaseDN(), request.getScope(), request.getDerefPolicy(),
