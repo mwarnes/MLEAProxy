@@ -3,7 +3,7 @@
 ### Introduction
 MLEAProxy was primarily written as a support tool to aide in diagnosing issue with authorising MarkLogic Users against an external LDAP or Active Directory server. However there is no reason it could not be used for other uses but in being designed as a diagnostic tool it hs not under gone any significant testing to ensure it is production  ready, therefore use at your descretion.
 <P>As well a being a proxy LDAP server MLEAProxy can run as simple LDAP server using an XML file containing a psuedo LDAP configuration. This is useful for users wanting to configure and evaluate MarkLogic External Security without the need to access a full LDAP or Active Directory server. This is the default configuration mode if no properties file is available.
-<P>MLEXProxy can also be extended using custom written Java code to intercept LDAP requests and take any actions or make modifications before returning the response to the MarkLogic server. the builtin LDAP XML Server us a Custom written requestProcessor class.
+<P>MLEXProxy can also be extended using custom written Java code to intercept LDAP requests and take any actions or make modifications before returning the response to the MarkLogic server. The LDAP XML Server use a custom written Processor class.
 
 ### Installation
 
@@ -24,9 +24,15 @@ ${HOME}/mleaproxy.properties
 Application defaults
 ````
 
+In addition the path of the properties file can be passed using the System property "mleaproxy.properties", if this method is used it takes precedence over the method listed above
+
+````
+java -Dmleaproxy.properties=/Users/mwarnes/my.props -jar mleaproxy.jar 
+````
+
 ### Configuration
 
-The configuration is made up of 4 areas, Servers, Server Sets, Listeners and Authenticators.
+The configuration is made up of 4 areas, Servers, Server Sets, Listeners and Processors.
 
 Servers define the back-end LDAP or Active Directory server that MLEAProxy will connect to.
 
@@ -48,7 +54,7 @@ ldapserver.ad1.host=192.168.0.60
 ldapserver.ad1.port=636
 ````
 
-Server Sets define the back-end LDAP servers to use; As well as single a back-end server, MLEAProxy supports load balancing to one or more back-end LDAP servers
+Server Sets define the back-end LDAP servers to use; As well as a single back-end server, MLEAProxy supports load balancing to one or more back-end LDAP servers
 
 ````
 Parameters
@@ -74,19 +80,19 @@ ldapset.set3.truststore=/Users/mwarnes/mlproxy.jks
 ldapset.set3.truststorepasswd=password
 ````
 
-Authenticators are used to identify the Authenticator and Configuration classes that will be used to handle the request using Custom classes.
+Request Processors are used to identify the Processor class, debug level and parameters that will be used to handle the request.
 
 ````
 Parameters
 ==========
 requestProcessor.xmlauthenticator.authclass   : Java class to process the request <Required>.
-requestProcessor.xmlauthenticator.configclass : Java class to process configuration <Required>.
+requestProcessor.xmlauthenticator.debuglevel  : Debug level <Default INFO>
 requestProcessor.xmlauthenticator.parm[1-20]  : Optional list of parameters (Maximum 20 pararmeters).
  
 Examples
 ======== 
-requestProcessor.xmlauthenticator.authclass=com.marklogic.authenticators.XMLAuthenticator
-requestProcessor.xmlauthenticator.configclass=com.marklogic.configuration.CustomConfig
+requestProcessor.xmlauthenticator.authclass=com.marklogic.processors.XMLRequestProcessor
+requestProcessor.xmlauthenticator.debuglevel=DEBUG
 requestProcessor.xmlauthenticator.parm1=/path/to/users.xml 
 ````
 
@@ -97,37 +103,24 @@ Parameters
 ==========
 listener.<name>.ipaddress       : IP address to bind to (Default 0.0.0.0). 
 listener.<name>.port            : port to listenon <Required>.
-listener.<name>.debugleve       : Level to use INFO|WARN|ERROR|TRACE|DEBUG  (Default INFO)
-listener.<name>.requestHandler  : Request handler for incoming connections, currently the following are supported:
- 
-                                  com.marklogic.handlers.ProxyRequestHandler
-                                  com.marklogic.handlers.CustomRequestHandler
-                                   
-listener.<name>.requestProcessor   : Authentcator definition to use if CustomRequestHandler is used.                              
+listener.<name>.debuglevel      : Level to use INFO|WARN|ERROR|TRACE|DEBUG  (Default INFO)
+listener.<name>.requestProcessor: Name of Process clas to handle the request.                              
 listener.<name>.secure          : True/False whether to enable TLS (Default false).
 listener.<name>.keystore        : Java Keystore containing system certificate.
 listener.<name>.keystorepasswd  : Keystore password
 listener.<name>.ldapset         : Name of LDAP Server set to use.
-listener.<name>.ldapmode        : LDAP balancing mode (single|failover|roundrobin|roundrobindns|fewest|fastest) (Default single).
+listener.<name>.ldapmode        : LDAP balancing mode (internal|single|failover|roundrobin|roundrobindns|fewest|fastest) (Default single).
 listener.<name>.description     : Description of listener (Optional).
  
 Examples
 ======== 
 listener.proxy.ipaddress=0.0.0.0
-listener.proxy.port=30389
-listener.proxy.secure=false
-listener.proxy.requestHandler=com.marklogic.handlers.ProxyRequestHandler
-listener.proxy.ldapset=set2
-listener.proxy.ldapmode=roundrobin
-listener.proxy.description=General LDAP proxy with round robin load balancing to 2 back-end servers.
- 
-listener.xmlcustom.ipaddress=0.0.0.0
-listener.xmlcustom.port=20389
-listener.xmlcustom.requestHandler=com.marklogic.handlers.CustomRequestHandler
-listener.xmlcustom.requestProcessor=xmlauthenticator
-listener.xmlcustom.ldapset=set1
-listener.xmlcustom.ldapmode=single
-listener.xmlcustom.description=LDAP server with Custom Authenticator using XML backing store
+listener.proxy.port=20389
+listener.proxy.debuglevel=DEBUG
+listener.proxy.ldapset=set1
+listener.proxy.ldapmode=single
+listener.proxy.requestProcessor=ldapproxy
+listener.proxy.description=LDAP Proxy server
 ````
 
 MLEAProxy is able to run multiple, Listeners configure which listener instances will be started
@@ -162,13 +155,15 @@ ldap.debug=true
 listeners=proxy
 ## Listener
 listener.proxy.ipaddress=0.0.0.0
-listener.proxy.port=30389
+listener.proxy.port=20389
 listener.proxy.debuglevel=DEBUG
-listener.proxy.secure=false
-listener.proxy.requestHandler=com.marklogic.handlers.ProxyRequestHandler
 listener.proxy.ldapset=set1
 listener.proxy.ldapmode=single
-listener.proxy.description=Simple LDAP proxy
+listener.proxy.requestProcessor=ldapproxy
+listener.proxy.description=LDAP Proxy server
+## processor
+requestProcessor.ldapproxy.authclass=com.marklogic.processors.ProxyRequestProcessor
+requestProcessor.ldapproxy.debuglevel=DEBUG
 ## LDAP Server set
 ldapset.set1.servers=server1
 ## LDAP Server
@@ -178,27 +173,25 @@ ldapserver.server1.port=10389
 Sample log output
 
 ````
-2017-06-30 12:55:23.157  INFO 86215 --- [           main] com.marklogic.MLEAProxy                  : Starting MLEAProxy on MacPro-4505.local with PID 86215 (/Users/mwarnes/IdeaProjects/MLEAProxy/target/classes started by mwarnes in /Users/mwarnes/IdeaProjects/MLEAProxy)
-2017-06-30 12:55:23.159  INFO 86215 --- [           main] com.marklogic.MLEAProxy                  : No active profile set, falling back to default profiles: default
-2017-06-30 12:55:23.200  INFO 86215 --- [           main] s.c.a.AnnotationConfigApplicationContext : Refreshing org.springframework.context.annotation.AnnotationConfigApplicationContext@7e0e6aa2: startup date [Fri Jun 30 12:55:23 BST 2017]; root of context hierarchy
-2017-06-30 12:55:24.001  INFO 86215 --- [           main] o.s.j.e.a.AnnotationMBeanExporter        : Registering beans for JMX exposure on startup
-2017-06-30 12:55:24.030 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : IP Address: 0.0.0.0
-2017-06-30 12:55:24.031 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : Port: 30389
-2017-06-30 12:55:24.031 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : Request handler: com.marklogic.handlers.ProxyRequestHandler
-2017-06-30 12:55:24.031 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
-2017-06-30 12:55:24.032 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : Building server sets
-2017-06-30 12:55:24.032 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
-2017-06-30 12:55:24.035 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: kerberos.marklogic.local
-2017-06-30 12:55:24.036 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 389
-2017-06-30 12:55:24.039 DEBUG 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : SingleServerSet(server=kerberos.marklogic.local:389)
-2017-06-30 12:55:24.045  INFO 86215 --- [           main] com.marklogic.handlers.LDAPlistener      : Listening on: 0.0.0.0:30389 ( Simple LDAP proxy )
-2017-06-30 12:55:24.047  INFO 86215 --- [           main] com.marklogic.MLEAProxy                  : Started MLEAProxy in 1.216 seconds (JVM running for 1.494)
-2017-06-30 12:55:37.171  INFO 86215 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=17 threadName="LDAPListener client connection reader for connection from 127.0.0.1:52578 to 127.0.0.1:30389" revision=24201 sendingLDAPRequest="SimpleBindRequest(dn='cn=Manager,dc=MarkLogic,dc=Local')"
-2017-06-30 12:55:37.182  INFO 86215 --- [logic.local:389] com.unboundid.ldap.sdk                   : level="INFO" threadID=19 threadName="Connection reader for connection 0 to kerberos.marklogic.local:389" revision=24201 connectionID=0 connectedTo="kerberos.marklogic.local:389" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
-2017-06-30 12:55:37.191  INFO 86215 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=17 threadName="LDAPListener client connection reader for connection from 127.0.0.1:52578 to 127.0.0.1:30389" revision=24201 sendingLDAPRequest="SearchRequest(baseDN='', scope=BASE, deref=ALWAYS, sizeLimit=0, timeLimit=0, filter='(objectClass=*)', attrs={subschemaSubentry})"
-2017-06-30 12:55:37.194  INFO 86215 --- [logic.local:389] com.unboundid.ldap.sdk                   : level="INFO" threadID=19 threadName="Connection reader for connection 0 to kerberos.marklogic.local:389" revision=24201 connectionID=0 connectedTo="kerberos.marklogic.local:389" readLDAPResult="SearchResultEntry(dn='', messageID=2, attributes={Attribute(name=subschemaSubentry, values={'cn=Subschema'})}, controls={})"
-2017-06-30 12:55:37.194  INFO 86215 --- [logic.local:389] com.unboundid.ldap.sdk                   : level="INFO" threadID=19 threadName="Connection reader for connection 0 to kerberos.marklogic.local:389" revision=24201 connectionID=0 connectedTo="kerberos.marklogic.local:389" readLDAPResult="SearchResult(resultCode=0 (success), messageID=2)"
-
+2017-07-02 11:49:18.482  INFO 88453 --- [           main] com.marklogic.MLEAProxy                  : Starting MLEAProxy on MacPro-4505.local with PID 88453 (/Users/mwarnes/IdeaProjects/MLEAProxy/target/classes started by mwarnes in /Users/mwarnes/IdeaProjects/MLEAProxy)
+2017-07-02 11:49:18.484  INFO 88453 --- [           main] com.marklogic.MLEAProxy                  : No active profile set, falling back to default profiles: default
+2017-07-02 11:49:18.521  INFO 88453 --- [           main] s.c.a.AnnotationConfigApplicationContext : Refreshing org.springframework.context.annotation.AnnotationConfigApplicationContext@42607a4f: startup date [Sun Jul 02 11:49:18 BST 2017]; root of context hierarchy
+2017-07-02 11:49:19.202  INFO 88453 --- [           main] o.s.j.e.a.AnnotationMBeanExporter        : Registering beans for JMX exposure on startup
+2017-07-02 11:49:19.229 DEBUG 88453 --- [           main] com.marklogic.handlers.LDAPlistener      : IP Address: 0.0.0.0
+2017-07-02 11:49:19.229 DEBUG 88453 --- [           main] com.marklogic.handlers.LDAPlistener      : Port: 20389
+2017-07-02 11:49:19.230 DEBUG 88453 --- [           main] com.marklogic.handlers.LDAPlistener      : Request handler: com.marklogic.handlers.LDAPRequestHandler
+2017-07-02 11:49:19.230 DEBUG 88453 --- [           main] com.marklogic.handlers.LDAPlistener      : Building server sets
+2017-07-02 11:49:19.230 DEBUG 88453 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
+2017-07-02 11:49:19.234 DEBUG 88453 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: kerberos.marklogic.local
+2017-07-02 11:49:19.234 DEBUG 88453 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 389
+2017-07-02 11:49:19.237 DEBUG 88453 --- [           main] com.marklogic.handlers.LDAPlistener      : SingleServerSet(server=kerberos.marklogic.local:389)
+2017-07-02 11:49:19.242  INFO 88453 --- [           main] com.marklogic.handlers.LDAPlistener      : Listening on: 0.0.0.0:20389 ( LDAP Proxy server )
+2017-07-02 11:49:19.244  INFO 88453 --- [           main] com.marklogic.MLEAProxy                  : Started MLEAProxy in 1.058 seconds (JVM running for 1.317)
+2017-07-02 11:50:03.983 DEBUG 88453 --- [127.0.0.1:20389] c.m.processors.ProxyRequestProcessor     : 1-+-BindRequestProtocolOp(version=3, bindDN='cn=Manager,dc=MarkLogic,dc=Local', type=simple)-+-[]
+2017-07-02 11:50:03.985  INFO 88453 --- [127.0.0.1:20389] com.unboundid.ldap.sdk                   : level="INFO" threadID=20 threadName="LDAPListener client connection reader for connection from 127.0.0.1:54531 to 127.0.0.1:20389" revision=24201 sendingLDAPRequest="SimpleBindRequest(dn='cn=Manager,dc=MarkLogic,dc=Local')"
+2017-07-02 11:50:03.986  INFO 88453 --- [127.0.0.1:20389] com.unboundid.ldap.sdk                   : level="INFO" threadID=17 threadName="LDAPListener client connection reader for connection from 127.0.0.1:54530 to 127.0.0.1:20389" revision=24201 message="Sending LDAP unbind request."
+2017-07-02 11:50:03.988  INFO 88453 --- [logic.local:389] com.unboundid.ldap.sdk                   : level="INFO" threadID=22 threadName="Connection reader for connection 1 to kerberos.marklogic.local:389" revision=24201 connectionID=1 connectedTo="kerberos.marklogic.local:389" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
+2017-07-02 11:50:03.991 DEBUG 88453 --- [127.0.0.1:20389] c.m.processors.ProxyRequestProcessor     : 1-+-BindResponseProtocolOp(resultCode=0)-+-[]
 ````
 
 #### Secure LDAP Proxy server (1)
@@ -218,10 +211,13 @@ listener.proxy.ipaddress=0.0.0.0
 listener.proxy.port=30389
 listener.proxy.debuglevel=DEBUG
 listener.proxy.secure=false
-listener.proxy.requestHandler=com.marklogic.handlers.ProxyRequestHandler
 listener.proxy.ldapset=set1
 listener.proxy.ldapmode=single
+listener.proxy.requestProcessor=ldapproxy
 listener.proxy.description=LDAP proxy with LDAPS connection to back-end server.
+## processor
+requestProcessor.ldapproxy.authclass=com.marklogic.processors.ProxyRequestProcessor
+requestProcessor.ldapproxy.debuglevel=DEBUG
 ## LDAP Server set
 ldapset.set1.servers=server1
 ldapset.set1.secure=true
@@ -287,10 +283,13 @@ listener.proxy.debuglevel=DEBUG
 listener.proxy.secure=true
 listener.proxy.keystore=/Users/mwarnes/mlproxy.jks
 listener.proxy.keystorepasswd=password
-listener.proxy.requestHandler=com.marklogic.handlers.ProxyRequestHandler
 listener.proxy.ldapset=set1
 listener.proxy.ldapmode=single
+listener.proxy.requestProcessor=ldapproxy
 listener.proxy.description=LDAP proxy with LDAPS connection to front-end and back-end servers.
+## processor
+requestProcessor.ldapproxy.authclass=com.marklogic.processors.ProxyRequestProcessor
+requestProcessor.ldapproxy.debuglevel=DEBUG
 ## LDAP Server set
 ldapset.set1.servers=server1
 ldapset.set1.secure=true
@@ -299,7 +298,7 @@ ldapserver.server1.host=kerberos.marklogic.local
 ldapserver.server1.port=636
 ````
 
-Sample output
+Sample log output
 
 ````
 2017-06-30 14:33:42.957  INFO 90645 --- [           main] com.marklogic.MLEAProxy                  : Starting MLEAProxy on MacPro-4505.local with PID 90645 (/Users/mwarnes/IdeaProjects/MLEAProxy/target/classes started by mwarnes in /Users/mwarnes/IdeaProjects/MLEAProxy)
@@ -350,10 +349,13 @@ listener.proxy.ipaddress=0.0.0.0
 listener.proxy.port=30389
 listener.proxy.debuglevel=DEBUG
 listener.proxy.secure=false
-listener.proxy.requestHandler=com.marklogic.handlers.ProxyRequestHandler
 listener.proxy.ldapset=set1
 listener.proxy.ldapmode=roundrobin
+listener.proxy.requestProcessor=ldapproxy
 listener.proxy.description=General load balancing LDAP proxy.
+## processor
+requestProcessor.ldapproxy.authclass=com.marklogic.processors.ProxyRequestProcessor
+requestProcessor.ldapproxy.debuglevel=DEBUG
 ## LDAP Server set
 ldapset.set1.servers=server1,server2,server3
 ## LDAP Server
@@ -365,34 +367,42 @@ ldapserver.server3.host=192.168.0.52
 ldapserver.server3.port=10389
 ````
 
-Sample output showing 3 bind requests directing to 3 back-end servers in turn.
+Sample log output showing 3 bind requests directing to 3 back-end servers in turn.
 
 ````
-2017-06-30 15:58:26.855  INFO 94596 --- [           main] com.marklogic.MLEAProxy                  : Starting MLEAProxy on MacPro-4505.local with PID 94596 (/Users/mwarnes/IdeaProjects/MLEAProxy/target/classes started by mwarnes in /Users/mwarnes/IdeaProjects/MLEAProxy)
-2017-06-30 15:58:27.636 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : IP Address: 0.0.0.0
-2017-06-30 15:58:27.636 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : Port: 30389
-2017-06-30 15:58:27.636 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : Request handler: com.marklogic.handlers.ProxyRequestHandler
-2017-06-30 15:58:27.637 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
-2017-06-30 15:58:27.637 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : Building server sets
-2017-06-30 15:58:27.637 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
-2017-06-30 15:58:27.641 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: 192.168.0.50
-2017-06-30 15:58:27.641 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 10389
-2017-06-30 15:58:27.642 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: 192.168.0.51
-2017-06-30 15:58:27.643 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 10389
-2017-06-30 15:58:27.643 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: 192.168.0.52
-2017-06-30 15:58:27.644 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 10389
-2017-06-30 15:58:27.647 DEBUG 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : RoundRobinServerSet(servers={192.168.0.50:10389, 192.168.0.51:10389, 192.168.0.52:10389})
-2017-06-30 15:58:27.653  INFO 94596 --- [           main] com.marklogic.handlers.LDAPlistener      : Listening on: 0.0.0.0:30389 ( General load balancing LDAP proxy. )
-2017-06-30 15:58:27.654  INFO 94596 --- [           main] com.marklogic.MLEAProxy                  : Started MLEAProxy in 1.181 seconds (JVM running for 1.463)
-2017-06-30 15:59:40.119  INFO 94596 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=17 threadName="LDAPListener client connection reader for connection from 127.0.0.1:55788 to 127.0.0.1:30389" revision=24201 sendingLDAPRequest="SimpleBindRequest(dn='cn=Directory Manager')"
-2017-06-30 15:59:40.131  INFO 94596 --- [.168.0.50:10389] com.unboundid.ldap.sdk                   : level="INFO" threadID=19 threadName="Connection reader for connection 0 to 192.168.0.50:10389" revision=24201 connectionID=0 connectedTo="192.168.0.50:10389" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
-2017-06-30 15:59:40.137  INFO 94596 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=17 threadName="LDAPListener client connection reader for connection from 127.0.0.1:55788 to 127.0.0.1:30389" revision=24201 message="Sending LDAP unbind request."
-2017-06-30 15:59:44.346  INFO 94596 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=20 threadName="LDAPListener client connection reader for connection from 127.0.0.1:55790 to 127.0.0.1:30389" revision=24201 sendingLDAPRequest="SimpleBindRequest(dn='cn=Directory Manager')"
-2017-06-30 15:59:44.347  INFO 94596 --- [.168.0.51:10389] com.unboundid.ldap.sdk                   : level="INFO" threadID=22 threadName="Connection reader for connection 1 to 192.168.0.51:10389" revision=24201 connectionID=1 connectedTo="192.168.0.51:10389" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
-2017-06-30 15:59:44.348  INFO 94596 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=20 threadName="LDAPListener client connection reader for connection from 127.0.0.1:55790 to 127.0.0.1:30389" revision=24201 message="Sending LDAP unbind request."
-2017-06-30 15:59:47.384  INFO 94596 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=23 threadName="LDAPListener client connection reader for connection from 127.0.0.1:55795 to 127.0.0.1:30389" revision=24201 sendingLDAPRequest="SimpleBindRequest(dn='cn=Directory Manager')"
-2017-06-30 15:59:47.385  INFO 94596 --- [.168.0.52:10389] com.unboundid.ldap.sdk                   : level="INFO" threadID=25 threadName="Connection reader for connection 2 to 192.168.0.52:10389" revision=24201 connectionID=2 connectedTo="192.168.0.52:10389" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
-2017-06-30 15:59:47.386  INFO 94596 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=23 threadName="LDAPListener client connection reader for connection from 127.0.0.1:55795 to 127.0.0.1:30389" revision=24201 message="Sending LDAP unbind request."
+2017-07-02 11:57:46.421  INFO 88766 --- [           main] com.marklogic.MLEAProxy                  : Starting MLEAProxy on MacPro-4505.local with PID 88766 (/Users/mwarnes/IdeaProjects/MLEAProxy/target/classes started by mwarnes in /Users/mwarnes/IdeaProjects/MLEAProxy)
+2017-07-02 11:57:46.422  INFO 88766 --- [           main] com.marklogic.MLEAProxy                  : No active profile set, falling back to default profiles: default
+2017-07-02 11:57:46.458  INFO 88766 --- [           main] s.c.a.AnnotationConfigApplicationContext : Refreshing org.springframework.context.annotation.AnnotationConfigApplicationContext@42607a4f: startup date [Sun Jul 02 11:57:46 BST 2017]; root of context hierarchy
+2017-07-02 11:57:47.152  INFO 88766 --- [           main] o.s.j.e.a.AnnotationMBeanExporter        : Registering beans for JMX exposure on startup
+2017-07-02 11:57:47.177 DEBUG 88766 --- [           main] com.marklogic.handlers.LDAPlistener      : IP Address: 0.0.0.0
+2017-07-02 11:57:47.178 DEBUG 88766 --- [           main] com.marklogic.handlers.LDAPlistener      : Port: 30389
+2017-07-02 11:57:47.178 DEBUG 88766 --- [           main] com.marklogic.handlers.LDAPlistener      : Request handler: com.marklogic.handlers.LDAPRequestHandler
+2017-07-02 11:57:47.178 DEBUG 88766 --- [           main] com.marklogic.handlers.LDAPlistener      : Building server sets
+2017-07-02 11:57:47.178 DEBUG 88766 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: set1
+2017-07-02 11:57:47.182 DEBUG 88766 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: 192.168.0.50
+2017-07-02 11:57:47.182 DEBUG 88766 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 10389
+2017-07-02 11:57:47.183 DEBUG 88766 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: 192.168.0.51
+2017-07-02 11:57:47.183 DEBUG 88766 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 10389
+2017-07-02 11:57:47.184 DEBUG 88766 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server host: 192.168.0.52
+2017-07-02 11:57:47.184 DEBUG 88766 --- [           main] com.marklogic.handlers.LDAPlistener      : LDAP Server Port: 10389
+2017-07-02 11:57:47.187 DEBUG 88766 --- [           main] com.marklogic.handlers.LDAPlistener      : RoundRobinServerSet(servers={192.168.0.50:10389, 192.168.0.51:10389, 192.168.0.52:10389})
+2017-07-02 11:57:47.192  INFO 88766 --- [           main] com.marklogic.handlers.LDAPlistener      : Listening on: 0.0.0.0:30389 ( General load balancing LDAP proxy. )
+2017-07-02 11:57:47.193  INFO 88766 --- [           main] com.marklogic.MLEAProxy                  : Started MLEAProxy in 1.097 seconds (JVM running for 1.354)
+2017-07-02 12:01:24.277 DEBUG 88766 --- [127.0.0.1:30389] c.m.processors.ProxyRequestProcessor     : 1-+-BindRequestProtocolOp(version=3, bindDN='cn=Directory Manager', type=simple)-+-[]
+2017-07-02 12:01:24.279  INFO 88766 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=17 threadName="LDAPListener client connection reader for connection from 127.0.0.1:54668 to 127.0.0.1:30389" revision=24201 sendingLDAPRequest="SimpleBindRequest(dn='cn=Directory Manager')"
+2017-07-02 12:01:24.291  INFO 88766 --- [.168.0.50:10389] com.unboundid.ldap.sdk                   : level="INFO" threadID=19 threadName="Connection reader for connection 0 to 192.168.0.50:10389" revision=24201 connectionID=0 connectedTo="192.168.0.50:10389" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
+2017-07-02 12:01:24.294 DEBUG 88766 --- [127.0.0.1:30389] c.m.processors.ProxyRequestProcessor     : 1-+-BindResponseProtocolOp(resultCode=0)-+-[]
+2017-07-02 12:01:24.297  INFO 88766 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=17 threadName="LDAPListener client connection reader for connection from 127.0.0.1:54668 to 127.0.0.1:30389" revision=24201 message="Sending LDAP unbind request."
+2017-07-02 12:01:26.170 DEBUG 88766 --- [127.0.0.1:30389] c.m.processors.ProxyRequestProcessor     : 1-+-BindRequestProtocolOp(version=3, bindDN='cn=Directory Manager', type=simple)-+-[]
+2017-07-02 12:01:26.171  INFO 88766 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=20 threadName="LDAPListener client connection reader for connection from 127.0.0.1:54670 to 127.0.0.1:30389" revision=24201 sendingLDAPRequest="SimpleBindRequest(dn='cn=Directory Manager')"
+2017-07-02 12:01:26.171  INFO 88766 --- [.168.0.51:10389] com.unboundid.ldap.sdk                   : level="INFO" threadID=22 threadName="Connection reader for connection 1 to 192.168.0.51:10389" revision=24201 connectionID=1 connectedTo="192.168.0.51:10389" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
+2017-07-02 12:01:26.172 DEBUG 88766 --- [127.0.0.1:30389] c.m.processors.ProxyRequestProcessor     : 1-+-BindResponseProtocolOp(resultCode=0)-+-[]
+2017-07-02 12:01:26.172  INFO 88766 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=20 threadName="LDAPListener client connection reader for connection from 127.0.0.1:54670 to 127.0.0.1:30389" revision=24201 message="Sending LDAP unbind request."
+2017-07-02 12:01:28.114 DEBUG 88766 --- [127.0.0.1:30389] c.m.processors.ProxyRequestProcessor     : 1-+-BindRequestProtocolOp(version=3, bindDN='cn=Directory Manager', type=simple)-+-[]
+2017-07-02 12:01:28.114  INFO 88766 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=23 threadName="LDAPListener client connection reader for connection from 127.0.0.1:54672 to 127.0.0.1:30389" revision=24201 sendingLDAPRequest="SimpleBindRequest(dn='cn=Directory Manager')"
+2017-07-02 12:01:28.114  INFO 88766 --- [.168.0.52:10389] com.unboundid.ldap.sdk                   : level="INFO" threadID=25 threadName="Connection reader for connection 2 to 192.168.0.52:10389" revision=24201 connectionID=2 connectedTo="192.168.0.52:10389" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
+2017-07-02 12:01:28.115 DEBUG 88766 --- [127.0.0.1:30389] c.m.processors.ProxyRequestProcessor     : 1-+-BindResponseProtocolOp(resultCode=0)-+-[]
+2017-07-02 12:01:28.115  INFO 88766 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=23 threadName="LDAPListener client connection reader for connection from 127.0.0.1:54672 to 127.0.0.1:30389" revision=24201 message="Sending LDAP unbind request."
 ````
 
 In addition to the simple simple roundrobin load balancing algorithm, MLEAProxy also supports the following load balancing algorithms.
@@ -424,7 +434,11 @@ listener.proxy.secure=false
 listener.proxy.requestHandler=com.marklogic.handlers.ProxyRequestHandler
 listener.proxy.ldapset=set1,set2
 listener.proxy.ldapmode=roundrobin
+listener.proxy.requestProcessor=ldapproxy
 listener.proxy.description=Load balancing LDAP proxy with failover to secondary set.
+## processor
+requestProcessor.ldapproxy.authclass=com.marklogic.processors.ProxyRequestProcessor
+requestProcessor.ldapproxy.debuglevel=DEBUG
 ## LDAP Server set
 ldapset.set1.servers=server1,server2
 ldapset.set2.servers=server3,server4
@@ -439,7 +453,7 @@ ldapserver.server4.host=192.168.0.53
 ldapserver.server4.port=10389
 ````
 
-Sample output
+Sample log output
 
 ````
 2017-06-30 16:23:43.076  INFO 95738 --- [           main] com.marklogic.MLEAProxy                  : Starting MLEAProxy on MacPro-4505.local with PID 95738 (/Users/mwarnes/IdeaProjects/MLEAProxy/target/classes started by mwarnes in /Users/mwarnes/IdeaProjects/MLEAProxy)
