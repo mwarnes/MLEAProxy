@@ -3,7 +3,8 @@ package com.marklogic.configuration;
 import org.aeonbits.owner.Config;
 
 @Config.LoadPolicy(Config.LoadType.FIRST)
-@Config.Sources({ "file:./mleaproxy.properties",
+@Config.Sources({ "file:${mleaproxy.properties}",
+        "file:./mleaproxy.properties",
         "file:${HOME}/mleaproxy.properties",
         "file:/etc/mleaproxy.properties",
         "classpath:mleaproxy.properties" })

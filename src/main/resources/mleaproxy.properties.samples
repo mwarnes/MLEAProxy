@@ -12,7 +12,7 @@ listener.proxy.requestHandler=com.marklogic.handlers.ProxyRequestHandler
 listener.proxy.ldapset=set7
 #listener.proxy.ldapmode=roundrobin
 listener.proxy.ldapmode=single
-listener.proxy.description=General LDAP proxy with no authenticator.
+listener.proxy.description=General LDAP proxy with no requestProcessor.
 
 listener.proxyssl.ipaddress=0.0.0.0
 listener.proxyssl.port=50636
@@ -22,7 +22,7 @@ listener.proxyssl.keystorepasswd=password
 listener.proxyssl.requestHandler=com.marklogic.handlers.ProxyRequestHandler
 listener.proxyssl.ldapset=set1
 listener.proxyssl.ldapmode=single
-listener.proxyssl.description=General LDAP proxy with no authenticator and LDAPS back-end.
+listener.proxyssl.description=General LDAP proxy with no requestProcessor and LDAPS back-end.
 
 listener.proxymixed.ipaddress=0.0.0.0
 listener.proxymixed.port=60389
@@ -30,13 +30,13 @@ listener.proxymixed.secure=false
 listener.proxymixed.requestHandler=com.marklogic.handlers.ProxyRequestHandler
 listener.proxymixed.ldapset=set1,set5
 listener.proxymixed.ldapmode=single
-listener.proxymixed.description=General LDAP proxy with no authenticator and mixed LDAP/LDAPS back-end.
+listener.proxymixed.description=General LDAP proxy with no requestProcessor and mixed LDAP/LDAPS back-end.
 
 listener.custom.ipaddress=0.0.0.0
 listener.custom.port=20389
 listener.custom.debuglevel=DEBUG
 listener.custom.requestHandler=com.marklogic.handlers.CustomRequestHandler
-listener.custom.authenticator=xmlauthenticator
+listener.custom.requestProcessor=xmlauthenticator
 listener.custom.ldapset=set1
 listener.custom.ldapmode=single
 listener.custom.description=LDAP with Custom Authenticator
@@ -88,9 +88,9 @@ ldapserver.ad1.port=389
 ldapserver.dirsrv.host=192.168.66.240
 ldapserver.dirsrv.port=389
 
-authenticator.xmlauthenticator.authclass=com.marklogic.authenticators.XMLAuthenticator
-#authenticator.xmlauthenticator.configclass=com.marklogic.configuration.CustomConfig
-authenticator.xmlauthenticator.parm1=/Users/mwarnes/IdeaProjects/MLEAProxy/src/main/resources/users.xml
+requestProcessor.xmlauthenticator.authclass=com.marklogic.authenticators.XMLAuthenticator
+#requestProcessor.xmlauthenticator.configclass=com.marklogic.configuration.CustomConfig
+requestProcessor.xmlauthenticator.parm1=/Users/mwarnes/IdeaProjects/MLEAProxy/src/main/resources/users.xml
 
 
 

@@ -3,7 +3,8 @@ package com.marklogic.configuration;
 import org.aeonbits.owner.Config;
 
 @Config.LoadPolicy(Config.LoadType.FIRST)
-@Config.Sources({ "file:./mleaproxy.properties",
+@Config.Sources({ "file:${mleaproxy.properties}",
+        "file:./mleaproxy.properties",
         "file:${HOME}/mleaproxy.properties",
         "file:/etc/mleaproxy.properties",
         "classpath:mleaproxy.properties" })
@@ -43,21 +44,22 @@ public interface ListenersConfig extends Config {
     String listenerTrustStorePassword();
 
     @Key("listener.${listener}.ldapset")
-    @DefaultValue("dummy")
+    @DefaultValue("null")
     String[] listenerLDAPSet();
 
     @Key("listener.${listener}.ldapmode")
-    @DefaultValue("dummy")
+    @DefaultValue("internal")
     String listenerLDAPMode();
 
-    @Key("listener.${listener}.authenticator")
+    @Key("listener.${listener}.requestProcessor")
     @DefaultValue("")
-    String listenerAuthenticator();
+    String listenerRequestProcessor();
 
     @Key("listener.${listener}.description")
     @DefaultValue("")
     String listenerDescription();
 
     @Key("listener.${listener}.requestHandler")
+    @DefaultValue("com.marklogic.handlers.LDAPRequestHandler")
     String listenerRequestHandler();
 }

@@ -16,9 +16,9 @@ import javax.net.SocketFactory;
 @ThreadSafety(
         level = ThreadSafetyLevel.COMPLETELY_THREADSAFE
 )
-public final class DummyServerSet extends ServerSet {
+public final class NullServerSet extends ServerSet {
 
-    public DummyServerSet() {
+    public NullServerSet() {
 
     }
 

@@ -3,7 +3,7 @@
 ### Introduction
 MLEAProxy was primarily written as a support tool to aide in diagnosing issue with authorising MarkLogic Users against an external LDAP or Active Directory server. However there is no reason it could not be used for other uses but in being designed as a diagnostic tool it hs not under gone any significant testing to ensure it is production  ready, therefore use at your descretion.
 <P>As well a being a proxy LDAP server MLEAProxy can run as simple LDAP server using an XML file containing a psuedo LDAP configuration. This is useful for users wanting to configure and evaluate MarkLogic External Security without the need to access a full LDAP or Active Directory server. This is the default configuration mode if no properties file is available.
-<P>MLEXProxy can also be extended using custom written Java code to intercept LDAP requests and take any actions or make modifications before returning the response to the MarkLogic server. the builtin LDAP XML Server us a Custom written authenticator class.
+<P>MLEXProxy can also be extended using custom written Java code to intercept LDAP requests and take any actions or make modifications before returning the response to the MarkLogic server. the builtin LDAP XML Server us a Custom written requestProcessor class.
 
 ### Installation
 
@@ -79,15 +79,15 @@ Authenticators are used to identify the Authenticator and Configuration classes 
 ````
 Parameters
 ==========
-authenticator.xmlauthenticator.authclass   : Java class to process the request <Required>.
-authenticator.xmlauthenticator.configclass : Java class to process configuration <Required>.
-authenticator.xmlauthenticator.parm[1-20]  : Optional list of parameters (Maximum 20 pararmeters).
+requestProcessor.xmlauthenticator.authclass   : Java class to process the request <Required>.
+requestProcessor.xmlauthenticator.configclass : Java class to process configuration <Required>.
+requestProcessor.xmlauthenticator.parm[1-20]  : Optional list of parameters (Maximum 20 pararmeters).
  
 Examples
 ======== 
-authenticator.xmlauthenticator.authclass=com.marklogic.authenticators.XMLAuthenticator
-authenticator.xmlauthenticator.configclass=com.marklogic.configuration.CustomConfig
-authenticator.xmlauthenticator.parm1=/path/to/users.xml 
+requestProcessor.xmlauthenticator.authclass=com.marklogic.authenticators.XMLAuthenticator
+requestProcessor.xmlauthenticator.configclass=com.marklogic.configuration.CustomConfig
+requestProcessor.xmlauthenticator.parm1=/path/to/users.xml 
 ````
 
 A Listener defines the individual MLEAProxy listening instance and defines such properties as listening port, binnd address, whether TLS is required, the ldapserver set to use and the type of load balancing if required.
@@ -103,7 +103,7 @@ listener.<name>.requestHandler  : Request handler for incoming connections, curr
                                   com.marklogic.handlers.ProxyRequestHandler
                                   com.marklogic.handlers.CustomRequestHandler
                                    
-listener.<name>.authenticator   : Authentcator definition to use if CustomRequestHandler is used.                              
+listener.<name>.requestProcessor   : Authentcator definition to use if CustomRequestHandler is used.                              
 listener.<name>.secure          : True/False whether to enable TLS (Default false).
 listener.<name>.keystore        : Java Keystore containing system certificate.
 listener.<name>.keystorepasswd  : Keystore password
@@ -124,7 +124,7 @@ listener.proxy.description=General LDAP proxy with round robin load balancing to
 listener.xmlcustom.ipaddress=0.0.0.0
 listener.xmlcustom.port=20389
 listener.xmlcustom.requestHandler=com.marklogic.handlers.CustomRequestHandler
-listener.xmlcustom.authenticator=xmlauthenticator
+listener.xmlcustom.requestProcessor=xmlauthenticator
 listener.xmlcustom.ldapset=set1
 listener.xmlcustom.ldapmode=single
 listener.xmlcustom.description=LDAP server with Custom Authenticator using XML backing store

@@ -43,6 +43,9 @@ class LDAPlistener implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments applicationArguments) throws Exception {
 
+        if (System.getProperty("mleaproxy.properties")==null) {
+            System.setProperty("mleaproxy.properties", "./mleaproxy.properties");
+        }
         ApplicationConfig cfg = ConfigFactory.create(ApplicationConfig.class);
 
         logger.debug("ldap.debug flag: " + cfg.ldapDebug());
@@ -64,9 +67,6 @@ class LDAPlistener implements ApplicationRunner {
             logger.debug("IP Address: " + listenerCfg.listenerIpAddress());
             logger.debug("Port: " + listenerCfg.listenerPort());
             logger.debug("Request handler: " + listenerCfg.listenerRequestHandler());
-            for (String s : listenerCfg.listenerLDAPSet()) {
-                logger.debug("ServerSet: " + s);
-            }
 
             ServerSet serverSet = buildServerSet(listenerCfg.listenerLDAPSet(), listenerCfg.listenerLDAPMode());
 
@@ -74,7 +74,7 @@ class LDAPlistener implements ApplicationRunner {
 
             if (listenerCfg.secureListener()) {
                 Constructor c = Class.forName(listenerCfg.listenerRequestHandler()).getDeclaredConstructor(ServerSet.class, String.class);
-                LDAPListenerRequestHandler mlh = (LDAPListenerRequestHandler) c.newInstance(serverSet,listenerCfg.listenerAuthenticator());
+                LDAPListenerRequestHandler mlh = (LDAPListenerRequestHandler) c.newInstance(serverSet,listenerCfg.listenerRequestProcessor());
                 LDAPListenerConfig listenerConfig = new LDAPListenerConfig(listenerCfg.listenerPort(), mlh);
                 ServerSocketFactory ssf = createServerSocketFactory(listenerCfg);
                 listenerConfig.setServerSocketFactory(ssf);
@@ -82,7 +82,7 @@ class LDAPlistener implements ApplicationRunner {
                 listener.startListening();
             } else {
                 Constructor c = Class.forName(listenerCfg.listenerRequestHandler()).getDeclaredConstructor(ServerSet.class, String.class);
-                LDAPListenerRequestHandler mlh = (LDAPListenerRequestHandler) c.newInstance(serverSet,listenerCfg.listenerAuthenticator());
+                LDAPListenerRequestHandler mlh = (LDAPListenerRequestHandler) c.newInstance(serverSet,listenerCfg.listenerRequestProcessor());
                 LDAPListenerConfig listenerConfig = new LDAPListenerConfig(listenerCfg.listenerPort(), mlh);
                 LDAPListener listener = new LDAPListener(listenerConfig);
                 listener.startListening();
@@ -118,7 +118,7 @@ class LDAPlistener implements ApplicationRunner {
                 ServersConfig serverCfg = ConfigFactory
                         .create(ServersConfig.class, serverVars);
 
-                if (!mode.equalsIgnoreCase("DUMMY")) {
+                if (!mode.equalsIgnoreCase("INTERNAL")) {
                     logger.debug("LDAP Server host: " + serverCfg.serverHost());
                     logger.debug("LDAP Server Port: " + serverCfg.serverPort());
                     hostAddresses.add(serverCfg.serverHost());
@@ -135,8 +135,8 @@ class LDAPlistener implements ApplicationRunner {
             for (int i = 0; i < strAddresses.length; i++)
                 strAddresses[i] = hostAddresses.get(i);
 
-            if (mode.equalsIgnoreCase("DUMMY")) {
-                    ss = new DummyServerSet();
+            if (mode.equalsIgnoreCase("INTERNAL")) {
+                    ss = new NullServerSet();
             }
             if (mode.equalsIgnoreCase("SINGLE")) {
                 if (setsCfg.serverSetSecure()) {

@@ -1,18 +1,18 @@
-package com.marklogic.handlers;
+package com.marklogic.processors;
 
-import java.util.Arrays;
-
+import com.marklogic.handlers.LDAPRequestHandler;
 import com.unboundid.ldap.listener.LDAPListenerClientConnection;
 import com.unboundid.ldap.protocol.SearchResultReferenceProtocolOp;
 import com.unboundid.ldap.sdk.SearchResultEntry;
 import com.unboundid.ldap.sdk.SearchResultReference;
 import com.unboundid.util.Debug;
 
+import java.util.Arrays;
 
 
 /**
  * This class provides an implementation of a search result listener that will
- * be used by the {@link CustomRequestHandler} class in the course of returning
+ * be used by the {@link LDAPRequestHandler} class in the course of returning
  * entries to the client.
  */
 final class SearchResultListener
@@ -34,7 +34,7 @@ final class SearchResultListener
 
 
     /**
-     * Creates a new proxy search result listener with the provided information.
+     * Creates a new search result listener with the provided information.
      *
      * @param  clientConnection  The client connection to which the results will
      *                           be sent.
