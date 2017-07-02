@@ -1,10 +1,9 @@
 # MLEAProxy
 ## An External LDAP Authentication Proxy server for MarkLogic Server
 ### Introduction
-MLEAProxy was primarily written as a support tool to aide in diagnosing issue with authorising MarkLogic Users against an external LDAP or Active Directory server. However there is no reason it could not be used for other uses but in being designed as a diagnostic tool it hs not under gone any significant testing to ensure it is production  ready, therefore use at your descretion.
-<P>As well a being a proxy LDAP server MLEAProxy can run as simple LDAP server using an XML file containing a psuedo LDAP configuration. This is useful for users wanting to configure and evaluate MarkLogic External Security without the need to access a full LDAP or Active Directory server. This is the default configuration mode if no properties file is available.
-<P>MLEXProxy can also be extended using custom written Java code to intercept LDAP requests and take any actions or make modifications before returning the response to the MarkLogic server. The LDAP XML Server use a custom written Processor class.
-
+MLEAProxy was primarily written as a support tool to aid in diagnosing issues when authorizing MarkLogic Users against an external LDAP or Active Directory server. However there is no reason it could not be used for other uses but in being designed as a diagnostic tool it has not undergone any significant testing to ensure it is production ready, therefore use at your own discretion.
+<P>As well a being a proxy LDAP server MLEAProxy can run a simple LDAP server using an XML file containing a pseudo LDAP configuration. This is useful for users wanting to configure and evaluate MarkLogic External Security without the need to access a full LDAP or Active Directory server. This is the default configuration mode if no properties file is available.
+<P>MLEXProxy can also be extended using custom written Java code to intercept LDAP requests and take any actions or make modifications before returning the response to the LDAP client.
 ### Installation
 
  [<img src="./download.png" width="160">](./mleaproxy.jar) or clone the repository and build your own version.
@@ -24,15 +23,14 @@ ${HOME}/mleaproxy.properties
 Application defaults
 ````
 
-In addition the path of the properties file can be passed using the System property "mleaproxy.properties", if this method is used it takes precedence over the method listed above
-
+In addition, the path of the properties file can be passed using the System property "mleaproxy.properties", if this method is used it takes precedence over the method listed above.
 ````
 java -Dmleaproxy.properties=/Users/mwarnes/my.props -jar mleaproxy.jar 
 ````
 
 ### Configuration
 
-The configuration is made up of 4 areas, Servers, Server Sets, Listeners and Processors.
+The configuration is made up of 4 areas, Servers, Server Sets, Listeners, and Processors.
 
 Servers define the back-end LDAP or Active Directory server that MLEAProxy will connect to.
 
@@ -54,7 +52,7 @@ ldapserver.ad1.host=192.168.0.60
 ldapserver.ad1.port=636
 ````
 
-Server Sets define the back-end LDAP servers to use; As well as a single back-end server, MLEAProxy supports load balancing to one or more back-end LDAP servers
+Server Sets define the back-end LDAP servers to use; As well as a single back-end server, MLEAProxy supports load balancing to one or more back-end LDAP servers.
 
 ````
 Parameters
@@ -96,8 +94,7 @@ requestProcessor.xmlauthenticator.debuglevel=DEBUG
 requestProcessor.xmlauthenticator.parm1=/path/to/users.xml 
 ````
 
-A Listener defines the individual MLEAProxy listening instance and defines such properties as listening port, binnd address, whether TLS is required, the ldapserver set to use and the type of load balancing if required.
-
+A Listener defines the individual MLEAProxy listening instance and defines such properties as listening port, bind address, whether TLS is required, the LDAP server set to use and the type of load balancing if required.
 ````
 Parameters
 ==========
@@ -137,15 +134,153 @@ listeners=proxy
 listeners=proxy,xmlcustom
 ````
 
-Lower level LDAP debugging in addition to the listener debug level can be enabled using the following parameter in the mleaproxy.properies file.
-
+Lower level LDAP debugging in addition to the listener debug level can be enabled using the following parameter in the mleaproxy.properties file.
 ````
 ldap.debug=true
 ````
 
 ### Sample Configurations
+#### XML LDAP Server
+
+This is the default configuration if no other configuration or properties file and will start a simple LDAP server that uses a XML file which contains a pseudo LDAP server layout with a number of user entries containing a example attributes needed to support external security on a MarkLogic server.
+
+As all LDAP Requests are processed internal "listener.ldapxml.ldapmode=internal" no Servers are Server Sets are required
+
+<img src="./xmlserver.png">
+
+````
+## Listeners
+listeners=ldapxml
+
+## Listener
+listener.ldapxml.ipaddress=0.0.0.0
+listener.ldapxml.port=30389
+listener.ldapxml.debuglevel=DEBUG
+listener.ldapxml.ldapmode=internal
+listener.ldapxml.requestProcessor=xmlauthenticator
+listener.ldapxml.description=Simple LDAP Server using a read-only XML User store
+## processor
+requestProcessor.xmlauthenticator.authclass=com.marklogic.processors.XMLRequestProcessor
+requestProcessor.xmlauthenticator.debuglevel=DEBUG
+````
+
+To use a different XML LDAP users files a path can be specified using parm1 as below.
+
+````
+requestProcessor.xmlauthenticator.parm1=/Users/mwarnes/users.xml
+````
+
+If no XML LDAP users file is provided the default internal layout will be used:
+
+````xml
+<?xml version="1.0"?>
+<ldap>
+    <users basedn="ou=users,dc=marklogic,dc=local">
+        <user dn="cn=manager">
+            <sAMAccountName>manager</sAMAccountName>
+            <userPassword>password</userPassword>
+        </user>
+        <user dn="cn=user1">
+            <sAMAccountName>user1</sAMAccountName>
+            <memberOf>cn=appreader,ou=groups,dc=marklogic,dc=local</memberOf>
+            <memberOf>cn=appwriter,ou=groups,dc=marklogic,dc=local</memberOf>
+            <memberOf>cn=appadmin,ou=groups,dc=marklogic,dc=local</memberOf>
+            <userPassword>password</userPassword>
+        </user>
+        <user dn="cn=user2">
+            <sAMAccountName>user2</sAMAccountName>
+            <memberOf>cn=appreader,ou=groups,dc=marklogic,dc=local</memberOf>
+            <memberOf>cn=appwriter,ou=groups,dc=marklogic,dc=local</memberOf>
+            <userPassword>password</userPassword>
+        </user>
+        <user dn="cn=user3">
+            <sAMAccountName>user3</sAMAccountName>
+            <memberOf>cn=appreader,ou=groups,dc=marklogic,dc=local</memberOf>
+            <userPassword>password</userPassword>
+        </user>
+        <user dn="cn=user4">
+            <sAMAccountName>user4</sAMAccountName>
+            <userPassword>password</userPassword>
+        </user>
+    </users>
+</ldap>
+````
+
+Sample ldapsearch and log output.
+
+````bash
+ldapsearch -H ldap://localhost:30389 -x -D "cn=manager,ou=users,dc=marklogic,dc=local" -W -b "ou=users,dc=marklogic,dc=local" -s sub -a always -z 1000 "(sAMAccountName=user1)" "memberOf" "objectClass"
+Enter LDAP Password: 
+# extended LDIF
+#
+# LDAPv3
+# base <ou=users,dc=marklogic,dc=local> with scope subtree
+# filter: (sAMAccountName=user1)
+# requesting: memberOf objectClass 
+#
+
+# user1, users, marklogic.local
+dn: cn=user1,ou=users,dc=marklogic,dc=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+memberOf: cn=appreader,ou=groups,dc=marklogic,dc=local
+memberOf: cn=appwriter,ou=groups,dc=marklogic,dc=local
+memberOf: cn=appadmin,ou=groups,dc=marklogic,dc=local
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 2
+# numEntries: 1
+````
+
+````
+2017-07-02 12:54:04.130  INFO 91756 --- [           main] com.marklogic.MLEAProxy                  : Starting MLEAProxy on MacPro-4505.local with PID 91756 (/Users/mwarnes/IdeaProjects/MLEAProxy/target/classes started by mwarnes in /Users/mwarnes/IdeaProjects/MLEAProxy)
+2017-07-02 12:54:04.132  INFO 91756 --- [           main] com.marklogic.MLEAProxy                  : No active profile set, falling back to default profiles: default
+2017-07-02 12:54:04.165  INFO 91756 --- [           main] s.c.a.AnnotationConfigApplicationContext : Refreshing org.springframework.context.annotation.AnnotationConfigApplicationContext@42607a4f: startup date [Sun Jul 02 12:54:04 BST 2017]; root of context hierarchy
+2017-07-02 12:54:04.879  INFO 91756 --- [           main] o.s.j.e.a.AnnotationMBeanExporter        : Registering beans for JMX exposure on startup
+2017-07-02 12:54:04.909 DEBUG 91756 --- [           main] com.marklogic.handlers.LDAPlistener      : IP Address: 0.0.0.0
+2017-07-02 12:54:04.909 DEBUG 91756 --- [           main] com.marklogic.handlers.LDAPlistener      : Port: 30389
+2017-07-02 12:54:04.909 DEBUG 91756 --- [           main] com.marklogic.handlers.LDAPlistener      : Request handler: com.marklogic.handlers.LDAPRequestHandler
+2017-07-02 12:54:04.910 DEBUG 91756 --- [           main] com.marklogic.handlers.LDAPlistener      : Building server sets
+2017-07-02 12:54:04.910 DEBUG 91756 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet: null
+2017-07-02 12:54:04.913 DEBUG 91756 --- [           main] com.marklogic.handlers.LDAPlistener      : ServerSet(className=com.marklogic.handlers.NullServerSet)
+2017-07-02 12:54:04.920  INFO 91756 --- [           main] com.marklogic.handlers.LDAPlistener      : Listening on: 0.0.0.0:30389 ( Simple LDAP Server using a read-only XML User store )
+2017-07-02 12:54:04.921  INFO 91756 --- [           main] com.marklogic.MLEAProxy                  : Started MLEAProxy in 1.135 seconds (JVM running for 1.403)
+2017-07-02 12:54:14.597 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : XML file path: /Users/mwarnes/IdeaProjects/MLEAProxy/src/main/resources/users.xml
+2017-07-02 12:54:14.612  INFO 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : Using custom LDAP configuration from: /Users/mwarnes/IdeaProjects/MLEAProxy/src/main/resources/users.xml
+2017-07-02 12:54:14.630  INFO 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : XML Authenticator.authenticate called.
+2017-07-02 12:54:14.630  INFO 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : BindRequestProtocolOp(version=3, bindDN='cn=manager,ou=users,dc=marklogic,dc=local', type=simple)
+2017-07-02 12:54:14.631 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : BindDN cn=manager,ou=users,dc=marklogic,dc=local
+2017-07-02 12:54:14.631 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : UserDN cn=manager
+2017-07-02 12:54:14.631 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : Passwd password
+2017-07-02 12:54:14.631 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : BaseDN ou=users,dc=marklogic,dc=local
+2017-07-02 12:54:14.631 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : xpath query /ldap/users[@basedn="ou=users,dc=marklogic,dc=local"]/user[@dn="cn=manager"]/userPassword
+2017-07-02 12:54:14.645 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : LDAP userPassword password
+2017-07-02 12:54:14.655  INFO 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : BindResponseProtocolOp(resultCode=0)
+2017-07-02 12:54:14.660 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : XML file path: /Users/mwarnes/IdeaProjects/MLEAProxy/src/main/resources/users.xml
+2017-07-02 12:54:14.661  INFO 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : Using custom LDAP configuration from: /Users/mwarnes/IdeaProjects/MLEAProxy/src/main/resources/users.xml
+2017-07-02 12:54:14.663  INFO 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : XML Authenticator.search called.
+2017-07-02 12:54:14.663  INFO 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : SearchRequestProtocolOp(baseDN='ou=users,dc=marklogic,dc=local', scope='SUB', derefPolicy='ALWAYS', sizeLimit=1000, timeLimit=0, typesOnly=false, filter='(sAMAccountName=user1)', attributes={memberOf,objectClass})
+2017-07-02 12:54:14.663 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : BaseDN: ou=users,dc=marklogic,dc=local
+2017-07-02 12:54:14.663 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : Filter: (sAMAccountName=user1)
+2017-07-02 12:54:14.665 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : Attributes: [memberOf, objectClass]
+2017-07-02 12:54:14.665 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : /ldap/users[@basedn="ou=users,dc=marklogic,dc=local"]/user[sAMAccountName="user1"]/@dn
+2017-07-02 12:54:14.666 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : UserDN cn=user1,ou=users,dc=marklogic,dc=local
+2017-07-02 12:54:14.669 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : memberOf : cn=appreader,ou=groups,dc=marklogic,dc=local
+2017-07-02 12:54:14.669 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : memberOf : cn=appwriter,ou=groups,dc=marklogic,dc=local
+2017-07-02 12:54:14.669 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : memberOf : cn=appadmin,ou=groups,dc=marklogic,dc=local
+2017-07-02 12:54:14.710 DEBUG 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : Response Attribute  [SearchResultEntry(dn='cn=user1,ou=users,dc=marklogic,dc=local', messageID=2, attributes={Attribute(name=objectClass, values={'top', 'person', 'organizationalPerson', 'inetOrgPerson'}), Attribute(name=memberOf, values={'cn=appreader,ou=groups,dc=marklogic,dc=local', 'cn=appwriter,ou=groups,dc=marklogic,dc=local', 'cn=appadmin,ou=groups,dc=marklogic,dc=local'})}, controls={})]
+2017-07-02 12:54:14.711  INFO 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : SearchResultEntryProtocolOp(dn='cn=user1,ou=users,dc=marklogic,dc=local', attrs={Attribute(name=objectClass, values={'top', 'person', 'organizationalPerson', 'inetOrgPerson'}),Attribute(name=memberOf, values={'cn=appreader,ou=groups,dc=marklogic,dc=local'}),Attribute(name=memberOf, values={'cn=appwriter,ou=groups,dc=marklogic,dc=local'}),Attribute(name=memberOf, values={'cn=appadmin,ou=groups,dc=marklogic,dc=local'})})
+2017-07-02 12:54:14.713  INFO 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : ResponseProtocolOp(type=65, resultCode=0)
+````
+
+
 #### Simple LDAP Proxy server
-The following configuration will start a simple proxy listener to relay LDAP request back and forth between a client such as a MarkLogic server and a back-end LDAP server. In addition both LDAP and Listener debugging is enabled to write detailed LDAP Request/Response information.
+The following configuration will start a simple proxy listener to relay LDAP request back and forth between a client such as a MarkLogic server and a back-end LDAP server. In addition, both LDAP and Listener debugging is enabled to write detailed LDAP Request/Response information.
 
 <img src="./simpleproxy.png">
 
@@ -198,7 +333,7 @@ Sample log output
 
 An example configuration building on the simple LDAP proxy but securing the back-end connection to the LDAP server using LDAPS security.
 This is a useful configuration for diagnosing external security problems where the back-end LDAP server requires a TLS encrypted session. 
-With the MLEAProxy in place LDAP traffic can be seen in the output display and also makes it possible to capture network traffic between the client and MLEAProxy for further diagnosis using the Wireshark LDAP dissector.
+With the MLEAProxy in place, LDAP traffic can be seen on the output display and also makes it possible to capture network traffic between the client and MLEAProxy for further diagnosis using the Wireshark LDAP dissector.
 
 <img src="./secureproxy1.png">
 
@@ -252,15 +387,13 @@ Sample output
 2017-06-30 14:04:59.311  INFO 89193 --- [logic.local:636] com.unboundid.ldap.sdk                   : level="INFO" threadID=19 threadName="Connection reader for connection 0 to kerberos.marklogic.local:636" revision=24201 connectionID=0 connectedTo="kerberos.marklogic.local:636" readLDAPResult="BindResult(resultCode=0 (success), messageID=1, hasServerSASLCredentials=false)"
 ````
 
-This configuration can be further enhanced for cases where a TrustAll TrustManager is not acceptable by adding a user created truststore containing the required CA certificates.
-
+This configuration can be further enhanced for cases where a TrustAll TrustManager is not acceptable by adding a user created trust store containing the required CA certificates.
 ````
 ldapset.set1.truststore=/path/to/mlproxytrust.jks
 ldapset.set1.truststorepasswd=password
 ````
 
-If the back-end LDAPS server also requires TLS Client Authentication then a user created keystore containing a certificate and private key can be added.
-
+If the back-end LDAPS server also requires TLS Client Authentication then a user created key store containing a certificate and private key can be added.
 ````
 ldapset.set1.keystore=/path/to/mlproxykey.jks
 ldapset.set1.keystorepasswd=password
@@ -268,7 +401,7 @@ ldapset.set1.keystorepasswd=password
 
 #### Secure LDAP Proxy server (2)
 
-The following configuration add TLS Secure transport support to the MLEAProxy listening port, with this both front-end and back-end connection will user LDAPS.
+The following configuration adds TLS Secure transport support to the MLEAProxy listening port, with this both front-end and back-end connection will user LDAPS.
 
 <img src="./secureproxy2.png">
 
@@ -334,9 +467,9 @@ Sample log output
 
 #### Load balancing LDAP Proxy server (1)
 
-MLEAProxy can also be configured as a load balancing proxy to handle a number of different scenerios including failover.
+MLEAProxy can also be configured as a load balancing proxy to handle a number of different scenarios including failover.
 
-For this configuration MLEAProxy will balance between 3 back-end LDAP servers using a simple roundrobin algorithm
+For this configuration, MLEAProxy will balance between 3 back-end LDAP servers using a simple round robin algorithm.
 
 <img src="./loadbalance1.png">
 
@@ -405,20 +538,20 @@ Sample log output showing 3 bind requests directing to 3 back-end servers in tur
 2017-07-02 12:01:28.115  INFO 88766 --- [127.0.0.1:30389] com.unboundid.ldap.sdk                   : level="INFO" threadID=23 threadName="LDAPListener client connection reader for connection from 127.0.0.1:54672 to 127.0.0.1:30389" revision=24201 message="Sending LDAP unbind request."
 ````
 
-In addition to the simple simple roundrobin load balancing algorithm, MLEAProxy also supports the following load balancing algorithms.
+In addition to the simple round robin load balancing algorithm, MLEAProxy also supports the following load balancing algorithms.
 
 * <b>single</b>        : No load balancing performed only the first server in the set will be used.
 * <b>failover</b>      : The first server in the set will be used while it is available, should the server become unavailable the next server in the set will be used.
 * <b>roundrobin</b>    : Servers in the set will be used in turn.
-* <b>roundrobindns</b> : Used when a hostname lookup returns multiple IP addresses, MLEAProxy will use each returned IP Address in turn the same as if they had been coded for roundrobin.
-* <b>fewest</b>        : Servers in the set will be used on a least used basis, this is useful when variable LDAP request load result in one or more servers handling more work when roundrobin is used.
+* <b>roundrobindns</b> : Used when a hostname lookup returns multiple IP addresses, MLEAProxy will use each returned IP Address, in turn, the same as if they had been coded for round robin.
+* <b>fewest</b>        : Servers in the set will be used on a least used basis, this is useful when variable LDAP request load result in one or more servers handling more work when round robin is used.
 * <b>fastest</b>       : LDAP requests will be directed to the server that handles requests faster.
 
 #### Load balancing LDAP Proxy server (2)
 
 The following configuration is a more complex load balancing environment and shows how multiple server sets can be configured in a failover mode.
 
-Each server set is configured to use 2 servers, each using a round robin algorithm, when multiple server sets are defined each set acts as the failover set to the previous one. This scenario would suit an environment where the primary LDAP servers are at site and a secondary set of backup LDAP servers at another. MLEAProxy will load balance between the 2 servers at the primary site and failover to load balancing to the secondary site should the primary site become unavailable.
+Each server set is configured to use 2 servers, each using a round robin algorithm when multiple server sets are defined each set acts as the failover set to the previous one. This scenario would suit an environment where the primary LDAP servers are at the site and a secondary set of backup LDAP servers at another. MLEAProxy will load balance between the 2 servers at the primary site and failover to load balancing to the secondary site should the primary site become unavailable.
 
 <img src="./loadbalance2.png">
 
