@@ -337,6 +337,14 @@ The mleaproxy proxy server also supports mapping Attribute names, this can be us
 requestProcessor.ldapproxy.parm1=memberOf:isMemberOf
 ````
 
+With debug enabled on the requestProcessor details of any mappings taking place will be displayed
+
+````
+2017-07-02 17:43:06.325 DEBUG 6154 --- [0:0:0:0:1:30389] c.m.processors.SearchResultListener      : Attribute: Attribute(name=isMemberOf, values={'cn=appreader,ou=groups,dc=marklogic,dc=local', 'cn=appwriter,ou=groups,dc=marklogic,dc=local', 'cn=appadmin,ou=groups,dc=marklogic,dc=local'})
+2017-07-02 17:43:06.325 DEBUG 6154 --- [0:0:0:0:1:30389] c.m.processors.SearchResultListener      : Mapping: isMemberOf to memberOf
+2017-07-02 17:43:06.325 DEBUG 6154 --- [0:0:0:0:1:30389] c.m.processors.SearchResultListener      : Mapped Attribute: Attribute(name=memberOf, values={'cn=appreader,ou=groups,dc=marklogic,dc=local', 'cn=appwriter,ou=groups,dc=marklogic,dc=local', 'cn=appadmin,ou=groups,dc=marklogic,dc=local'})
+````
+
 Note: MarkLogic 9 has added the functionality to specify alternate search Attributes in place of "memberOf" witout the need to use a proxy.
 
 #### Secure LDAP Proxy server (1)
