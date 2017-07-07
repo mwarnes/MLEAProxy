@@ -1,0 +1,100 @@
+version: 1
+
+dn: dc=MarkLogic,dc=Local
+objectClass: organization
+objectClass: dcObject
+dc: MarkLogic
+o: MarkLogic
+
+dn: ou=Users,dc=MarkLogic,dc=Local
+objectClass: organizationalUnit
+ou: Users
+
+dn: uid=mluser1,ou=Users,dc=MarkLogic,dc=Local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: mluser1
+sn: MarkLogic User
+businessCategory: cn=AppWriter,ou=Groups,dc=MarkLogic,dc=Local
+businessCategory: cn=AppReader,ou=Groups,dc=MarkLogic,dc=Local
+destinationIndicator: IVKFK3B4OI4VQMDGENEVURT5GRYFIWTM
+uid: mluser1
+userPassword:: cGFzc3dvcmQ=
+
+dn: uid=mluser2,ou=Users,dc=MarkLogic,dc=Local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: mluser2
+sn: MarkLogic User
+uid: mluser2
+userPassword:: cGFzc3dvcmQ=
+
+dn: uid=mluser3,ou=Users,dc=MarkLogic,dc=Local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: mluser3
+sn: MarkLogic User
+uid: mluser3
+userPassword:: cGFzc3dvcmQ=
+
+dn: uid=appreader,ou=Users,dc=MarkLogic,dc=Local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: appreader
+sn: MarkLogic App Reader
+businessCategory: cn=AppReader,ou=Groups,dc=MarkLogic,dc=Local
+uid: appreader
+userPassword:: cGFzc3dvcmQ=
+
+dn: uid=appwriter,ou=Users,dc=MarkLogic,dc=Local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: appwriter
+sn: MarkLogic App Writer
+businessCategory: cn=AppWriter,ou=Groups,dc=MarkLogic,dc=Local
+uid: appwriter
+userPassword:: cGFzc3dvcmQ=
+
+dn: uid=appadmin,ou=Users,dc=MarkLogic,dc=Local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: appadmin
+sn: MarkLogic App Admin
+businessCategory: cn=AppAdmin,ou=Groups,dc=MarkLogic,dc=Local
+uid: appadmin
+userPassword:: cGFzc3dvcmQ=
+
+dn: ou=Groups,dc=MarkLogic,dc=Local
+objectClass: organizationalUnit
+ou: Groups
+
+dn: cn=AppReader,ou=Groups,dc=MarkLogic,dc=Local
+objectClass: groupOfNames
+objectClass: top
+cn: AppReader
+member: uid=appreader,ou=Users,dc=MarkLogic,dc=Local
+
+dn: cn=AppWriter,ou=Groups,dc=MarkLogic,dc=Local
+objectClass: groupOfNames
+objectClass: top
+cn: AppWriter
+member: uid=appwriter,ou=Users,dc=MarkLogic,dc=Local
+
+dn: cn=AppAdmin,ou=Groups,dc=MarkLogic,dc=Local
+objectClass: groupOfNames
+objectClass: top
+cn: AppAdmin
+member: uid=appadmin,ou=Users,dc=MarkLogic,dc=Local
+

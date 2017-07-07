@@ -10,6 +10,9 @@ import org.aeonbits.owner.Config;
         "classpath:mleaproxy.properties" })
 public interface ApplicationConfig extends Config {
 
+    @Key("directoryServers")
+    public String[] directoryServers();
+
     @Key("listeners")
     public String[] listeners();
 

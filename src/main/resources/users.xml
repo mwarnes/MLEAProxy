@@ -11,6 +11,7 @@
             <memberOf>cn=appwriter,ou=groups,dc=marklogic,dc=local</memberOf>
             <memberOf>cn=appadmin,ou=groups,dc=marklogic,dc=local</memberOf>
             <userPassword>password</userPassword>
+            <rfc6238code>IVKFK3B4OI4VQMDGENEVURT5GRYFIWTM</rfc6238code>
         </user>
         <user dn="cn=user2">
             <sAMAccountName>user2</sAMAccountName>

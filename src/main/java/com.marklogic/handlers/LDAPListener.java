@@ -2,14 +2,10 @@ package com.marklogic.handlers;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
-import com.marklogic.configuration.ApplicationConfig;
-import com.marklogic.configuration.ListenersConfig;
-import com.marklogic.configuration.ServersConfig;
-import com.marklogic.configuration.SetsConfig;
-import com.unboundid.ldap.listener.LDAPListener;
-import com.unboundid.ldap.listener.LDAPListenerConfig;
-import com.unboundid.ldap.listener.LDAPListenerRequestHandler;
+import com.marklogic.configuration.*;
+import com.unboundid.ldap.listener.*;
 import com.unboundid.ldap.sdk.*;
+import com.unboundid.ldif.LDIFReader;
 import com.unboundid.util.Validator;
 import com.unboundid.util.ssl.SSLUtil;
 import com.unboundid.util.ssl.TrustAllTrustManager;
@@ -25,6 +21,7 @@ import javax.net.SocketFactory;
 import javax.net.ssl.*;
 import java.io.*;
 import java.lang.reflect.Constructor;
+import java.net.InetAddress;
 import java.security.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,6 +40,7 @@ class LDAPlistener implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments applicationArguments) throws Exception {
 
+        // Set mleaproxy.properties System Property if not passed on the commandline.
         if (System.getProperty("mleaproxy.properties")==null) {
             System.setProperty("mleaproxy.properties", "./mleaproxy.properties");
         }
@@ -54,6 +52,43 @@ class LDAPlistener implements ApplicationRunner {
             System.setProperty("com.unboundid.ldap.sdk.debug.type","ldap");
         }
 
+        // Start In memory Directory Server
+        for (String d : cfg.directoryServers()) {
+            logger.debug("directoryServer: " + d);
+            Map expVars = new HashMap();
+            expVars.put("directoryServer", d);
+            DSConfig dsCfg = ConfigFactory
+                    .create(DSConfig.class, expVars);
+
+            InMemoryDirectoryServerConfig config =
+                    new InMemoryDirectoryServerConfig(dsCfg.dsBaseDN());
+            config.addAdditionalBindCredentials(dsCfg.dsAdminDN(), dsCfg.dsAdminPW());
+
+            InetAddress addr = InetAddress.getByName(dsCfg.dsIpAddress());
+            int port = dsCfg.dsPort();
+
+            InMemoryListenerConfig dsListener = new InMemoryListenerConfig(dsCfg.dsName(),addr,port,null,null,null);
+
+            config.setListenerConfigs(dsListener);
+
+            logger.debug("LDIF Path empty: " + dsCfg.dsLDIF().isEmpty());
+
+            InMemoryDirectoryServer ds = new InMemoryDirectoryServer(config);
+
+            if (dsCfg.dsLDIF().isEmpty()) {
+                logger.info("Using internal LDIF");
+                LDIFReader ldr = new LDIFReader(ClassLoader.class.getResourceAsStream("/marklogic.ldif"));
+                ds.importFromLDIF(true, ldr);
+            } else {
+                logger.info("LDIF file read from override path.");
+                ds.importFromLDIF(true, dsCfg.dsLDIF());
+            }
+            ds.startListening();
+            logger.info("Directory Server listening on: "  + addr + ":" + port + " ( " + dsCfg.dsName() + " )");
+
+        }
+
+        // Start Listeners
         for (String l : cfg.listeners()) {
             logger.debug("Listener: " + l);
             Map expVars = new HashMap();
