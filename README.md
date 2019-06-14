@@ -4,6 +4,7 @@
 MLEAProxy was primarily written as a support tool to aid in diagnosing issues when authorizing MarkLogic Users against an external LDAP or Active Directory server. However there is no reason it could not be used for other uses but in being designed as a diagnostic tool it has not undergone any significant testing to ensure it is production ready, therefore use at your own discretion.
 <P>As well a being a proxy LDAP server MLEAProxy can run a simple LDAP server using an XML file containing a pseudo LDAP configuration. This is useful for users wanting to configure and evaluate MarkLogic External Security without the need to access a full LDAP or Active Directory server. This is the default configuration mode if no properties file is available.
 <P>MLEXProxy can also be extended using custom written Java code to intercept LDAP requests and take any actions or make modifications before returning the response to the LDAP client.
+
 ### Installation
 
  [<img src="./download.png" width="160">](./mleaproxy.jar) or clone the repository and build your own version.

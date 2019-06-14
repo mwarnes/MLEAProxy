@@ -53,43 +53,50 @@ class LDAPlistener implements ApplicationRunner {
         }
 
         // Start In memory Directory Server
-        for (String d : cfg.directoryServers()) {
-            logger.debug("directoryServer: " + d);
-            Map expVars = new HashMap();
-            expVars.put("directoryServer", d);
-            DSConfig dsCfg = ConfigFactory
-                    .create(DSConfig.class, expVars);
+        logger.debug("inMemory LDAP servers: " + cfg.directoryServers());
+        if (cfg.directoryServers()==null) {
+            logger.info("No inMemory LDAP servers defined.");
+        } else {
+            logger.info("Starting inMemory LDAP servers.");
+            for (String d : cfg.directoryServers()) {
+                logger.debug("directoryServer: " + d);
+                Map expVars = new HashMap();
+                expVars.put("directoryServer", d);
+                DSConfig dsCfg = ConfigFactory
+                        .create(DSConfig.class, expVars);
 
-            InMemoryDirectoryServerConfig config =
-                    new InMemoryDirectoryServerConfig(dsCfg.dsBaseDN());
-            config.addAdditionalBindCredentials(dsCfg.dsAdminDN(), dsCfg.dsAdminPW());
+                InMemoryDirectoryServerConfig config =
+                        new InMemoryDirectoryServerConfig(dsCfg.dsBaseDN());
+                config.addAdditionalBindCredentials(dsCfg.dsAdminDN(), dsCfg.dsAdminPW());
 
-            InetAddress addr = InetAddress.getByName(dsCfg.dsIpAddress());
-            int port = dsCfg.dsPort();
+                InetAddress addr = InetAddress.getByName(dsCfg.dsIpAddress());
+                int port = dsCfg.dsPort();
 
-            InMemoryListenerConfig dsListener = new InMemoryListenerConfig(dsCfg.dsName(),addr,port,null,null,null);
+                InMemoryListenerConfig dsListener = new InMemoryListenerConfig(dsCfg.dsName(), addr, port, null, null, null);
 
-            config.setListenerConfigs(dsListener);
+                config.setListenerConfigs(dsListener);
 
-            logger.debug("LDIF Path empty: " + dsCfg.dsLDIF().isEmpty());
+                logger.debug("LDIF Path empty: " + dsCfg.dsLDIF().isEmpty());
 
-            InMemoryDirectoryServer ds = new InMemoryDirectoryServer(config);
+                InMemoryDirectoryServer ds = new InMemoryDirectoryServer(config);
 
-            if (dsCfg.dsLDIF().isEmpty()) {
-                logger.info("Using internal LDIF");
-                LDIFReader ldr = new LDIFReader(ClassLoader.class.getResourceAsStream("/marklogic.ldif"));
-                ds.importFromLDIF(true, ldr);
-            } else {
-                logger.info("LDIF file read from override path.");
-                ds.importFromLDIF(true, dsCfg.dsLDIF());
+                if (dsCfg.dsLDIF().isEmpty()) {
+                    logger.info("Using internal LDIF");
+                    LDIFReader ldr = new LDIFReader(ClassLoader.class.getResourceAsStream("/marklogic.ldif"));
+                    ds.importFromLDIF(true, ldr);
+                } else {
+                    logger.info("LDIF file read from override path.");
+                    ds.importFromLDIF(true, dsCfg.dsLDIF());
+                }
+                ds.startListening();
+                logger.info("Directory Server listening on: " + addr + ":" + port + " ( " + dsCfg.dsName() + " )");
+
             }
-            ds.startListening();
-            logger.info("Directory Server listening on: "  + addr + ":" + port + " ( " + dsCfg.dsName() + " )");
-
         }
 
         // Start Listeners
         for (String l : cfg.listeners()) {
+            logger.info("Starting LDAP listeners.");
             logger.debug("Listener: " + l);
             Map expVars = new HashMap();
             expVars.put("listener", l);
