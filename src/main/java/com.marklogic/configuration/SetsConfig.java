@@ -21,6 +21,24 @@ public interface SetsConfig extends Config {
     @DefaultValue("false")
     boolean serverSetSecure();
 
+    @Key("ldapset.${serverSet}.keytype")
+    @DefaultValue("PEM")
+    String serverSetStoreType();
+
+    /* Required for servers that support Client Authentication */
+    @Key("ldapset.${serverSet}.keypath")
+    @DefaultValue("")
+    String serverSetKeyPath();
+
+    /* Required for servers that support Client Authentication */
+    @Key("ldapset.${serverSet}.certpath")
+    @DefaultValue("")
+    String serverSetCertPath();
+
+    @Key("ldapset.${serverSet}.capath")
+    @DefaultValue("")
+    String serverSetCAPath();
+
     /* Required for servers that support Client Authentication */
     @Key("ldapset.${serverSet}.keystore")
     @DefaultValue("")
@@ -30,6 +48,16 @@ public interface SetsConfig extends Config {
     @Key("ldapset.${serverSet}.keystorepasswd")
     @DefaultValue("")
     String serverSetKeyStorePassword();
+
+    /* Required for servers that support Client Authentication */
+    @Key("ldapset.${serverSet}.pfxpath")
+    @DefaultValue("")
+    String serverSetPfxPath();
+
+    /* Required for servers that support Client Authentication */
+    @Key("ldapset.${serverSet}.pfxpasswd")
+    @DefaultValue("")
+    String serverSetPfxPassword();
 
     @Key("ldapset.${serverSet}.truststore")
     @DefaultValue("")

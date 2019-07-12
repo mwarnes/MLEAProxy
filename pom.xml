@@ -6,7 +6,7 @@
 
     <groupId>com.marklogic</groupId>
     <artifactId>mleaproxy</artifactId>
-    <version>1.0.0-Beta</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <name>mleaproxy</name>
@@ -122,6 +122,17 @@
             <version>4.3.1.Final</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>1.62</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk15on</artifactId>
+            <version>1.62</version>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -130,11 +141,11 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <fork>true</fork>
                     <mainClass>${start-class}</mainClass>
                 </configuration>
                 <executions>
                     <execution>
+                        <id>repackage</id>
                         <goals>
                             <goal>repackage</goal>
                         </goals>
@@ -143,6 +154,5 @@
             </plugin>
         </plugins>
     </build>
-
     
 </project>

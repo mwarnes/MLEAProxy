@@ -10,11 +10,15 @@ import com.unboundid.util.Validator;
 import com.unboundid.util.ssl.SSLUtil;
 import com.unboundid.util.ssl.TrustAllTrustManager;
 import org.aeonbits.owner.ConfigFactory;
+import org.bouncycastle.asn1.ASN1Integer;
+import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.util.io.pem.PemObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
+import org.bouncycastle.openssl.PEMParser;
 
 import javax.net.ServerSocketFactory;
 import javax.net.SocketFactory;
@@ -23,10 +27,13 @@ import java.io.*;
 import java.lang.reflect.Constructor;
 import java.net.InetAddress;
 import java.security.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.security.spec.RSAPrivateCrtKeySpec;
+import java.security.spec.RSAPublicKeySpec;
+import java.util.*;
 
 
 /**
@@ -45,6 +52,8 @@ class LDAPlistener implements ApplicationRunner {
             System.setProperty("mleaproxy.properties", "./mleaproxy.properties");
         }
         ApplicationConfig cfg = ConfigFactory.create(ApplicationConfig.class);
+
+        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
 
         logger.debug("ldap.debug flag: " + cfg.ldapDebug());
         if (cfg.ldapDebug()) {
@@ -249,7 +258,14 @@ class LDAPlistener implements ApplicationRunner {
     private SSLSocketFactory createSecureSocketFactory(SetsConfig cfg) throws GeneralSecurityException, IOException {
         logger.debug("Creating SSL Socket Factory.");
 
-        SSLUtil sslUtil = getSslUtil(cfg.serverSetKeyStore(),cfg.serverSetKeyStorePassword(),cfg.serverSetTrustStore(),cfg.serverSetTrustStorePassword());
+        SSLUtil sslUtil = null;
+        if (cfg.serverSetStoreType().equalsIgnoreCase("PEM")) {
+            sslUtil = getSslUtil(cfg.serverSetKeyPath(), cfg.serverSetCertPath(), cfg.serverSetCAPath());
+        } else if (cfg.serverSetStoreType().equalsIgnoreCase("PFX")) {
+            sslUtil = getSslUtil(cfg.serverSetPfxPath(), cfg.serverSetPfxPassword());
+        } else {
+            sslUtil = getSslUtil(cfg.serverSetKeyStore(), cfg.serverSetKeyStorePassword(), cfg.serverSetTrustStore(), cfg.serverSetTrustStorePassword());
+        }
 
         return sslUtil.createSSLSocketFactory();
 
@@ -268,17 +284,152 @@ class LDAPlistener implements ApplicationRunner {
 
     }
 
+    private SSLUtil getSslUtil(String pfxpath, String pfxpasswd) throws NoSuchProviderException, KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
+        logger.debug("Creating SSLUtil (Type=PFX).");
+        SSLUtil sslUtil = null;
+
+        KeyManager km = null;
+
+        logger.debug("PFX path: " + pfxpath);
+//        logger.debug("PFX password: " + pfxpasswd);
+
+        if (!pfxpath.isEmpty() && !pfxpasswd.isEmpty()) {
+            KeyStore ks = KeyStore.getInstance("PKCS12", "BC");
+            ks.load(new FileInputStream(pfxpath), pfxpasswd.toCharArray());
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+            kmf.init(ks, pfxpasswd.toCharArray());
+            km = kmf.getKeyManagers()[0];
+        }
+
+        if (km!=null) {
+            logger.debug("Using supplied PKCS#12 Store & TrustAllTrustManager.");
+            sslUtil = new SSLUtil(km,new TrustAllTrustManager());
+        } else {
+            logger.debug("Using default TrustAllTrustManager.");
+            sslUtil = new SSLUtil(new TrustAllTrustManager());
+        }
+
+        return sslUtil;
+    }
+
+    private SSLUtil getSslUtil(String keypath, String certpath, String capath) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
+        logger.debug("Creating SSLUtil (Type=PEM).");
+        SSLUtil sslUtil = null;
+
+        KeyManager km = null;
+
+        logger.debug("Key path: " + keypath);
+        logger.debug("Cert path: " + certpath);
+
+        PEMParser pemParser = null;
+        PemObject pemObject;
+        KeyPair kp = null;
+        ArrayList<X509Certificate> certs = new ArrayList<>();
+
+        if (!keypath.isEmpty()) {
+            InputStreamReader isr1 = new InputStreamReader(new FileInputStream(keypath));
+            pemParser = new PEMParser(isr1);
+            try {
+                pemObject = pemParser.readPemObject();
+                if (pemObject.getType().equalsIgnoreCase("RSA PRIVATE KEY")) {
+                    logger.debug("Parsing RSA Private Key");
+                    ASN1Sequence seq = (ASN1Sequence) ASN1Sequence.fromByteArray(pemObject.getContent());
+                    if (seq.size() != 9) {
+                        logger.debug("Malformed sequence in RSA private key");
+                    } else {
+                        ASN1Integer mod = (ASN1Integer) seq.getObjectAt(1);
+                        ASN1Integer pubExp = (ASN1Integer) seq.getObjectAt(2);
+                        ASN1Integer privExp = (ASN1Integer) seq.getObjectAt(3);
+                        ASN1Integer p1 = (ASN1Integer) seq.getObjectAt(4);
+                        ASN1Integer p2 = (ASN1Integer) seq.getObjectAt(5);
+                        ASN1Integer exp1 = (ASN1Integer) seq.getObjectAt(6);
+                        ASN1Integer exp2 = (ASN1Integer) seq.getObjectAt(7);
+                        ASN1Integer crtCoef = (ASN1Integer) seq.getObjectAt(8);
+                        RSAPublicKeySpec pubSpec = new RSAPublicKeySpec(mod.getValue(), pubExp.getValue());
+                        RSAPrivateCrtKeySpec privSpec = new RSAPrivateCrtKeySpec(mod.getValue(), pubExp.getValue(),
+                                privExp.getValue(), p1.getValue(), p2.getValue(), exp1.getValue(), exp2.getValue(),
+                                crtCoef.getValue());
+                        KeyFactory fact = KeyFactory.getInstance("RSA", "BC");
+                        kp = new KeyPair(fact.generatePublic(pubSpec), fact.generatePrivate(privSpec));
+                    }
+                } else {
+                    logger.error("Private Key file not of type RSA Private Key: " + keypath);
+                }
+            } catch (Exception e) {
+                logger.error("Unable to parse Private key file: " + keypath);
+                e.printStackTrace();
+                System.exit(0);
+            } finally {
+                if (pemParser != null) {
+                    pemParser.close();
+                }
+            }
+            ;
+        }
+
+        if (!certpath.isEmpty()) {
+            InputStreamReader isr1 = new InputStreamReader(new FileInputStream(certpath));
+            pemParser = new PEMParser(isr1);
+            try {
+                logger.debug("Parsing Certificate(s)");
+                while ((pemObject = pemParser.readPemObject()) != null) {
+                    if (pemObject.getType().equalsIgnoreCase("CERTIFICATE")) {
+                        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+                        for (Certificate certificate : cf
+                                .generateCertificates(new ByteArrayInputStream(pemObject.getContent()))) {
+                            certs.add((X509Certificate) certificate);
+                            logger.debug("Found certificate: " + ((X509Certificate) certificate).getSubjectDN().toString());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("Unable to parse Certificate key file: " + keypath);
+                e.printStackTrace();
+                System.exit(0);
+            } finally {
+                if (pemParser != null) {
+                    pemParser.close();
+                }
+            }
+            ;
+        }
+
+        // If KeyPair and Certificate are both available then create a KeyStore
+        if (kp!=null & !certs.isEmpty()) {
+            logger.debug("Creating Keystore Manager.");
+            KeyStore ks = KeyStore.getInstance("JKS");
+            ks.load(null, null);
+            ks.setKeyEntry("main", kp.getPrivate(), "654321".toCharArray(), new Certificate[] {certs.get(0)});
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+            kmf.init(ks, "654321".toCharArray());
+            km = kmf.getKeyManagers()[0];
+//            FileOutputStream JKSkeyStoreOut = new FileOutputStream("/Users/mwarnes/test.jks");
+//            ks.store(JKSkeyStoreOut, "Sterling123".toCharArray());
+//            JKSkeyStoreOut.close();
+        }
+
+        if (km!=null) {
+            logger.debug("Using supplied Certificate and Private Key & TrustAllTrustManager.");
+            sslUtil = new SSLUtil(km,new TrustAllTrustManager());
+        } else {
+            logger.debug("Using default TrustAllTrustManager.");
+            sslUtil = new SSLUtil(new TrustAllTrustManager());
+        }
+
+        return sslUtil;
+    }
+
     private SSLUtil getSslUtil(String keystore, String keystorepw, String truststore, String truststorepw) throws GeneralSecurityException, IOException {
-        logger.debug("Creating SSLUtil.");
+        logger.debug("Creating SSLUtil (Type=JKS).");
         SSLUtil sslUtil = null;
 
         KeyManager km = null;
         TrustManager tm = null;
 
         logger.debug("Keystore: " + keystore);
-        logger.debug("Keystore password: " + keystorepw);
+//        logger.debug("Keystore password: " + keystorepw);
         logger.debug("Truststore: " + truststore);
-        logger.debug("Truststore password: " + truststorepw);
+//        logger.debug("Truststore password: " + truststorepw);
 
         if (!keystore.isEmpty() && !keystorepw.isEmpty()) {
             KeyStore ks = KeyStore.getInstance("JKS");
