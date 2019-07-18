@@ -50,6 +50,10 @@ public final class LDAPRequestHandler
         this.requestProcessor = auth;
         ldapConnection = null;
         listenerConnection = null;
+        logger.debug("LDAPRequestHandler constructor called.");
+        logger.debug("serverSet" + serverSet);
+        logger.debug("ldapConnection" + ldapConnection);
+        logger.debug("listenerConnection" + listenerConnection);
     }
 
 
@@ -100,6 +104,7 @@ public final class LDAPRequestHandler
      */
     @Override()
     public void closeInstance() {
+        logger.debug("closeInstance called.");
         ldapConnection.close();
     }
 
@@ -113,8 +118,10 @@ public final class LDAPRequestHandler
                                          final List<Control> controls) {
 
         // Call Configures processor
+        logger.debug("processAddRequest called.");
         IRequestProcessor processor = getProcessor();
         LDAPMessage message = processor.processAddRequest(messageID, request, controls, this.ldapConnection, this.listenerConnection);
+        logger.debug("LDAP Message : " + message);
         return message;
     }
 
@@ -128,8 +135,10 @@ public final class LDAPRequestHandler
                                           final List<Control> controls) {
 
         // Call Configures processor
+        logger.debug("processBindRequest called.");
         IRequestProcessor processor = getProcessor();
         LDAPMessage message = processor.processBindRequest(messageID, request, controls, this.ldapConnection, this.listenerConnection);
+        logger.debug("LDAP Message : " + message);
         return message;
     }
 
@@ -143,8 +152,10 @@ public final class LDAPRequestHandler
                                              final List<Control> controls) {
 
         // Call Configures processor
+        logger.debug("processCompareRequest called.");
         IRequestProcessor processor = getProcessor();
         LDAPMessage message = processor.processCompareRequest(messageID, request, controls, this.ldapConnection, this.listenerConnection);
+        logger.debug("LDAP Message : " + message);
         return message;
     }
 
@@ -158,8 +169,10 @@ public final class LDAPRequestHandler
                                             final List<Control> controls) {
 
         // Call Configures processor
+        logger.debug("processDeleteRequest called.");
         IRequestProcessor processor = getProcessor();
         LDAPMessage message = processor.processDeleteRequest(messageID, request, controls, this.ldapConnection, this.listenerConnection);
+        logger.debug("LDAP Message : " + message);
         return message;
     }
 
@@ -173,8 +186,10 @@ public final class LDAPRequestHandler
                                               final List<Control> controls) {
 
         // Call Configures processor
+        logger.debug("processExtendedRequest called.");
         IRequestProcessor processor = getProcessor();
         LDAPMessage message = processor.processExtendedRequest(messageID, request, controls, this.ldapConnection, this.listenerConnection);
+        logger.debug("LDAP Message : " + message);
         return message;
 
     }
@@ -189,8 +204,10 @@ public final class LDAPRequestHandler
                                             final List<Control> controls) {
 
         // Call Configures processor
+        logger.debug("processModifyRequest called.");
         IRequestProcessor processor = getProcessor();
         LDAPMessage message = processor.processModifyRequest(messageID, request, controls, this.ldapConnection, this.listenerConnection);
+        logger.debug("LDAP Message : " + message);
         return message;
     }
 
@@ -204,8 +221,10 @@ public final class LDAPRequestHandler
                                               final List<Control> controls) {
 
         // Call Configures processor
+        logger.debug("processModifyDNRequest called.");
         IRequestProcessor processor = getProcessor();
         LDAPMessage message = processor.processModifyDNRequest(messageID, request, controls, this.ldapConnection, this.listenerConnection);
+        logger.debug("LDAP Message : " + message);
         return message;
     }
 
@@ -219,9 +238,10 @@ public final class LDAPRequestHandler
                                             final List<Control> controls) {
 
         // Call Search
+        logger.debug("processSearchRequest called.");
         IRequestProcessor processor = getProcessor();
         LDAPMessage searchResult = processor.processSearchRequest(messageID, request, controls, this.ldapConnection, this.listenerConnection);
-
+        logger.debug("Search Result : " + searchResult);
         return searchResult;
     }
 
