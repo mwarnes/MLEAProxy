@@ -17,8 +17,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.bouncycastle.openssl.PEMParser;
+import org.springframework.web.client.RestTemplate;
 
 import javax.net.ServerSocketFactory;
 import javax.net.SocketFactory;
@@ -45,7 +50,7 @@ class LDAPlistener implements ApplicationRunner {
     private static final Logger logger = LoggerFactory.getLogger(LDAPlistener.class);
 
     @Override
-    public void run(ApplicationArguments applicationArguments) throws Exception {
+    public void run(ApplicationArguments args) throws Exception {
 
         // Set mleaproxy.properties System Property if not passed on the commandline.
         if (System.getProperty("mleaproxy.properties")==null) {
@@ -60,6 +65,73 @@ class LDAPlistener implements ApplicationRunner {
             System.setProperty("com.unboundid.ldap.sdk.debug.enabled","true");
             System.setProperty("com.unboundid.ldap.sdk.debug.type","ldap");
         }
+
+//        logger.info("Application started with command-line arguments: {}", Arrays.toString(args.getSourceArgs()));
+//        logger.info("NonOptionArgs: {}", args.getNonOptionArgs());
+//        logger.info("OptionNames: {}", args.getOptionNames());
+//
+//        for (String name : args.getOptionNames()){
+//            logger.info("arg-" + name + "=" + args.getOptionValues(name));
+//        }
+//
+//        if (args.containsOption("help")) {
+//            //TODO Display help here
+//        }
+//
+//        // Start Listener from MarkLogic template
+//        if (args.containsOption("profile")) {
+//            String profile = args.getOptionValues("profile").get(0);
+//
+//            logger.info("Creating Listener from MarkLogic External Security profile");
+//            logger.info("Profile: " + profile);
+//
+//            String listenerIpAddress="0.0.0.0";
+//            if (args.containsOption("listenaddr")) {
+//                listenerIpAddress= args.getOptionValues("listenaddr").get(0);
+//            }
+//
+//            //TODO set this after we know if this is LDAP or LDAPS
+//            String listenerPort="10389";
+//            if (args.containsOption("listenport")) {
+//                listenerPort= args.getOptionValues("listenport").get(0);
+//            }
+//            String mlhost="localhost";
+//            if (args.containsOption("mlhost")) {
+//                mlhost= args.getOptionValues("mlhost").get(0);
+//            }
+//            String mlport="8002";
+//            if (args.containsOption("mlport")) {
+//                mlport= args.getOptionValues("mlport").get(0);
+//            }
+//            String userid="admin";
+//            if (args.containsOption("admin")) {
+//                userid= args.getOptionValues("admin").get(0);
+//            }
+//            String password="";
+//            if (args.containsOption("password")) {
+//                password= args.getOptionValues("password").get(0);
+//            }
+//
+//            logger.info("Listerner IP Address: " + listenerIpAddress);
+//            logger.info("Listener Port: " + listenerPort);
+//            logger.info("MarkLogic server: " + mlhost);
+//            logger.info("MarkLogic ResT Port: " + mlport);
+//            logger.info("MarkLogic Admin: " + userid);
+//            logger.info("MarkLogic Password: " + password);
+//
+//            String url = "http://" + mlhost + ":" + mlport + "/manage/v2/external-security/LDAP1?format=json";
+//            String authStr = userid + ":" + password;
+//            String base64Creds = Base64.getEncoder().encodeToString(authStr.getBytes());
+//            HttpHeaders headers = new HttpHeaders();
+//            headers.add("Authorization", "Basic " + base64Creds);
+//            HttpEntity request = new HttpEntity(headers);
+//            ResponseEntity<String> response = new RestTemplate().exchange(url, HttpMethod.GET, request, String.class);
+//            String json = response.getBody();
+//            logger.info(json);
+//
+//        } else {
+//            logger.info("No MarkLogic template specified.");
+//        }
 
         // Start In memory Directory Server
         logger.debug("inMemory LDAP servers: " + cfg.directoryServers());
@@ -104,42 +176,46 @@ class LDAPlistener implements ApplicationRunner {
         }
 
         // Start Listeners
-        for (String l : cfg.listeners()) {
-            logger.info("Starting LDAP listeners.");
-            logger.debug("Listener: " + l);
-            Map expVars = new HashMap();
-            expVars.put("listener", l);
-            ListenersConfig listenerCfg = ConfigFactory
-                    .create(ListenersConfig.class, expVars);
+        if (cfg.listeners()==null) {
+            logger.info("No LDAP Listener configurations found.");
+        } else {
+            for (String l : cfg.listeners()) {
+                logger.info("Starting LDAP listeners.");
+                logger.debug("Listener: " + l);
+                Map expVars = new HashMap();
+                expVars.put("listener", l);
+                ListenersConfig listenerCfg = ConfigFactory
+                        .create(ListenersConfig.class, expVars);
 
-            LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
-            context.getLogger(LDAPlistener.class).setLevel(Level.valueOf(listenerCfg.debugLevel()));
+                LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+                context.getLogger(LDAPlistener.class).setLevel(Level.valueOf(listenerCfg.debugLevel()));
 
-            logger.debug("IP Address: " + listenerCfg.listenerIpAddress());
-            logger.debug("Port: " + listenerCfg.listenerPort());
-            logger.debug("Request handler: " + listenerCfg.listenerRequestHandler());
+                logger.debug("IP Address: " + listenerCfg.listenerIpAddress());
+                logger.debug("Port: " + listenerCfg.listenerPort());
+                logger.debug("Request handler: " + listenerCfg.listenerRequestHandler());
 
-            ServerSet serverSet = buildServerSet(listenerCfg.listenerLDAPSet(), listenerCfg.listenerLDAPMode());
+                ServerSet serverSet = buildServerSet(listenerCfg.listenerLDAPSet(), listenerCfg.listenerLDAPMode());
 
-            logger.debug(serverSet.toString());
+                logger.debug(serverSet.toString());
 
-            if (listenerCfg.secureListener()) {
-                Constructor c = Class.forName(listenerCfg.listenerRequestHandler()).getDeclaredConstructor(ServerSet.class, String.class);
-                LDAPListenerRequestHandler mlh = (LDAPListenerRequestHandler) c.newInstance(serverSet,listenerCfg.listenerRequestProcessor());
-                LDAPListenerConfig listenerConfig = new LDAPListenerConfig(listenerCfg.listenerPort(), mlh);
-                ServerSocketFactory ssf = createServerSocketFactory(listenerCfg);
-                listenerConfig.setServerSocketFactory(ssf);
-                LDAPListener listener = new LDAPListener(listenerConfig);
-                listener.startListening();
-            } else {
-                Constructor c = Class.forName(listenerCfg.listenerRequestHandler()).getDeclaredConstructor(ServerSet.class, String.class);
-                LDAPListenerRequestHandler mlh = (LDAPListenerRequestHandler) c.newInstance(serverSet,listenerCfg.listenerRequestProcessor());
-                LDAPListenerConfig listenerConfig = new LDAPListenerConfig(listenerCfg.listenerPort(), mlh);
-                LDAPListener listener = new LDAPListener(listenerConfig);
-                listener.startListening();
+                if (listenerCfg.secureListener()) {
+                    Constructor c = Class.forName(listenerCfg.listenerRequestHandler()).getDeclaredConstructor(ServerSet.class, String.class);
+                    LDAPListenerRequestHandler mlh = (LDAPListenerRequestHandler) c.newInstance(serverSet, listenerCfg.listenerRequestProcessor());
+                    LDAPListenerConfig listenerConfig = new LDAPListenerConfig(listenerCfg.listenerPort(), mlh);
+                    ServerSocketFactory ssf = createServerSocketFactory(listenerCfg);
+                    listenerConfig.setServerSocketFactory(ssf);
+                    LDAPListener listener = new LDAPListener(listenerConfig);
+                    listener.startListening();
+                } else {
+                    Constructor c = Class.forName(listenerCfg.listenerRequestHandler()).getDeclaredConstructor(ServerSet.class, String.class);
+                    LDAPListenerRequestHandler mlh = (LDAPListenerRequestHandler) c.newInstance(serverSet, listenerCfg.listenerRequestProcessor());
+                    LDAPListenerConfig listenerConfig = new LDAPListenerConfig(listenerCfg.listenerPort(), mlh);
+                    LDAPListener listener = new LDAPListener(listenerConfig);
+                    listener.startListening();
+                }
+
+                logger.info("Listening on: " + listenerCfg.listenerIpAddress() + ":" + listenerCfg.listenerPort() + " ( " + listenerCfg.listenerDescription() + " )");
             }
-
-            logger.info("Listening on: " + listenerCfg.listenerIpAddress() + ":" + listenerCfg.listenerPort() + " ( " + listenerCfg.listenerDescription() + " )");
         }
 
     }
