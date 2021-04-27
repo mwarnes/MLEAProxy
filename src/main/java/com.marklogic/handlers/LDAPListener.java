@@ -40,6 +40,9 @@ import java.security.spec.RSAPrivateCrtKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.*;
 
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.*;
 
 /**
  * Created by mwarnes on 29/01/2017.
@@ -58,6 +61,8 @@ class LDAPlistener implements ApplicationRunner {
         }
         ApplicationConfig cfg = ConfigFactory.create(ApplicationConfig.class);
 
+        logger.debug("Cfg." + cfg.toString());
+
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
 
         logger.debug("ldap.debug flag: " + cfg.ldapDebug());
@@ -66,72 +71,10 @@ class LDAPlistener implements ApplicationRunner {
             System.setProperty("com.unboundid.ldap.sdk.debug.type","ldap");
         }
 
-//        logger.info("Application started with command-line arguments: {}", Arrays.toString(args.getSourceArgs()));
-//        logger.info("NonOptionArgs: {}", args.getNonOptionArgs());
-//        logger.info("OptionNames: {}", args.getOptionNames());
-//
-//        for (String name : args.getOptionNames()){
-//            logger.info("arg-" + name + "=" + args.getOptionValues(name));
-//        }
-//
-//        if (args.containsOption("help")) {
-//            //TODO Display help here
-//        }
-//
-//        // Start Listener from MarkLogic template
-//        if (args.containsOption("profile")) {
-//            String profile = args.getOptionValues("profile").get(0);
-//
-//            logger.info("Creating Listener from MarkLogic External Security profile");
-//            logger.info("Profile: " + profile);
-//
-//            String listenerIpAddress="0.0.0.0";
-//            if (args.containsOption("listenaddr")) {
-//                listenerIpAddress= args.getOptionValues("listenaddr").get(0);
-//            }
-//
-//            //TODO set this after we know if this is LDAP or LDAPS
-//            String listenerPort="10389";
-//            if (args.containsOption("listenport")) {
-//                listenerPort= args.getOptionValues("listenport").get(0);
-//            }
-//            String mlhost="localhost";
-//            if (args.containsOption("mlhost")) {
-//                mlhost= args.getOptionValues("mlhost").get(0);
-//            }
-//            String mlport="8002";
-//            if (args.containsOption("mlport")) {
-//                mlport= args.getOptionValues("mlport").get(0);
-//            }
-//            String userid="admin";
-//            if (args.containsOption("admin")) {
-//                userid= args.getOptionValues("admin").get(0);
-//            }
-//            String password="";
-//            if (args.containsOption("password")) {
-//                password= args.getOptionValues("password").get(0);
-//            }
-//
-//            logger.info("Listerner IP Address: " + listenerIpAddress);
-//            logger.info("Listener Port: " + listenerPort);
-//            logger.info("MarkLogic server: " + mlhost);
-//            logger.info("MarkLogic ResT Port: " + mlport);
-//            logger.info("MarkLogic Admin: " + userid);
-//            logger.info("MarkLogic Password: " + password);
-//
-//            String url = "http://" + mlhost + ":" + mlport + "/manage/v2/external-security/LDAP1?format=json";
-//            String authStr = userid + ":" + password;
-//            String base64Creds = Base64.getEncoder().encodeToString(authStr.getBytes());
-//            HttpHeaders headers = new HttpHeaders();
-//            headers.add("Authorization", "Basic " + base64Creds);
-//            HttpEntity request = new HttpEntity(headers);
-//            ResponseEntity<String> response = new RestTemplate().exchange(url, HttpMethod.GET, request, String.class);
-//            String json = response.getBody();
-//            logger.info(json);
-//
-//        } else {
-//            logger.info("No MarkLogic template specified.");
-//        }
+        logger.info("Application started with command-line arguments: {}", Arrays.toString(args.getSourceArgs()));
+        logger.info("NonOptionArgs: {}", args.getNonOptionArgs());
+        logger.info("OptionNames: {}", args.getOptionNames());
+
 
         // Start In memory Directory Server
         logger.debug("inMemory LDAP servers: " + cfg.directoryServers());
