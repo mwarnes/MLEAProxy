@@ -17,13 +17,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.bouncycastle.openssl.PEMParser;
-import org.springframework.web.client.RestTemplate;
 
 import javax.net.ServerSocketFactory;
 import javax.net.SocketFactory;
@@ -39,10 +34,6 @@ import java.security.cert.X509Certificate;
 import java.security.spec.RSAPrivateCrtKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.*;
-
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.*;
 
 /**
  * Created by mwarnes on 29/01/2017.
@@ -77,14 +68,15 @@ class LDAPlistener implements ApplicationRunner {
 
 
         // Start In memory Directory Server
-        logger.debug("inMemory LDAP servers: " + cfg.directoryServers());
+        logger.debug("inMemory LDAP servers: " + Arrays.toString(cfg.directoryServers()));
         if (cfg.directoryServers()==null) {
             logger.info("No inMemory LDAP servers defined.");
         } else {
             logger.info("Starting inMemory LDAP servers.");
             for (String d : cfg.directoryServers()) {
                 logger.debug("directoryServer: " + d);
-                Map expVars = new HashMap();
+                HashMap expVars;
+                expVars = new HashMap();
                 expVars.put("directoryServer", d);
                 DSConfig dsCfg = ConfigFactory
                         .create(DSConfig.class, expVars);
@@ -106,8 +98,9 @@ class LDAPlistener implements ApplicationRunner {
 
                 if (dsCfg.dsLDIF().isEmpty()) {
                     logger.info("Using internal LDIF");
-                    LDIFReader ldr = new LDIFReader(ClassLoader.class.getResourceAsStream("/marklogic.ldif"));
-                    ds.importFromLDIF(true, ldr);
+                    try (LDIFReader ldr = new LDIFReader(Objects.requireNonNull(ClassLoader.class.getResourceAsStream("/marklogic.ldif")))) {
+                        ds.importFromLDIF(true, ldr);
+                    }
                 } else {
                     logger.info("LDIF file read from override path.");
                     ds.importFromLDIF(true, dsCfg.dsLDIF());
@@ -125,7 +118,7 @@ class LDAPlistener implements ApplicationRunner {
             for (String l : cfg.listeners()) {
                 logger.info("Starting LDAP listeners.");
                 logger.debug("Listener: " + l);
-                Map expVars = new HashMap();
+                HashMap<String,String> expVars = new HashMap();
                 expVars.put("listener", l);
                 ListenersConfig listenerCfg = ConfigFactory
                         .create(ListenersConfig.class, expVars);
@@ -142,7 +135,7 @@ class LDAPlistener implements ApplicationRunner {
                 logger.debug(serverSet.toString());
 
                 if (listenerCfg.secureListener()) {
-                    Constructor c = Class.forName(listenerCfg.listenerRequestHandler()).getDeclaredConstructor(ServerSet.class, String.class);
+                    Constructor<?> c = Class.forName(listenerCfg.listenerRequestHandler()).getDeclaredConstructor(ServerSet.class, String.class);
                     LDAPListenerRequestHandler mlh = (LDAPListenerRequestHandler) c.newInstance(serverSet, listenerCfg.listenerRequestProcessor());
                     LDAPListenerConfig listenerConfig = new LDAPListenerConfig(listenerCfg.listenerPort(), mlh);
                     ServerSocketFactory ssf = createServerSocketFactory(listenerCfg);
@@ -150,7 +143,7 @@ class LDAPlistener implements ApplicationRunner {
                     LDAPListener listener = new LDAPListener(listenerConfig);
                     listener.startListening();
                 } else {
-                    Constructor c = Class.forName(listenerCfg.listenerRequestHandler()).getDeclaredConstructor(ServerSet.class, String.class);
+                    Constructor<?> c = Class.forName(listenerCfg.listenerRequestHandler()).getDeclaredConstructor(ServerSet.class, String.class);
                     LDAPListenerRequestHandler mlh = (LDAPListenerRequestHandler) c.newInstance(serverSet, listenerCfg.listenerRequestProcessor());
                     LDAPListenerConfig listenerConfig = new LDAPListenerConfig(listenerCfg.listenerPort(), mlh);
                     LDAPListener listener = new LDAPListener(listenerConfig);
@@ -166,8 +159,8 @@ class LDAPlistener implements ApplicationRunner {
     private ServerSet buildServerSet(String[] serverSetsList, String mode) throws GeneralSecurityException, IOException {
         logger.debug("Building server sets");
 
-        ServerSet returnSet=null;
-        List<ServerSet> sets = new ArrayList();
+        ServerSet returnSet;
+        ArrayList<ServerSet> sets = new ArrayList();
 
         for (String set : serverSetsList) {
             logger.debug("ServerSet: " + set);
@@ -175,15 +168,17 @@ class LDAPlistener implements ApplicationRunner {
             ServerSet ss= null;
 
             List<String> hostAddresses = new ArrayList<>();
-            List<Integer> hostPorts = new ArrayList<Integer>();
+            List<Integer> hostPorts = new ArrayList<>();
 
-            Map setVars = new HashMap();
+            HashMap setVars;
+            setVars = new HashMap();
             setVars.put("serverSet", set);
             SetsConfig setsCfg = ConfigFactory
                     .create(SetsConfig.class, setVars);
 
             for (String server : setsCfg.servers()) {
-                Map serverVars = new HashMap();
+                HashMap serverVars;
+                serverVars = new HashMap();
                 serverVars.put("server", server);
                 ServersConfig serverCfg = ConfigFactory
                         .create(ServersConfig.class, serverVars);
@@ -277,7 +272,7 @@ class LDAPlistener implements ApplicationRunner {
     private SSLSocketFactory createSecureSocketFactory(SetsConfig cfg) throws GeneralSecurityException, IOException {
         logger.debug("Creating SSL Socket Factory.");
 
-        SSLUtil sslUtil = null;
+        SSLUtil sslUtil;
         if (cfg.serverSetStoreType().equalsIgnoreCase("PEM")) {
             sslUtil = getSslUtil(cfg.serverSetKeyPath(), cfg.serverSetCertPath(), cfg.serverSetCAPath());
         } else if (cfg.serverSetStoreType().equalsIgnoreCase("PFX")) {
@@ -305,7 +300,7 @@ class LDAPlistener implements ApplicationRunner {
 
     private SSLUtil getSslUtil(String pfxpath, String pfxpasswd) throws NoSuchProviderException, KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
         logger.debug("Creating SSLUtil (Type=PFX).");
-        SSLUtil sslUtil = null;
+        SSLUtil sslUtil;
 
         KeyManager km = null;
 
@@ -333,14 +328,14 @@ class LDAPlistener implements ApplicationRunner {
 
     private SSLUtil getSslUtil(String keypath, String certpath, String capath) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
         logger.debug("Creating SSLUtil (Type=PEM).");
-        SSLUtil sslUtil = null;
+        SSLUtil sslUtil;
 
         KeyManager km = null;
 
         logger.debug("Key path: " + keypath);
         logger.debug("Cert path: " + certpath);
 
-        PEMParser pemParser = null;
+        PEMParser pemParser;
         PemObject pemObject;
         KeyPair kp = null;
         ArrayList<X509Certificate> certs = new ArrayList<>();
@@ -383,7 +378,6 @@ class LDAPlistener implements ApplicationRunner {
                     pemParser.close();
                 }
             }
-            ;
         }
 
         if (!certpath.isEmpty()) {
@@ -410,7 +404,6 @@ class LDAPlistener implements ApplicationRunner {
                     pemParser.close();
                 }
             }
-            ;
         }
 
         // If KeyPair and Certificate are both available then create a KeyStore
@@ -440,7 +433,7 @@ class LDAPlistener implements ApplicationRunner {
 
     private SSLUtil getSslUtil(String keystore, String keystorepw, String truststore, String truststorepw) throws GeneralSecurityException, IOException {
         logger.debug("Creating SSLUtil (Type=JKS).");
-        SSLUtil sslUtil = null;
+        SSLUtil sslUtil;
 
         KeyManager km = null;
         TrustManager tm = null;
