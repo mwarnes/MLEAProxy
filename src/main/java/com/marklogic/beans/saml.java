@@ -1,9 +1,11 @@
 package com.marklogic.beans;
 
-import com.marklogic.configuration.ApplicationConfig;
+import java.io.Serializable;
+
 import org.springframework.stereotype.Component;
 
-import java.io.Serializable;
+import com.marklogic.configuration.ApplicationConfig;
+import com.marklogic.configuration.SAMLListenersConfig;
 
 @Component("saml")
 public class saml implements Serializable {
@@ -19,6 +21,7 @@ public class saml implements Serializable {
     private String notafter_date;
 
     private static ApplicationConfig cfg;
+    private SAMLListenersConfig listenerCfg;
 
     public static ApplicationConfig getCfg() {
         return cfg;
@@ -26,6 +29,14 @@ public class saml implements Serializable {
 
     public void setCfg(ApplicationConfig cfg) {
         this.cfg = cfg;
+    }
+
+    public SAMLListenersConfig getListenerCfg() {
+        return listenerCfg;
+    }
+
+    public void setListenerCfg(SAMLListenersConfig listenerCfg) {
+        this.listenerCfg = listenerCfg;
     }
 
 

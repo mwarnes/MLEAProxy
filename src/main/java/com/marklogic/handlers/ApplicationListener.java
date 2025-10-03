@@ -2,6 +2,7 @@ package com.marklogic.handlers;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
+
 import com.marklogic.beans.saml;
 import com.marklogic.configuration.*;
 import com.unboundid.ldap.listener.*;
@@ -10,8 +11,12 @@ import com.unboundid.ldif.LDIFReader;
 import com.unboundid.util.Validator;
 import com.unboundid.util.ssl.SSLUtil;
 import com.unboundid.util.ssl.TrustAllTrustManager;
+
 import io.undertow.Handlers;
 import io.undertow.Undertow;
+import io.undertow.server.handlers.resource.ResourceHandler;
+import io.undertow.server.handlers.resource.ClassPathResourceManager;
+
 import org.aeonbits.owner.ConfigFactory;
 import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1Sequence;
@@ -27,6 +32,7 @@ import org.springframework.stereotype.Component;
 import javax.net.ServerSocketFactory;
 import javax.net.SocketFactory;
 import javax.net.ssl.*;
+
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -41,6 +47,13 @@ import java.security.cert.X509Certificate;
 import java.security.spec.RSAPrivateCrtKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.*;
+
+// SAML handler imports removed - using lambda handlers instead for Undertow
+// import com.marklogic.handlers.undertow.B64DecodeHandler;
+// import com.marklogic.handlers.undertow.B64EncodeHandler;
+// import com.marklogic.handlers.undertow.SAMLAuthHandler;
+// import com.marklogic.handlers.undertow.SAMLCaCertsHandler;
+// import com.marklogic.handlers.undertow.SAMLWrapAssertionHandler;
 
 /**
  * Created by mwarnes on 29/01/2017.
@@ -85,8 +98,8 @@ class Applicationlistener implements ApplicationRunner {
             logger.info("Starting inMemory LDAP servers.");
             for (String d : cfg.directoryServers()) {
                 logger.debug("directoryServer: " + d);
-                HashMap expVars;
-                expVars = new HashMap();
+                HashMap<String, String> expVars;
+                expVars = new HashMap<>();
                 expVars.put("directoryServer", d);
                 DSConfig dsCfg = ConfigFactory
                         .create(DSConfig.class, expVars);
@@ -128,7 +141,7 @@ class Applicationlistener implements ApplicationRunner {
             for (String l : cfg.ldaplisteners()) {
                 logger.info("Starting LDAP listeners.");
                 logger.debug("Listener: " + l);
-                HashMap<String,String> expVars = new HashMap();
+                HashMap<String,String> expVars = new HashMap<>();
                 expVars.put("listener", l);
                 LDAPListenersConfig listenerCfg = ConfigFactory
                         .create(LDAPListenersConfig.class, expVars);
@@ -164,45 +177,63 @@ class Applicationlistener implements ApplicationRunner {
             }
         }
 
-//        // Start SAML Listeners
+        // Start SAML Listeners
         saml.setCfg(cfg);
-//        if (cfg.samllisteners()==null) {
-//            logger.info("No SAML Listener configurations found.");
-//        } else {
-//            for (String l : cfg.samllisteners()) {
-//                logger.info("Starting SAML listeners.");
-//                logger.debug("Listener: " + l);
-//                HashMap<String, String> expVars = new HashMap();
-//                expVars.put("listener", l);
-//                SAMLListenersConfig listenerCfg = ConfigFactory
-//                        .create(SAMLListenersConfig.class, expVars);
-//                saml.setListenerCfg(listenerCfg);
-//
-//                LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
-//                context.getLogger(Applicationlistener.class).setLevel(Level.valueOf(listenerCfg.debugLevel()));
-//
-//
-//                Undertow.builder().addHttpListener(listenerCfg.listenerPort(), listenerCfg.listenerIpAddress())
-//                        .setHandler(Handlers.path()
-//                                // REST API path
-//                                .addPrefixPath("/saml", Handlers.routing()
-//                                                .get("/auth", new SAMLAuthHandler(listenerCfg, logger))
-////                                                .get("/ca", new SAMLCaCertsHandler(listenerCfg, logger))
-////                                                .post("/wrapassertion",new SAMLWrapAssertionHandler(listenerCfg, logger))
-////                                        .delete("/customers/{customerId}", exchange -> {...})
-////                                        .setFallbackHandler(exchange -> {...})
-//                                )
-//                                // Redirect root path to /static to serve the index.html by default
-////                                                .addExactPath("/saml/encode",new B64EncodeHandler(listenerCfg, logger))
-////                                                .addExactPath("/saml/decode",new B64DecodeHandler(listenerCfg, logger))
-////
-////                                // Serve all static files from a folder
-////                                .addPrefixPath("/static", new ResourceHandler(
-////                                        new PathResourceManager(Paths.get("/path/to/www/"), 100))
-////                                        .setWelcomeFiles("index.html"))
-//                        ).build().start();
-//            }
-//        }
+    //    if (cfg.samllisteners()==null) {
+    //        logger.info("No SAML Listener configurations found.");
+    //    } else {
+    //        for (String l : cfg.samllisteners()) {
+    //            logger.info("Starting SAML listeners.");
+    //            logger.debug("Listener: " + l);
+    //            HashMap<String, String> expVars = new HashMap<>();
+    //            expVars.put("listener", l);
+    //            SAMLListenersConfig listenerCfg = ConfigFactory
+    //                    .create(SAMLListenersConfig.class, expVars);
+    //            saml.setListenerCfg(listenerCfg);
+
+    //            LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+    //            context.getLogger(Applicationlistener.class).setLevel(Level.valueOf(listenerCfg.debugLevel()));
+
+
+    //            Undertow.builder().addHttpListener(listenerCfg.listenerPort(), listenerCfg.listenerIpAddress())
+    //                    .setHandler(Handlers.path()
+    //                            // REST API path
+    //                            .addPrefixPath("/saml", Handlers.routing()
+    //                                            .get("/auth", exchange -> {
+    //                                                exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "text/html");
+    //                                                exchange.getResponseSender().send("SAML Auth endpoint - temporarily disabled during OpenSAML 4.x migration");
+    //                                            })
+    //                                            .get("/ca", exchange -> {
+    //                                                exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "text/plain");
+    //                                                exchange.getResponseSender().send("SAML CA endpoint - temporarily disabled during OpenSAML 4.x migration");
+    //                                            })
+    //                                            .post("/wrapassertion", exchange -> {
+    //                                                exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "text/plain");
+    //                                                exchange.getResponseSender().send("SAML Wrap Assertion endpoint - temporarily disabled during OpenSAML 4.x migration");
+    //                                            })
+    //                                            .setFallbackHandler(exchange -> {
+    //                                                exchange.setStatusCode(404);
+    //                                                exchange.getResponseSender().send("SAML endpoint not found");
+    //                                            })
+    //                            )
+    //                            // SAML utility endpoints
+    //                                            .addExactPath("/saml/encode", exchange -> {
+    //                                                exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "text/plain");
+    //                                                exchange.getResponseSender().send("SAML Base64 Encode endpoint - temporarily disabled during OpenSAML 4.x migration");
+    //                                            })
+    //                                            .addExactPath("/saml/decode", exchange -> {
+    //                                                exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "text/plain");
+    //                                                exchange.getResponseSender().send("SAML Base64 Decode endpoint - temporarily disabled during OpenSAML 4.x migration");
+    //                                            })
+
+    //                            // Serve all static files from classpath resources/public folder
+    //                            .addPrefixPath("/static", new ResourceHandler(
+    //                                    new ClassPathResourceManager(
+    //                                        Applicationlistener.class.getClassLoader(), "public"))
+    //                                    .setWelcomeFiles("index.html"))
+    //                    ).build().start();
+    //        }
+    //    }
 
     }
 
@@ -210,7 +241,7 @@ class Applicationlistener implements ApplicationRunner {
         logger.debug("Building server sets");
 
         ServerSet returnSet;
-        ArrayList<ServerSet> sets = new ArrayList();
+        ArrayList<ServerSet> sets = new ArrayList<>();
 
         for (String set : serverSetsList) {
             logger.debug("ServerSet: " + set);
@@ -220,15 +251,15 @@ class Applicationlistener implements ApplicationRunner {
             List<String> hostAddresses = new ArrayList<>();
             List<Integer> hostPorts = new ArrayList<>();
 
-            HashMap setVars;
-            setVars = new HashMap();
+            HashMap<String, Object> setVars;
+            setVars = new HashMap<>();
             setVars.put("serverSet", set);
             SetsConfig setsCfg = ConfigFactory
                     .create(SetsConfig.class, setVars);
 
             for (String server : setsCfg.servers()) {
-                HashMap serverVars;
-                serverVars = new HashMap();
+                HashMap<String, String> serverVars;
+                serverVars = new HashMap<>();
                 serverVars.put("server", server);
                 ServersConfig serverCfg = ConfigFactory
                         .create(ServersConfig.class, serverVars);

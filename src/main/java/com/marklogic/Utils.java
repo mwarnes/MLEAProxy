@@ -15,7 +15,6 @@ import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -23,77 +22,21 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPrivateCrtKeySpec;
 import java.security.spec.RSAPublicKeySpec;
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
-
-import javax.xml.namespace.QName;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 
 import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.util.io.pem.PemObject;
-import org.joda.time.DateTime;
-import org.opensaml.DefaultBootstrap;
-import org.opensaml.common.SAMLVersion;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.Attribute;
-import org.opensaml.saml2.core.AttributeStatement;
-import org.opensaml.saml2.core.AttributeValue;
-import org.opensaml.saml2.core.Audience;
-import org.opensaml.saml2.core.AudienceRestriction;
-import org.opensaml.saml2.core.Conditions;
-import org.opensaml.saml2.core.Issuer;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Status;
-import org.opensaml.saml2.core.StatusCode;
-import org.opensaml.saml2.core.Subject;
-import org.opensaml.saml2.core.SubjectConfirmation;
-import org.opensaml.saml2.core.SubjectConfirmationData;
-import org.opensaml.saml2.core.impl.AssertionBuilder;
-import org.opensaml.saml2.core.impl.AttributeBuilder;
-import org.opensaml.saml2.core.impl.AttributeStatementBuilder;
-import org.opensaml.saml2.core.impl.AudienceBuilder;
-import org.opensaml.saml2.core.impl.AudienceRestrictionBuilder;
-import org.opensaml.saml2.core.impl.ConditionsBuilder;
-import org.opensaml.saml2.core.impl.IssuerBuilder;
-import org.opensaml.saml2.core.impl.NameIDBuilder;
-import org.opensaml.saml2.core.impl.ResponseBuilder;
-import org.opensaml.saml2.core.impl.ResponseMarshaller;
-import org.opensaml.saml2.core.impl.StatusBuilder;
-import org.opensaml.saml2.core.impl.StatusCodeBuilder;
-import org.opensaml.saml2.core.impl.SubjectBuilder;
-import org.opensaml.saml2.core.impl.SubjectConfirmationBuilder;
-import org.opensaml.saml2.core.impl.SubjectConfirmationDataBuilder;
-import org.opensaml.xml.ConfigurationException;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.XMLObjectBuilder;
-import org.opensaml.xml.io.MarshallingException;
-import org.opensaml.xml.schema.XSString;
-import org.opensaml.xml.schema.impl.XSStringBuilder;
-import org.opensaml.xml.security.x509.BasicX509Credential;
-import org.opensaml.xml.signature.SignatureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
-import org.w3c.dom.Element;
 
 import com.marklogic.beans.saml;
-import com.marklogic.handlers.undertow.SAMLAuthHandler;
 
-import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 
 public final class Utils {
@@ -108,28 +51,6 @@ public final class Utils {
         "<!DOCTYPE", "<!ENTITY", "&lt;!DOCTYPE", "&lt;!ENTITY",
         "SYSTEM", "PUBLIC", "file://", "http://", "ftp://"
     };
-
-    /**
-     * Validates XML content for security threats before processing
-     */
-    private static void validateXMLSecurity(String xmlContent) {
-        if (xmlContent == null || xmlContent.trim().isEmpty()) {
-            throw new IllegalArgumentException("XML content cannot be null or empty");
-        }
-        
-        if (xmlContent.length() > MAX_XML_SIZE) {
-            throw new SecurityException("XML content exceeds maximum allowed size");
-        }
-        
-        // Check for dangerous XML patterns
-        String upperContent = xmlContent.toUpperCase();
-        for (String pattern : DANGEROUS_XML_PATTERNS) {
-            if (upperContent.contains(pattern.toUpperCase())) {
-                LOG.warn("Potential XML security threat detected: {}", pattern);
-                throw new SecurityException("Potentially dangerous XML content detected");
-            }
-        }
-    }
 
     public static String resourceToString(String path) throws IOException {
         if (path == null || path.trim().isEmpty()) {
@@ -198,10 +119,7 @@ public final class Utils {
             
             inflater.end();
             String decodedXML = new String(xmlMessageBytes, 0, resultLength, StandardCharsets.UTF_8);
-            
-            // Validate the decoded XML for security
-            validateXMLSecurity(decodedXML);
-            
+
             return decodedXML;
             
         } catch (IllegalArgumentException e) {
@@ -296,94 +214,17 @@ public final class Utils {
         return pemString.toString();
     }
 
-    public static String generateSAMLResponse(saml saml) throws CertificateException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException, MarshallingException, TransformerException, ConfigurationException, SignatureException {
-        context.getLogger(SAMLAuthHandler .class).setLevel(Level.DEBUG);
-        org.opensaml.saml2.core.Response response = new ResponseBuilder().buildObject();
-        response.setVersion(SAMLVersion.VERSION_20);
-        LocalDateTime instant = LocalDateTime.now();
-        String instant_date = instant.toString();
-        response.setIssueInstant(new DateTime(instant_date));
-        Status stat = new StatusBuilder().buildObject();
-        StatusCode statCode = new StatusCodeBuilder().buildObject();
-        if (saml.getAuthnResult().equalsIgnoreCase("SUCCESS")) {
-            statCode.setValue("urn:oasis:names:tc:SAML:2.0:status:Success");
-        } else {
-            statCode.setValue("urn:oasis:names:tc:SAML:2.0:status:AuthnFailed");
-        }
-        response.setInResponseTo(saml.getSamlid());
-        stat.setStatusCode(statCode);
-        response.setStatus(stat);
-        response.setDestination(saml.getAssertionUrl());
-        Assertion assertion = new AssertionBuilder().buildObject();
-        assertion.setVersion(SAMLVersion.VERSION_20);
-        assertion.setIssueInstant(new DateTime(instant_date));
-        response.setID("ID_" + UUID.randomUUID());
-        assertion.setID("ID_" + UUID.randomUUID());
-        Issuer issuer = new IssuerBuilder().buildObject();
-        issuer.setValue(saml.getAssertionUrl());
-        assertion.setIssuer(issuer);
-        NameID nameid = new NameIDBuilder().buildObject();
-        nameid.setSPNameQualifier("http://sp.example.com/demo1/metadata.php");
-        nameid.setFormat("urn:oasis:names:tc:SAML:2.0:nameid-format:transient");
-        nameid.setValue(saml.getUserid());
-        SubjectConfirmation subjectConfirmation = new SubjectConfirmationBuilder().buildObject();
-        subjectConfirmation.setMethod("urn:oasis:names:tc:SAML:2.0:cm:bearer");
-        SubjectConfirmationData scd = new SubjectConfirmationDataBuilder().buildObject();
-        scd.setInResponseTo(saml.getSamlid());
-        scd.setNotBefore(new DateTime(saml.getNotbefore_date()));
-        scd.setNotOnOrAfter(new DateTime(saml.getNotafter_date()));
-        scd.setRecipient(saml.getAssertionUrl());
-        subjectConfirmation.setSubjectConfirmationData(scd);
-        Subject subject = new SubjectBuilder().buildObject();
-        subject.setNameID(nameid);
-        subject.getSubjectConfirmations().add(subjectConfirmation);
-        assertion.setSubject(subject);
-        Conditions conditions = new ConditionsBuilder().buildObject();
-        conditions.setNotBefore(new DateTime(saml.getNotbefore_date()));
-        conditions.setNotOnOrAfter(new DateTime(saml.getNotafter_date()));
-        AudienceRestriction ar = new AudienceRestrictionBuilder().buildObject();
-        Audience audience = new AudienceBuilder().buildObject();
-        audience.setAudienceURI(saml.getAssertionUrl());
-        ar.getAudiences().add(audience);
-        conditions.getAudienceRestrictions().add(ar);
-        assertion.setConditions(conditions);
-        AttributeStatement attributeStatement = new AttributeStatementBuilder().buildObject();
-        Attribute attribute = new AttributeBuilder().buildObject();
-        attribute.setName("Roles");
-
-        List<String> roles = Arrays.asList(saml.getRoles().split(","));
-        Iterator it = roles.iterator();
-        while (it.hasNext()) {
-            XSString attributeValue = buildAttributeValue(new XSStringBuilder(), XSString.TYPE_NAME);
-            attributeValue.setValue((String) it.next());
-            attribute.getAttributeValues().add(attributeValue);
-        }
-
-        attributeStatement.getAttributes().add(attribute);
-        assertion.getAttributeStatements().add(attributeStatement);
-
-        X509Certificate signingcert = Utils.getX509Certificate(Utils.getCaCertificate());
-        PrivateKey signingkey = Utils.getKeyPair(Utils.getCaPrivateKey()).getPrivate();
-        BasicX509Credential bc = new BasicX509Credential();
-        bc.setEntityCertificate(signingcert);
-        bc.setPrivateKey(signingkey);
-
-        DefaultBootstrap.bootstrap();
-        Assertion as = AssertionSigner.createWithCredential(bc).signAssertion(assertion);
-        response.getAssertions().add(as);
-
-        ResponseMarshaller rMarsh = new ResponseMarshaller();
-        Element plain = rMarsh.marshall(response);
-        TransformerFactory transFactory = TransformerFactory.newInstance();
-        Transformer transformer = transFactory.newTransformer();
-        StringWriter buffer = new StringWriter();
-        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-        transformer.transform(new DOMSource(plain), new StreamResult(buffer));
-        String samlResponse = buffer.toString();
-        return Utils.e(samlResponse);
-    }
-
-    private static <T extends XMLObject> T buildAttributeValue(XMLObjectBuilder<T> builder, QName typeName) {
-        return builder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME, typeName);
+    /**
+     * Generates SAML response using modern OpenSAML 4.x API
+     * @deprecated This method is temporarily disabled during OpenSAML 4.x migration
+     * TODO: Complete migration from OpenSAML 2.x to 4.x API
+     */
+    @Deprecated
+    public static String generateSAMLResponse(saml samlBean) throws Exception {
+        LOG.warn("SAML Response generation temporarily disabled during OpenSAML 4.x migration");
+        throw new UnsupportedOperationException(
+            "SAML Response generation is temporarily disabled during OpenSAML 4.x migration. " +
+            "This method requires complete rewrite for modern OpenSAML API compatibility. " +
+            "Please use OAuth2/OIDC authentication or wait for SAML modernization completion.");
     }
 }

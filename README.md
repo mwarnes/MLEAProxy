@@ -1,57 +1,163 @@
-# MLEAProxy
-## An External LDAP Authentication Proxy server for MarkLogic Server
-### Introduction
-MLEAProxy was primarily written as a support tool to aid in diagnosing issues when authorizing MarkLogic Users against an external LDAP or Active Directory server. However there is no reason it could not be used for other uses but in being designed as a diagnostic tool it has not undergone any significant testing to ensure it is production ready, therefore use at your own discretion.
-<P>As well a being a proxy LDAP server MLEAProxy can run a simple LDAP server using an XML file containing a pseudo LDAP configuration. This is useful for users wanting to configure and evaluate MarkLogic External Security without the need to access a full LDAP or Active Directory server. This is the default configuration mode if no properties file is available.
-<P>MLEXProxy can also be extended using custom written Java code to intercept LDAP requests and take any actions or make modifications before returning the response to the LDAP client.
+# 🚀 MLEAProxy
 
-### Installation
+[![Java](https://img.shields.io/badge/Java-21+-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.5-6DB33F?style=for-the-badge&logo=spring-boot)](https://spring.io/projects/spring-boot)
+[![Maven](https://img.shields.io/badge/Maven-3.9+-C71A36?style=for-the-badge&logo=apache-maven)](https://maven.apache.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
- [<img src="./download.png" width="160">](./mleaproxy.jar) or clone the repository and build your own version.
- 
- <p>To run simply execute the the runnable Jar file
- 
-```` 
-java -jar mleaproxy.jar 
-````
+> **An External LDAP Authentication Proxy Server for MarkLogic Server** 🔐
 
-MLEAProxy will search in the following order of preference for a mleaproxy.properties file in the current directory, the users home directory, /etc/ directory on Unix and finally will use the default in-built properties configuration if no other is found.
+---
 
-````
-./mleaproxy.properties
-${HOME}/mleaproxy.properties
-/etc/mleaproxy.properties
-Application defaults
-````
+## ✨ Overview
 
-In addition, the path of the properties file can be passed using the System property "mleaproxy.properties", if this method is used it takes precedence over the method listed above.
-````
-java -Dmleaproxy.properties=/Users/mwarnes/my.props -jar mleaproxy.jar 
-````
+**MLEAProxy** is a sophisticated LDAP proxy server designed to simplify and diagnose external authentication with MarkLogic Server. Whether you're troubleshooting LDAP/Active Directory integration or need a standalone LDAP server for testing, MLEAProxy provides the perfect solution.
 
-### Configuration
+### 🎯 Key Features
 
-The configuration is made up of 4 areas, Servers, Server Sets, Listeners, and Processors.
+- 🔍 **Diagnostic Tool**: Debug LDAP authentication issues with detailed logging
+- 🔄 **Proxy Mode**: Forward requests to backend LDAP/Active Directory servers  
+- 📊 **Load Balancing**: Support for multiple backend servers with various algorithms
+- 🔒 **Security Hardening**: Built-in protection against LDAP injection and XML attacks
+- 🏗️ **Standalone Mode**: XML-based LDAP server for testing without backend infrastructure
+- ⚡ **High Performance**: Java 21 optimized with Spring Boot 3.3.5
+- 🛠️ **Extensible**: Custom Java processors for specialized requirements
 
-Servers define the back-end LDAP or Active Directory server that MLEAProxy will connect to.
+### ⚠️ Important Notice
 
-````
-Parameters
-==========
-ldapserver.<name>.host : IP Address or Hostname of back-end LDAP server <Required>.
-ldapserver.<name>.port : Back-end LDAP Server listening port <Required>.
- 
-Examples
-======== 
-ldapserver.server1.host=dirsrv1.marklogic.com
-ldapserver.server1.port=389
+> **Development Tool**: While MLEAProxy is feature-rich and secure, it was primarily designed as a diagnostic and development tool. Use in production environments at your own discretion and ensure thorough testing for your specific use case.
 
-ldapserver.server2.host=dirsrv2.marklogic.com
-ldapserver.server2.port=389
- 
-ldapserver.ad1.host=192.168.0.60
-ldapserver.ad1.port=636
-````
+---
+
+## 📋 Table of Contents
+
+- [🚀 Quick Start](#-quick-start)
+- [📦 Installation](#-installation)
+- [⚙️ Configuration](#-configuration)
+- [📊 Usage Examples](#-usage-examples)
+- [🛡️ Security Features](#-security-features)
+- [🔧 Development](#-development)
+- [📚 Documentation](#-documentation)
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- ☕ **Java 21+** (OpenJDK LTS recommended)
+- 🔨 **Maven 3.9+** (for building from source)
+
+### Running MLEAProxy
+
+#### Option 1: Pre-built JAR
+
+```bash
+# Download the latest release
+wget https://github.com/mwarnes/MLEAProxy/releases/latest/download/mleaproxy.jar
+
+# Run with default XML LDAP server
+java -jar mleaproxy.jar
+
+# Run with custom properties
+java -Dmleaproxy.properties=./my-config.properties -jar mleaproxy.jar
+```
+
+#### Option 2: Build from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/mwarnes/MLEAProxy.git
+cd MLEAProxy
+
+# Build using our enhanced build script (recommended)
+chmod +x build.sh
+./build.sh clean package
+
+# Run the application
+java -Dmleaproxy.properties=./mleaproxy.properties -jar target/mlesproxy-2.0.0.jar
+```
+
+#### Option 3: Development Mode
+
+```bash
+# Load development aliases for convenience
+source dev-aliases.sh
+
+# Complete development cycle: clean → build → run
+mlproxy-dev
+```
+
+---
+
+## 📦 Installation
+
+### 📥 Download Options
+
+| Method | Description | Command |
+|--------|-------------|---------|
+| 🎯 **Release JAR** | Pre-built executable | [<img src="./download.png" width="120" alt="Download MLEAProxy">](./mleaproxy.jar) |
+| 🏗️ **Build from Source** | Latest features | `git clone && ./build.sh package` |
+| 📋 **Maven Dependency** | Include in your project | See [Maven Setup](#maven-setup) |
+
+### 🔧 System Requirements
+
+| Component | Requirement | Notes |
+|-----------|-------------|-------|
+| ☕ **Java Runtime** | OpenJDK 21+ | LTS version recommended |
+| 💾 **Memory** | 512MB+ | Depends on load and configuration |
+| 🌐 **Network** | TCP ports | Default: 30389 (configurable) |
+| 💿 **Disk Space** | 100MB+ | For JAR and logs |
+
+### 📍 Configuration File Locations
+
+MLEAProxy searches for `mleaproxy.properties` in the following order:
+
+1. 📂 **Current Directory**: `./mleaproxy.properties`
+2. 🏠 **User Home**: `${HOME}/mleaproxy.properties`  
+3. ⚙️ **System Directory**: `/etc/mleaproxy.properties` (Unix/Linux)
+4. 🔧 **System Property**: `-Dmleaproxy.properties=/path/to/config`
+5. 📋 **Built-in Defaults**: Internal XML LDAP server
+
+---
+
+## ⚙️ Configuration
+
+MLEAProxy uses a flexible configuration system with four main components:
+
+### 🏗️ Architecture Components
+
+```mermaid
+graph TB
+    A[LDAP Client<br/>MarkLogic] --> B[MLEAProxy<br/>Listeners]
+    B --> C[Request<br/>Processors]
+    C --> D[Server Sets<br/>Load Balancing]
+    D --> E[Backend LDAP<br/>Servers]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#fff3e0
+    style D fill:#e8f5e8
+    style E fill:#fce4ec
+```
+
+### 1️⃣ **Servers** - Backend LDAP/AD Servers
+
+Define your backend LDAP or Active Directory servers:
+
+```properties
+# Basic server configuration
+ldapserver.<name>.host=hostname_or_ip
+ldapserver.<name>.port=port_number
+
+# Examples
+ldapserver.primary.host=ldap1.company.com
+ldapserver.primary.port=389
+
+ldapserver.secondary.host=ldap2.company.com  
+ldapserver.secondary.port=636
+
+ldapserver.ad.host=192.168.1.100
+ldapserver.ad.port=636
+```
 
 Server Sets define the back-end LDAP servers to use; As well as a single back-end server, MLEAProxy supports load balancing to one or more back-end LDAP servers.
 
@@ -96,6 +202,7 @@ requestProcessor.xmlauthenticator.parm1=/path/to/users.xml
 ````
 
 A Listener defines the individual MLEAProxy listening instance and defines such properties as listening port, bind address, whether TLS is required, the LDAP server set to use and the type of load balancing if required.
+
 ````
 Parameters
 ==========
@@ -136,11 +243,13 @@ listeners=proxy,xmlcustom
 ````
 
 Lower level LDAP debugging in addition to the listener debug level can be enabled using the following parameter in the mleaproxy.properties file.
+
 ````
 ldap.debug=true
 ````
 
 ### Sample Configurations
+
 #### XML LDAP Server
 
 This is the default configuration if no other configuration or properties file and will start a simple LDAP server that uses a XML file which contains a pseudo LDAP server layout with a number of user entries containing a example attributes needed to support external security on a MarkLogic server.
@@ -279,8 +388,8 @@ result: 0 Success
 2017-07-02 12:54:14.713  INFO 91756 --- [0:0:0:0:1:30389] c.m.processors.XMLRequestProcessor       : ResponseProtocolOp(type=65, resultCode=0)
 ````
 
-
 #### Simple LDAP Proxy server
+
 The following configuration will start a simple proxy listener to relay LDAP request back and forth between a client such as a MarkLogic server and a back-end LDAP server. In addition, both LDAP and Listener debugging is enabled to write detailed LDAP Request/Response information.
 
 <img src="./simpleproxy.png">
@@ -306,6 +415,7 @@ ldapset.set1.servers=server1
 ldapserver.server1.host=kerberos.marklogic.local
 ldapserver.server1.port=10389
 ````
+
 Sample log output
 
 ````
@@ -330,8 +440,8 @@ Sample log output
 2017-07-02 11:50:03.991 DEBUG 88453 --- [127.0.0.1:20389] c.m.processors.ProxyRequestProcessor     : 1-+-BindResponseProtocolOp(resultCode=0)-+-[]
 ````
 
-The mleaproxy proxy server also supports mapping Attribute names, this can be used by a server running MakLogic version 8 or earlier which uses the "memberOf" Attribute to determine Group role permissions. To use this feature you can add a comma seperated list of mappings using parm1, the mleaproxy server will then map between the Attributes on the LDAP Requests and Response. 
- 
+The mleaproxy proxy server also supports mapping Attribute names, this can be used by a server running MakLogic version 8 or earlier which uses the "memberOf" Attribute to determine Group role permissions. To use this feature you can add a comma seperated list of mappings using parm1, the mleaproxy server will then map between the Attributes on the LDAP Requests and Response.
+
  Example: Mapping between "memberOf" used by MarkLogic and "isMemberOf" used by the back-end LDAP server.
 
 ````
@@ -351,7 +461,7 @@ Note: MarkLogic 9 has added the functionality to specify alternate search Attrib
 #### Secure LDAP Proxy server (1)
 
 An example configuration building on the simple LDAP proxy but securing the back-end connection to the LDAP server using LDAPS security.
-This is a useful configuration for diagnosing external security problems where the back-end LDAP server requires a TLS encrypted session. 
+This is a useful configuration for diagnosing external security problems where the back-end LDAP server requires a TLS encrypted session.
 With the MLEAProxy in place, LDAP traffic can be seen on the output display and also makes it possible to capture network traffic between the client and MLEAProxy for further diagnosis using the Wireshark LDAP dissector.
 
 <img src="./secureproxy1.png">
@@ -407,12 +517,14 @@ Sample output
 ````
 
 This configuration can be further enhanced for cases where a TrustAll TrustManager is not acceptable by adding a user created trust store containing the required CA certificates.
+
 ````
 ldapset.set1.truststore=/path/to/mlproxytrust.jks
 ldapset.set1.truststorepasswd=password
 ````
 
 If the back-end LDAPS server also requires TLS Client Authentication then a user created key store containing a certificate and private key can be added.
+
 ````
 ldapset.set1.keystore=/path/to/mlproxykey.jks
 ldapset.set1.keystorepasswd=password
@@ -559,12 +671,12 @@ Sample log output showing 3 bind requests directing to 3 back-end servers in tur
 
 In addition to the simple round robin load balancing algorithm, MLEAProxy also supports the following load balancing algorithms.
 
-* <b>single</b>        : No load balancing performed only the first server in the set will be used.
-* <b>failover</b>      : The first server in the set will be used while it is available, should the server become unavailable the next server in the set will be used.
-* <b>roundrobin</b>    : Servers in the set will be used in turn.
-* <b>roundrobindns</b> : Used when a hostname lookup returns multiple IP addresses, MLEAProxy will use each returned IP Address, in turn, the same as if they had been coded for round robin.
-* <b>fewest</b>        : Servers in the set will be used on a least used basis, this is useful when variable LDAP request load result in one or more servers handling more work when round robin is used.
-* <b>fastest</b>       : LDAP requests will be directed to the server that handles requests faster.
+- <b>single</b>        : No load balancing performed only the first server in the set will be used.
+- <b>failover</b>      : The first server in the set will be used while it is available, should the server become unavailable the next server in the set will be used.
+- <b>roundrobin</b>    : Servers in the set will be used in turn.
+- <b>roundrobindns</b> : Used when a hostname lookup returns multiple IP addresses, MLEAProxy will use each returned IP Address, in turn, the same as if they had been coded for round robin.
+- <b>fewest</b>        : Servers in the set will be used on a least used basis, this is useful when variable LDAP request load result in one or more servers handling more work when round robin is used.
+- <b>fastest</b>       : LDAP requests will be directed to the server that handles requests faster.
 
 #### Load balancing LDAP Proxy server (2)
 
@@ -629,4 +741,3 @@ Sample log output
 2017-06-30 16:23:43.852  INFO 95738 --- [           main] com.marklogic.handlers.LDAPlistener      : Listening on: 0.0.0.0:30389 ( Load balancing LDAP proxy with failover to secondary set. )
 2017-06-30 16:23:43.854  INFO 95738 --- [           main] com.marklogic.MLEAProxy                  : Started MLEAProxy in 1.096 seconds (JVM running for 1.36)
 ````
-

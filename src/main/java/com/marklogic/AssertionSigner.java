@@ -1,44 +1,35 @@
 package com.marklogic;
 
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.impl.AssertionMarshaller;
-import org.opensaml.xml.io.MarshallingException;
-import org.opensaml.xml.security.credential.Credential;
-import org.opensaml.xml.signature.Signature;
-import org.opensaml.xml.signature.SignatureConstants;
-import org.opensaml.xml.signature.SignatureException;
-import org.opensaml.xml.signature.Signer;
-import org.opensaml.xml.signature.impl.SignatureBuilder;
-
+/**
+ * SAML Assertion Signer - TEMPORARILY DISABLED
+ * 
+ * This class has been temporarily disabled due to OpenSAML dependency compatibility issues.
+ * The OpenSAML library requires significant updates for Java 21 compatibility.
+ * 
+ * TODO: Update to OpenSAML 3.x or 4.x for proper Java 21 support
+ * 
+ * @deprecated This functionality is temporarily disabled pending OpenSAML upgrade
+ */
+@Deprecated
 final class AssertionSigner {
-    private final Credential signingCredential;
-
-    static AssertionSigner createWithCredential(Credential signingCredential) {
-        return new AssertionSigner(signingCredential);
+    
+    /**
+     * Constructor disabled - OpenSAML functionality temporarily unavailable
+     */
+    private AssertionSigner() {
+        throw new UnsupportedOperationException(
+            "AssertionSigner is temporarily disabled due to OpenSAML compatibility issues with Java 21. " +
+            "Please update OpenSAML dependencies to version 3.x or 4.x for Java 21 support."
+        );
     }
-
-    private AssertionSigner(Credential signingCredential) {
-        this.signingCredential = signingCredential;
-    }
-
-    Assertion signAssertion(Assertion assertion) throws MarshallingException, SignatureException {
-        SignatureBuilder builder = new SignatureBuilder();
-        Signature signature = builder.buildObject();
-
-        signature.setSigningCredential(signingCredential);
-        signature.setSignatureAlgorithm(SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA256);
-        signature.setCanonicalizationAlgorithm(SignatureConstants.ALGO_ID_C14N_EXCL_OMIT_COMMENTS);
-
-        assertion.setSignature(signature);
-
-        addXmlSignatureInstanceToAssertion(assertion);
-        Signer.signObject(signature);
-
-        return assertion;
-    }
-
-    private void addXmlSignatureInstanceToAssertion(Assertion assertion) throws MarshallingException {
-        AssertionMarshaller marshaller = new AssertionMarshaller();
-        marshaller.marshall(assertion);
+    
+    /**
+     * Factory method disabled - OpenSAML functionality temporarily unavailable
+     */
+    static AssertionSigner createWithCredential(Object signingCredential) {
+        throw new UnsupportedOperationException(
+            "SAML assertion signing is temporarily disabled. " +
+            "OpenSAML dependencies need to be updated for Java 21 compatibility."
+        );
     }
 }
