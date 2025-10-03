@@ -9,30 +9,26 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Objects;
-
 @RestController
-public class B64EncodeHandler {
+public class B64DecodeHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(B64EncodeHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(B64DecodeHandler.class);
 
     @Autowired
     private saml saml;
 
     @RequestMapping(
-            value = "/saml/encode",
+            value = "/saml/decode",
             method = RequestMethod.POST,
             produces = "application/xml"
     )
     @ResponseBody
     public String encode(@RequestBody String body) {
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
-        context.getLogger(B64EncodeHandler.class).setLevel(Level.valueOf(saml.getListenerCfg().debugLevel()));
 
-        return Utils.e(body);
+        context.getLogger(B64DecodeHandler.class).setLevel(saml.getCfg().samlDebug() ? Level.DEBUG : Level.INFO);
+
+        return new String(Utils.b64d(body));
     }
 
 }

@@ -1,4 +1,4 @@
-package com.serverless.SAML;
+package com.marklogic;
 
 import org.opensaml.saml2.core.Assertion;
 import org.opensaml.saml2.core.impl.AssertionMarshaller;

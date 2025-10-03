@@ -1,67 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <meta charset="utf-8">
-    <title>Form</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"> 
+    <title>MarkLogic SAML Authentication Test Tool</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-  </head>
-  <body>
-    <form>
-      <div class="form-group row">
-        <label for="userid" class="col-4 col-form-label">Userid</label> 
-        <div class="col-8">
-          <div class="input-group">
-            <div class="input-group-prepend">
-              <div class="input-group-text">
-                <i class="fa fa-user"></i>
-              </div>
-            </div> 
-            <input id="userid" name="userid" type="text" class="form-control">
-          </div>
+</head>
+<body>
+<div class="container>"></div>
+<div class="container bg-light margin-bottom: 1rem">
+    <div class="card-body">
+        <h5 class="card-title">MarkLogic SAML Authentication Test Tool</h5>
+        <p class="card-text">Enter Userid and Roles to test a SAML protected AppServer.</p>
+        <p> Note: Changing other values will cause failures but this might be want you want to do :-)</p>
+    </div>
+</div>
+<p></p>
+<div class="container">
+    <form th:action="@{/saml/auth}" th:object="${saml}" method="post">
+        <div class="form-group row">
+            <label for="userid" class="col-4 col-form-label">Userid</label>
+            <div class="col-8">
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <div class="input-group-text">
+                            <i class="fa fa-user"></i>
+                        </div>
+                    </div>
+                    <input id="userid" name="userid" type="text" class="form-control">
+                </div>
+            </div>
         </div>
-      </div>
-      <div class="form-group row">
-        <label for="roles" class="col-4 col-form-label">Roles</label> 
-        <div class="col-8">
-          <div class="input-group">
-            <div class="input-group-prepend">
-              <div class="input-group-text">
-                <i class="fa fa-users"></i>
-              </div>
-            </div> 
-            <input id="roles" name="roles" type="text" aria-describedby="rolesHelpBlock" class="form-control">
-          </div> 
-          <span id="rolesHelpBlock" class="form-text text-muted">Comma seperate list of roles to include in the assertion</span>
+        <div class="form-group row">
+            <label for="roles" class="col-4 col-form-label">Roles</label>
+            <div class="col-8">
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <div class="input-group-text">
+                            <i class="fa fa-users"></i>
+                        </div>
+                    </div>
+                    <input id="roles" name="roles" type="text" aria-describedby="rolesHelpBlock" class="form-control">
+                </div>
+                <span id="rolesHelpBlock" class="form-text text-muted">Comma seperate list of roles to include in the assertion</span>
+            </div>
         </div>
-      </div>
-      <div class="form-group row">
-        <label for="authn" class="col-4 col-form-label">Authn result</label> 
-        <div class="col-8">
-          <select id="authn" name="authn" required="required" class="custom-select">
-            <option value="success">Success</option>
-            <option value="failure">Failure</option>
-          </select>
+        <div class="form-group row">
+            <label for="authn" class="col-4 col-form-label">Authn result</label>
+            <div class="col-8">
+                <select id="authn" name="authn" required="required" class="custom-select">
+                    <option value="success">Success</option>
+                    <option value="failure">Failure</option>
+                </select>
+            </div>
         </div>
-      </div>
-      <div class="form-group row">
-        <label for="id" class="col-4 col-form-label">SAML I.D</label> 
-        <div class="col-8">
-          <input id="id" name="id" type="text" class="form-control">
+        <div class="form-group row">
+            <label for="notbefore_date" class="col-4 col-form-label">Valid from</label>
+            <div class="col-8">
+                <input id="notbefore_date" name="notbefore_date" type="text" class="form-control"
+                       th:field="*{notbefore_date}">
+            </div>
         </div>
-      </div>
-      <div class="form-group row">
-        <label for="textarea" class="col-4 col-form-label">SAML Request</label> 
-        <div class="col-8">
-          <textarea id="textarea" name="textarea" cols="40" rows="5" class="form-control"></textarea>
+        <div class="form-group row">
+            <label for="notafter_date" class="col-4 col-form-label">Valid to</label>
+            <div class="col-8">
+                <input id="notafter_date" name="notafter_date" type="text" class="form-control"
+                       th:field="*{notafter_date}">
+            </div>
         </div>
-      </div> 
-      <div class="form-group row">
-        <div class="offset-4 col-8">
-          <button name="submit" type="submit" class="btn btn-primary">Submit</button>
+        <div class="form-group row">
+            <label for="id" class="col-4 col-form-label">SAML I.D</label>
+            <div class="col-8">
+                <input id="id" name="id" type="text" class="form-control" th:field="*{samlid}">
+            </div>
         </div>
-      </div>
+        <div class="form-group row">
+            <label for="assertionUrl" class="col-4 col-form-label">Assertion Consumer URL</label>
+            <div class="col-8">
+                <input id="assertionUrl" name="assertionUrl" type="text" class="form-control"
+                       th:field="*{assertionUrl}">
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="samlRequest" class="col-4 col-form-label">SAML Request</label>
+            <div class="col-8">
+                <textarea id="samlRequest" name="" cols="40" rows="5" class="form-control"
+                          th:text="*{samlRequest}"></textarea>
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="offset-4 col-8">
+                <button name="submit" type="submit" class="btn btn-primary">Submit</button>
+            </div>
+        </div>
     </form>
-  </body>
+</div>
+</div>
+</body>
 </html>
