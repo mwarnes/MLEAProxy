@@ -111,17 +111,17 @@ class LDAPlistener implements ApplicationRunner {
             }
         }
 
-        // Start Listeners
-        if (cfg.listeners()==null) {
+        // Start LDAP Listeners
+        if (cfg.ldaplisteners()==null) {
             logger.info("No LDAP Listener configurations found.");
         } else {
-            for (String l : cfg.listeners()) {
+            for (String l : cfg.ldaplisteners()) {
                 logger.info("Starting LDAP listeners.");
                 logger.debug("Listener: " + l);
                 HashMap<String,String> expVars = new HashMap();
                 expVars.put("listener", l);
-                ListenersConfig listenerCfg = ConfigFactory
-                        .create(ListenersConfig.class, expVars);
+                LDAPListenersConfig listenerCfg = ConfigFactory
+                        .create(LDAPListenersConfig.class, expVars);
 
                 LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
                 context.getLogger(LDAPlistener.class).setLevel(Level.valueOf(listenerCfg.debugLevel()));
@@ -151,6 +151,27 @@ class LDAPlistener implements ApplicationRunner {
                 }
 
                 logger.info("Listening on: " + listenerCfg.listenerIpAddress() + ":" + listenerCfg.listenerPort() + " ( " + listenerCfg.listenerDescription() + " )");
+            }
+        }
+
+        // Start LDAP Listeners
+        if (cfg.samllisteners()==null) {
+            logger.info("No SAML Listener configurations found.");
+        } else {
+            for (String l : cfg.samllisteners()) {
+                logger.info("Starting SAML listeners.");
+                logger.debug("Listener: " + l);
+                HashMap<String, String> expVars = new HashMap();
+                expVars.put("listener", l);
+                SAMLListenersConfig listenerCfg = ConfigFactory
+                        .create(SAMLListenersConfig.class, expVars);
+
+                LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+                context.getLogger(LDAPlistener.class).setLevel(Level.valueOf(listenerCfg.debugLevel()));
+
+                logger.debug("IP Address: " + listenerCfg.listenerIpAddress());
+                logger.debug("Port: " + listenerCfg.listenerPort());
+//                logger.debug("Request handler: " + listenerCfg.listenerRequestHandler());
             }
         }
 
@@ -285,7 +306,7 @@ class LDAPlistener implements ApplicationRunner {
 
     }
 
-    private ServerSocketFactory createServerSocketFactory(ListenersConfig cfg) throws Exception {
+    private ServerSocketFactory createServerSocketFactory(LDAPListenersConfig cfg) throws Exception {
         logger.debug("Creating Server Socket Factory.");
 
         if (cfg.listenerKeyStore().isEmpty() || cfg.listenerKeyStorePassword().isEmpty() ) {
