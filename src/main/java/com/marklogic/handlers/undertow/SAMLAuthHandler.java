@@ -1,10 +1,17 @@
 package com.marklogic.handlers.undertow;
 
 import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.zip.DataFormatException;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -31,14 +38,36 @@ import org.opensaml.saml.saml2.core.Status;
 import org.opensaml.saml.saml2.core.StatusCode;
 import org.opensaml.saml.saml2.core.Subject;
 import org.opensaml.saml.saml2.core.SubjectConfirmation;
+import org.opensaml.saml.saml2.core.SubjectConfirmationData;
+import org.opensaml.saml.saml2.core.Conditions;
+import org.opensaml.saml.saml2.core.AuthnStatement;
+import org.opensaml.saml.saml2.core.AuthnContext;
+import org.opensaml.saml.saml2.core.AuthnContextClassRef;
+import org.opensaml.saml.saml2.core.Attribute;
+import org.opensaml.saml.saml2.core.AttributeStatement;
+import org.opensaml.saml.saml2.core.AttributeValue;
+import org.opensaml.core.xml.schema.XSString;
+import org.opensaml.core.xml.schema.impl.XSStringBuilder;
 import org.opensaml.saml.saml2.core.impl.AssertionBuilder;
 import org.opensaml.saml.saml2.core.impl.IssuerBuilder;
 import org.opensaml.saml.saml2.core.impl.NameIDBuilder;
 import org.opensaml.saml.saml2.core.impl.ResponseBuilder;
+import org.opensaml.saml.saml2.core.impl.AttributeBuilder;
+import org.opensaml.saml.saml2.core.impl.AttributeStatementBuilder;
 import org.opensaml.saml.saml2.core.impl.StatusBuilder;
 import org.opensaml.saml.saml2.core.impl.StatusCodeBuilder;
 import org.opensaml.saml.saml2.core.impl.SubjectBuilder;
 import org.opensaml.saml.saml2.core.impl.SubjectConfirmationBuilder;
+import org.opensaml.saml.saml2.core.impl.SubjectConfirmationDataBuilder;
+import org.opensaml.saml.saml2.core.impl.ConditionsBuilder;
+import org.opensaml.saml.saml2.core.impl.AuthnStatementBuilder;
+import org.opensaml.saml.saml2.core.impl.AuthnContextBuilder;
+import org.opensaml.saml.saml2.core.impl.AuthnContextClassRefBuilder;
+import org.opensaml.security.credential.Credential;
+import org.opensaml.security.credential.CredentialSupport;
+import org.opensaml.xmlsec.signature.Signature;
+import org.opensaml.xmlsec.signature.support.SignatureConstants;
+import org.opensaml.xmlsec.signature.support.Signer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -143,6 +172,53 @@ public class SAMLAuthHandler {
     }
     
     /**
+     * Load private key from PEM file
+     */
+    private PrivateKey loadPrivateKey(String keyPath) throws Exception {
+        String key = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(keyPath)));
+        
+        // Remove PEM header/footer and whitespace
+        key = key.replace("-----BEGIN PRIVATE KEY-----", "")
+                 .replace("-----END PRIVATE KEY-----", "")
+                 .replace("-----BEGIN RSA PRIVATE KEY-----", "")
+                 .replace("-----END RSA PRIVATE KEY-----", "")
+                 .replaceAll("\\s", "");
+        
+        // Decode base64
+        byte[] keyBytes = Base64.getDecoder().decode(key);
+        
+        // Try PKCS8 format first
+        try {
+            PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
+            KeyFactory kf = KeyFactory.getInstance("RSA");
+            return kf.generatePrivate(spec);
+        } catch (Exception e) {
+            // If PKCS8 fails, try converting from PKCS1 (traditional RSA format)
+            logger.warn("Failed to load as PKCS8, attempting PKCS1 conversion", e);
+            throw new Exception("Private key must be in PKCS8 format. Convert using: openssl pkcs8 -topk8 -nocrypt -in privkey.pem -out privkey_pkcs8.pem");
+        }
+    }
+    
+    /**
+     * Load X509 certificate from PEM file
+     */
+    private X509Certificate loadCertificate(String certPath) throws Exception {
+        try (FileInputStream fis = new FileInputStream(certPath)) {
+            CertificateFactory cf = CertificateFactory.getInstance("X.509");
+            return (X509Certificate) cf.generateCertificate(fis);
+        }
+    }
+    
+    /**
+     * Create signing credential from private key and certificate
+     */
+    private Credential createSigningCredential(String keyPath, String certPath) throws Exception {
+        PrivateKey privateKey = loadPrivateKey(keyPath);
+        X509Certificate certificate = loadCertificate(certPath);
+        return CredentialSupport.getSimpleCredential(certificate, privateKey);
+    }
+    
+    /**
      * Generate SAML Response using OpenSAML 4.x API
      * This is a temporary local implementation until Utils.generateSAMLResponse is updated
      */
@@ -211,7 +287,132 @@ public class SAMLAuthHandler {
             SubjectConfirmation subjectConfirmation = subjectConfirmationBuilder.buildObject();
             subjectConfirmation.setMethod(SubjectConfirmation.METHOD_BEARER);
             
+            // Create SubjectConfirmationData with Recipient and NotOnOrAfter
+            SubjectConfirmationDataBuilder subjectConfirmationDataBuilder = (SubjectConfirmationDataBuilder) builderFactory.getBuilder(SubjectConfirmationData.DEFAULT_ELEMENT_NAME);
+            SubjectConfirmationData subjectConfirmationData = subjectConfirmationDataBuilder.buildObject();
+            subjectConfirmationData.setRecipient(samlBean.getAssertionUrl());
+            subjectConfirmationData.setInResponseTo(samlBean.getSamlid());
+            
+            // Parse NotOnOrAfter from the samlBean
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                LocalDateTime notAfterDateTime = LocalDateTime.parse(samlBean.getNotafter_date(), formatter);
+                java.time.Instant notAfterInstant = notAfterDateTime.atZone(java.time.ZoneId.of("UTC")).toInstant();
+                subjectConfirmationData.setNotOnOrAfter(notAfterInstant);
+            } catch (Exception e) {
+                logger.error("Failed to parse NotOnOrAfter date: {}", samlBean.getNotafter_date(), e);
+                // Default to 5 minutes from now
+                subjectConfirmationData.setNotOnOrAfter(java.time.Instant.now().plusSeconds(300));
+            }
+            
+            subjectConfirmation.setSubjectConfirmationData(subjectConfirmationData);
+            subject.getSubjectConfirmations().add(subjectConfirmation);
+            
             assertion.setSubject(subject);
+            
+            // Create Conditions with NotBefore and NotOnOrAfter
+            ConditionsBuilder conditionsBuilder = (ConditionsBuilder) builderFactory.getBuilder(Conditions.DEFAULT_ELEMENT_NAME);
+            Conditions conditions = conditionsBuilder.buildObject();
+            
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                LocalDateTime notBeforeDateTime = LocalDateTime.parse(samlBean.getNotbefore_date(), formatter);
+                LocalDateTime notAfterDateTime = LocalDateTime.parse(samlBean.getNotafter_date(), formatter);
+                
+                java.time.Instant notBeforeInstant = notBeforeDateTime.atZone(java.time.ZoneId.of("UTC")).toInstant();
+                java.time.Instant notAfterInstant = notAfterDateTime.atZone(java.time.ZoneId.of("UTC")).toInstant();
+                
+                conditions.setNotBefore(notBeforeInstant);
+                conditions.setNotOnOrAfter(notAfterInstant);
+            } catch (Exception e) {
+                logger.error("Failed to parse Conditions dates", e);
+                // Default to now and 5 minutes from now
+                conditions.setNotBefore(java.time.Instant.now());
+                conditions.setNotOnOrAfter(java.time.Instant.now().plusSeconds(300));
+            }
+            
+            assertion.setConditions(conditions);
+            
+            // Create AuthnStatement
+            AuthnStatementBuilder authnStatementBuilder = (AuthnStatementBuilder) builderFactory.getBuilder(AuthnStatement.DEFAULT_ELEMENT_NAME);
+            AuthnStatement authnStatement = authnStatementBuilder.buildObject();
+            authnStatement.setAuthnInstant(java.time.Instant.now());
+            
+            // Create AuthnContext
+            AuthnContextBuilder authnContextBuilder = (AuthnContextBuilder) builderFactory.getBuilder(AuthnContext.DEFAULT_ELEMENT_NAME);
+            AuthnContext authnContext = authnContextBuilder.buildObject();
+            
+            // Create AuthnContextClassRef
+            AuthnContextClassRefBuilder authnContextClassRefBuilder = (AuthnContextClassRefBuilder) builderFactory.getBuilder(AuthnContextClassRef.DEFAULT_ELEMENT_NAME);
+            AuthnContextClassRef authnContextClassRef = authnContextClassRefBuilder.buildObject();
+            authnContextClassRef.setURI(AuthnContext.PASSWORD_AUTHN_CTX);
+            
+            authnContext.setAuthnContextClassRef(authnContextClassRef);
+            authnStatement.setAuthnContext(authnContext);
+            assertion.getAuthnStatements().add(authnStatement);
+            
+            // Create AttributeStatement with roles
+            logger.debug("Processing roles for user {}: [{}]", samlBean.getUserid(), samlBean.getRoles());
+            if (samlBean.getRoles() != null && !samlBean.getRoles().isEmpty()) {
+                AttributeStatementBuilder attributeStatementBuilder = (AttributeStatementBuilder) builderFactory.getBuilder(AttributeStatement.DEFAULT_ELEMENT_NAME);
+                AttributeStatement attributeStatement = attributeStatementBuilder.buildObject();
+                
+                // Create roles attribute
+                AttributeBuilder attributeBuilder = (AttributeBuilder) builderFactory.getBuilder(Attribute.DEFAULT_ELEMENT_NAME);
+                Attribute rolesAttribute = attributeBuilder.buildObject();
+                rolesAttribute.setName("roles");
+                rolesAttribute.setNameFormat("urn:oasis:names:tc:SAML:2.0:attrname-format:basic");
+                
+                // Parse comma-separated roles and add each as an attribute value
+                String[] roles = samlBean.getRoles().split(",");
+                XSStringBuilder stringBuilder = (XSStringBuilder) builderFactory.getBuilder(XSString.TYPE_NAME);
+                
+                for (String role : roles) {
+                    String trimmedRole = role.trim();
+                    if (!trimmedRole.isEmpty()) {
+                        XSString roleValue = stringBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME, XSString.TYPE_NAME);
+                        roleValue.setValue(trimmedRole);
+                        rolesAttribute.getAttributeValues().add(roleValue);
+                    }
+                }
+                
+                attributeStatement.getAttributes().add(rolesAttribute);
+                assertion.getAttributeStatements().add(attributeStatement);
+                
+                logger.info("Added {} role(s) to SAML assertion: {}", roles.length, samlBean.getRoles());
+            } else {
+                logger.warn("No roles to add to SAML assertion for user: {} (roles value: '{}')", samlBean.getUserid(), samlBean.getRoles());
+            }
+            
+            // Sign the assertion if certificate and key paths are configured
+            String certPath = System.getProperty("user.dir") + "/src/main/resources/static/certificates/certificate.pem";
+            String keyPath = System.getProperty("user.dir") + "/src/main/resources/static/certificates/privkey.pem";
+            
+            Signature signature = null;
+            try {
+                // Load signing credential
+                Credential signingCredential = createSigningCredential(keyPath, certPath);
+                
+                // Create signature
+                var sigBuilder = builderFactory.getBuilder(Signature.DEFAULT_ELEMENT_NAME);
+                if (sigBuilder != null) {
+                    signature = (Signature) sigBuilder.buildObject(Signature.DEFAULT_ELEMENT_NAME);
+                    signature.setSigningCredential(signingCredential);
+                    signature.setSignatureAlgorithm(SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA256);
+                    signature.setCanonicalizationAlgorithm(SignatureConstants.ALGO_ID_C14N_EXCL_OMIT_COMMENTS);
+                    
+                    // Add signature to assertion
+                    assertion.setSignature(signature);
+                    
+                    logger.info("Assertion signature configured successfully");
+                } else {
+                    logger.error("Failed to get Signature builder from factory");
+                }
+            } catch (Exception e) {
+                logger.error("Failed to sign assertion - certificate or key not found or invalid", e);
+                // Continue without signature if signing fails
+                signature = null;
+            }
             
             // Add Assertion to Response
             response.getAssertions().add(assertion);
@@ -224,6 +425,19 @@ public class SAMLAuthHandler {
             }
             org.w3c.dom.Element element = marshaller.marshall(response);
             
+            // Sign the assertion after marshalling (required by OpenSAML)
+            if (signature != null) {
+                try {
+                    Signer.signObject(signature);
+                    logger.info("Assertion signed successfully");
+                } catch (Exception e) {
+                    logger.error("Failed to sign assertion", e);
+                    throw new RuntimeException("Assertion signing failed", e);
+                }
+            } else {
+                logger.warn("No signature configured - assertion will not be signed");
+            }
+            
             // Convert to string
             javax.xml.transform.TransformerFactory transformerFactory = javax.xml.transform.TransformerFactory.newInstance();
             javax.xml.transform.Transformer transformer = transformerFactory.newTransformer();
@@ -233,7 +447,10 @@ public class SAMLAuthHandler {
                                new javax.xml.transform.stream.StreamResult(stringWriter));
             
             String samlResponse = stringWriter.toString();
-            logger.debug("Generated SAML Response XML: {}", samlResponse);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Generated SAML Response XML (length: {} chars):", samlResponse.length());
+                logger.debug(samlResponse);
+            }
             
             // Base64 encode the response
             return Utils.e(samlResponse);
@@ -278,7 +495,11 @@ public class SAMLAuthHandler {
             
             // Generate the SAML response using OpenSAML 4.x
             String response = generateSAMLResponseV4(saml);
-            logger.debug("Generated SAML Response: {}", new String(Utils.b64d(response)));
+            if (logger.isDebugEnabled()) {
+                String decodedResponse = new String(Utils.b64d(response));
+                logger.debug("Generated SAML Response (Base64 decoded, length: {} chars):", decodedResponse.length());
+                logger.debug(decodedResponse);
+            }
             saml.setSamlResponse(response);
             
             logger.info("SAML authentication successful for user: {} with roles: {}", userid, roles);
