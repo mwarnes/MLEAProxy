@@ -222,11 +222,23 @@
             <artifactId>spring-security-oauth2-jose</artifactId>
         </dependency>
         
-        <!-- JWT Support -->
+        <!-- JWT Support - JJWT (Modern JWT library) -->
         <dependency>
-            <groupId>com.nimbusds</groupId>
-            <artifactId>nimbus-jose-jwt</artifactId>
-            <version>9.37.3</version>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.6</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
         </dependency>
         
         <!-- Modern Date/Time Support (replaces Joda Time) -->
