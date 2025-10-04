@@ -3,7 +3,7 @@ package com.marklogic.handlers;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 
-import com.marklogic.beans.saml;
+import com.marklogic.beans.SamlBean;
 import com.marklogic.configuration.*;
 import com.unboundid.ldap.listener.*;
 import com.unboundid.ldap.sdk.*;
@@ -63,41 +63,102 @@ class Applicationlistener implements ApplicationRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(Applicationlistener.class);
 
-    @Autowired
-    private saml saml;
+    /**
+     * Expected sequence size for an RSA private key in ASN.1 format.
+     * An RSA private key sequence contains: version, modulus, publicExponent,
+     * privateExponent, prime1, prime2, exponent1, exponent2, and coefficient.
+     */
+    private static final int RSA_PRIVATE_KEY_SEQUENCE_SIZE = 9;
 
+    @Autowired
+    private SamlBean saml;
+
+    /**
+     * Main entry point for the application runner.
+     * Orchestrates the initialization and startup of all application components.
+     * 
+     * @param args Command-line arguments passed to the application
+     * @throws Exception if any initialization step fails
+     */
     @Override
     public void run(ApplicationArguments args) throws Exception {
+        ApplicationConfig cfg = initializeConfiguration();
+        setupSecurityProviders();
+        setupLDAPDebugging(cfg);
+        logApplicationArguments(args);
+        startInMemoryDirectoryServers(cfg);
+        startLDAPListeners(cfg);
+        initializeSAMLConfiguration(cfg);
+    }
 
+    /**
+     * Initializes the application configuration from properties file.
+     * Sets the default properties file path if not specified on command line.
+     * 
+     * @return Loaded ApplicationConfig instance
+     */
+    private ApplicationConfig initializeConfiguration() {
         // Set mleaproxy.properties System Property if not passed on the commandline.
-        if (System.getProperty("mleaproxy.properties")==null) {
+        if (System.getProperty("mleaproxy.properties") == null) {
             System.setProperty("mleaproxy.properties", "./mleaproxy.properties");
         }
+        
         ApplicationConfig cfg = ConfigFactory.create(ApplicationConfig.class);
+        logger.debug("Cfg: {}", cfg);
+        
+        return cfg;
+    }
 
-        logger.debug("Cfg." + cfg.toString());
-
+    /**
+     * Sets up security providers required for cryptographic operations.
+     * Adds BouncyCastle provider for PEM file parsing and SSL operations.
+     */
+    private void setupSecurityProviders() {
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+    }
 
-        logger.debug("ldap.debug flag: " + cfg.ldapDebug());
+    /**
+     * Configures LDAP debugging based on application configuration.
+     * Enables UnboundID LDAP SDK debug output when configured.
+     * 
+     * @param cfg Application configuration containing debug settings
+     */
+    private void setupLDAPDebugging(ApplicationConfig cfg) {
+        logger.debug("ldap.debug flag: {}", cfg.ldapDebug());
         if (cfg.ldapDebug()) {
-            System.setProperty("com.unboundid.ldap.sdk.debug.enabled","true");
-            System.setProperty("com.unboundid.ldap.sdk.debug.type","ldap");
+            System.setProperty("com.unboundid.ldap.sdk.debug.enabled", "true");
+            System.setProperty("com.unboundid.ldap.sdk.debug.type", "ldap");
         }
+    }
 
+    /**
+     * Logs command-line arguments passed to the application.
+     * Useful for debugging application startup and configuration.
+     * 
+     * @param args Command-line arguments to log
+     */
+    private void logApplicationArguments(ApplicationArguments args) {
         logger.info("Application started with command-line arguments: {}", Arrays.toString(args.getSourceArgs()));
         logger.info("NonOptionArgs: {}", args.getNonOptionArgs());
         logger.info("OptionNames: {}", args.getOptionNames());
+    }
 
-
+    /**
+     * Starts in-memory LDAP directory servers as configured.
+     * Each server can have custom schema, LDIF data, and custom listeners.
+     * 
+     * @param cfg Application configuration containing directory server definitions
+     * @throws Exception if server initialization or startup fails
+     */
+    private void startInMemoryDirectoryServers(ApplicationConfig cfg) throws Exception {
         // Start In memory Directory Server
-        logger.debug("inMemory LDAP servers: " + Arrays.toString(cfg.directoryServers()));
-        if (cfg.directoryServers()==null) {
+        logger.debug("inMemory LDAP servers: {}", Arrays.toString(cfg.directoryServers()));
+        if (cfg.directoryServers() == null) {
             logger.info("No inMemory LDAP servers defined.");
         } else {
             logger.info("Starting inMemory LDAP servers.");
             for (String d : cfg.directoryServers()) {
-                logger.debug("directoryServer: " + d);
+                logger.debug("directoryServer: {}", d);
                 HashMap<String, String> expVars;
                 expVars = new HashMap<>();
                 expVars.put("directoryServer", d);
@@ -115,7 +176,7 @@ class Applicationlistener implements ApplicationRunner {
 
                 config.setListenerConfigs(dsListener);
 
-                logger.debug("LDIF Path empty: " + dsCfg.dsLDIF().isEmpty());
+                logger.debug("LDIF Path empty: {}", dsCfg.dsLDIF().isEmpty());
 
                 InMemoryDirectoryServer ds = new InMemoryDirectoryServer(config);
 
@@ -129,19 +190,28 @@ class Applicationlistener implements ApplicationRunner {
                     ds.importFromLDIF(true, dsCfg.dsLDIF());
                 }
                 ds.startListening();
-                logger.info("Directory Server listening on: " + addr + ":" + port + " ( " + dsCfg.dsName() + " )");
+                logger.info("Directory Server listening on: {}:{} ({})", addr, port, dsCfg.dsName());
 
             }
         }
+    }
 
+    /**
+     * Starts LDAP proxy listeners that forward requests to backend LDAP servers.
+     * Configures both secure (TLS) and non-secure listeners with custom request handlers.
+     * 
+     * @param cfg Application configuration containing listener definitions
+     * @throws Exception if listener initialization or startup fails
+     */
+    private void startLDAPListeners(ApplicationConfig cfg) throws Exception {
         // Start LDAP Listeners
-        if (cfg.ldaplisteners()==null) {
+        if (cfg.ldaplisteners() == null) {
             logger.info("No LDAP Listener configurations found.");
         } else {
             for (String l : cfg.ldaplisteners()) {
                 logger.info("Starting LDAP listeners.");
-                logger.debug("Listener: " + l);
-                HashMap<String,String> expVars = new HashMap<>();
+                logger.debug("Listener: {}", l);
+                HashMap<String, String> expVars = new HashMap<>();
                 expVars.put("listener", l);
                 LDAPListenersConfig listenerCfg = ConfigFactory
                         .create(LDAPListenersConfig.class, expVars);
@@ -149,9 +219,9 @@ class Applicationlistener implements ApplicationRunner {
                 LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
                 context.getLogger(Applicationlistener.class).setLevel(Level.valueOf(listenerCfg.debugLevel()));
 
-                logger.debug("IP Address: " + listenerCfg.listenerIpAddress());
-                logger.debug("Port: " + listenerCfg.listenerPort());
-                logger.debug("Request handler: " + listenerCfg.listenerRequestHandler());
+                logger.debug("IP Address: {}", listenerCfg.listenerIpAddress());
+                logger.debug("Port: {}", listenerCfg.listenerPort());
+                logger.debug("Request handler: {}", listenerCfg.listenerRequestHandler());
 
                 ServerSet serverSet = buildServerSet(listenerCfg.listenerLDAPSet(), listenerCfg.listenerLDAPMode());
 
@@ -173,70 +243,36 @@ class Applicationlistener implements ApplicationRunner {
                     listener.startListening();
                 }
 
-                logger.info("Listening on: " + listenerCfg.listenerIpAddress() + ":" + listenerCfg.listenerPort() + " ( " + listenerCfg.listenerDescription() + " )");
+                logger.info("Listening on: {}:{} ({})", listenerCfg.listenerIpAddress(), listenerCfg.listenerPort(), listenerCfg.listenerDescription());
             }
         }
-
-        // Start SAML Listeners
-        saml.setCfg(cfg);
-    //    if (cfg.samllisteners()==null) {
-    //        logger.info("No SAML Listener configurations found.");
-    //    } else {
-    //        for (String l : cfg.samllisteners()) {
-    //            logger.info("Starting SAML listeners.");
-    //            logger.debug("Listener: " + l);
-    //            HashMap<String, String> expVars = new HashMap<>();
-    //            expVars.put("listener", l);
-    //            SAMLListenersConfig listenerCfg = ConfigFactory
-    //                    .create(SAMLListenersConfig.class, expVars);
-    //            saml.setListenerCfg(listenerCfg);
-
-    //            LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
-    //            context.getLogger(Applicationlistener.class).setLevel(Level.valueOf(listenerCfg.debugLevel()));
-
-
-    //            Undertow.builder().addHttpListener(listenerCfg.listenerPort(), listenerCfg.listenerIpAddress())
-    //                    .setHandler(Handlers.path()
-    //                            // REST API path
-    //                            .addPrefixPath("/saml", Handlers.routing()
-    //                                            .get("/auth", exchange -> {
-    //                                                exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "text/html");
-    //                                                exchange.getResponseSender().send("SAML Auth endpoint - temporarily disabled during OpenSAML 4.x migration");
-    //                                            })
-    //                                            .get("/ca", exchange -> {
-    //                                                exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "text/plain");
-    //                                                exchange.getResponseSender().send("SAML CA endpoint - temporarily disabled during OpenSAML 4.x migration");
-    //                                            })
-    //                                            .post("/wrapassertion", exchange -> {
-    //                                                exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "text/plain");
-    //                                                exchange.getResponseSender().send("SAML Wrap Assertion endpoint - temporarily disabled during OpenSAML 4.x migration");
-    //                                            })
-    //                                            .setFallbackHandler(exchange -> {
-    //                                                exchange.setStatusCode(404);
-    //                                                exchange.getResponseSender().send("SAML endpoint not found");
-    //                                            })
-    //                            )
-    //                            // SAML utility endpoints
-    //                                            .addExactPath("/saml/encode", exchange -> {
-    //                                                exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "text/plain");
-    //                                                exchange.getResponseSender().send("SAML Base64 Encode endpoint - temporarily disabled during OpenSAML 4.x migration");
-    //                                            })
-    //                                            .addExactPath("/saml/decode", exchange -> {
-    //                                                exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "text/plain");
-    //                                                exchange.getResponseSender().send("SAML Base64 Decode endpoint - temporarily disabled during OpenSAML 4.x migration");
-    //                                            })
-
-    //                            // Serve all static files from classpath resources/public folder
-    //                            .addPrefixPath("/static", new ResourceHandler(
-    //                                    new ClassPathResourceManager(
-    //                                        Applicationlistener.class.getClassLoader(), "public"))
-    //                                    .setWelcomeFiles("index.html"))
-    //                    ).build().start();
-    //        }
-    //    }
-
     }
 
+    /**
+     * Initializes SAML configuration for Spring Boot SAML authentication handlers.
+     * Note: SAML listeners now use Spring Boot controllers (SAMLAuthHandler)
+     * instead of Undertow handlers. See SAMLAuthHandler.java for implementation.
+     * 
+     * @param cfg Application configuration to set on the SAML bean
+     */
+    private void initializeSAMLConfiguration(ApplicationConfig cfg) {
+        // Start SAML Listeners
+        // Note: SAML listeners now use Spring Boot controllers (SAMLAuthHandler)
+        // instead of Undertow handlers. See SAMLAuthHandler.java for implementation.
+        saml.setCfg(cfg);
+    }
+
+    /**
+     * Builds a ServerSet configuration for LDAP backend connections.
+     * Supports multiple server set types including SINGLE, ROUNDROBIN, FAILOVER, FASTEST, FEWEST, and ROUNDROBINDNS.
+     * Can create secure (SSL/TLS) or non-secure connections based on configuration.
+     * 
+     * @param serverSetsList Array of server set names to configure
+     * @param mode Connection mode (INTERNAL, SINGLE, ROUNDROBIN, FAILOVER, FASTEST, FEWEST, ROUNDROBINDNS)
+     * @return Configured ServerSet for LDAP connections
+     * @throws GeneralSecurityException if SSL/TLS configuration fails
+     * @throws IOException if server configuration cannot be read
+     */
     private ServerSet buildServerSet(String[] serverSetsList, String mode) throws GeneralSecurityException, IOException {
         logger.debug("Building server sets");
 
@@ -244,7 +280,7 @@ class Applicationlistener implements ApplicationRunner {
         ArrayList<ServerSet> sets = new ArrayList<>();
 
         for (String set : serverSetsList) {
-            logger.debug("ServerSet: " + set);
+            logger.debug("ServerSet: {}", set);
 
             ServerSet ss= null;
 
@@ -265,8 +301,8 @@ class Applicationlistener implements ApplicationRunner {
                         .create(ServersConfig.class, serverVars);
 
                 if (!mode.equalsIgnoreCase("INTERNAL")) {
-                    logger.debug("LDAP Server host: " + serverCfg.serverHost());
-                    logger.debug("LDAP Server Port: " + serverCfg.serverPort());
+                    logger.debug("LDAP Server host: {}", serverCfg.serverHost());
+                    logger.debug("LDAP Server Port: {}", serverCfg.serverPort());
                     hostAddresses.add(serverCfg.serverHost());
                     hostPorts.add(serverCfg.serverPort());
                 }
@@ -282,9 +318,8 @@ class Applicationlistener implements ApplicationRunner {
                 strAddresses[i] = hostAddresses.get(i);
 
             if (mode.equalsIgnoreCase("INTERNAL")) {
-                    ss = new NullServerSet();
-            }
-            if (mode.equalsIgnoreCase("SINGLE")) {
+                ss = new NullServerSet();
+            } else if (mode.equalsIgnoreCase("SINGLE")) {
                 if (setsCfg.serverSetSecure()) {
                     ss = new SingleServerSet(hostAddresses.get(0), hostPorts.get(0), createSecureSocketFactory(setsCfg));
                 } else {
@@ -350,6 +385,15 @@ class Applicationlistener implements ApplicationRunner {
         return returnSet;
     }
 
+    /**
+     * Creates an SSL socket factory for secure LDAP connections.
+     * Configures SSL/TLS settings based on the provided configuration including certificates, keys, and trust stores.
+     * 
+     * @param cfg Server set configuration containing SSL/TLS settings
+     * @return Configured SSLSocketFactory for secure connections
+     * @throws GeneralSecurityException if SSL/TLS setup fails
+     * @throws IOException if certificate or key files cannot be read
+     */
     private SSLSocketFactory createSecureSocketFactory(SetsConfig cfg) throws GeneralSecurityException, IOException {
         logger.debug("Creating SSL Socket Factory.");
 
@@ -366,6 +410,15 @@ class Applicationlistener implements ApplicationRunner {
 
     }
 
+    /**
+     * Creates a server socket factory for secure LDAP listener connections.
+     * Configures SSL/TLS settings for incoming connections based on the listener configuration.
+     * Requires keystore and password to be configured.
+     * 
+     * @param cfg LDAP listener configuration containing SSL/TLS settings
+     * @return Configured ServerSocketFactory for secure server sockets
+     * @throws Exception if keystore or password is not configured, or if SSL/TLS configuration fails
+     */
     private ServerSocketFactory createServerSocketFactory(LDAPListenersConfig cfg) throws Exception {
         logger.debug("Creating Server Socket Factory.");
 
@@ -379,13 +432,28 @@ class Applicationlistener implements ApplicationRunner {
 
     }
 
+    /**
+     * Creates an SSLUtil instance from a PFX/PKCS12 keystore file.
+     * Loads the keystore and configures key manager for SSL/TLS connections.
+     * Uses BouncyCastle provider for PKCS12 keystore operations.
+     * 
+     * @param pfxpath Path to the PFX/PKCS12 keystore file
+     * @param pfxpasswd Password for the PFX keystore
+     * @return Configured SSLUtil instance with key manager
+     * @throws NoSuchProviderException if BouncyCastle provider is unavailable
+     * @throws KeyStoreException if keystore operations fail
+     * @throws IOException if keystore file cannot be read
+     * @throws CertificateException if certificate parsing fails
+     * @throws NoSuchAlgorithmException if required algorithm is unavailable
+     * @throws UnrecoverableKeyException if private key cannot be recovered
+     */
     private SSLUtil getSslUtil(String pfxpath, String pfxpasswd) throws NoSuchProviderException, KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
         logger.debug("Creating SSLUtil (Type=PFX).");
         SSLUtil sslUtil;
 
         KeyManager km = null;
 
-        logger.debug("PFX path: " + pfxpath);
+        logger.debug("PFX path: {}", pfxpath);
 //        logger.debug("PFX password: " + pfxpasswd);
 
         if (!pfxpath.isEmpty() && !pfxpasswd.isEmpty()) {
@@ -407,14 +475,30 @@ class Applicationlistener implements ApplicationRunner {
         return sslUtil;
     }
 
+    /**
+     * Creates an SSLUtil instance from separate PEM-formatted files.
+     * Parses PEM-formatted private key, certificate, and CA certificate files.
+     * Supports RSA private keys with PKCS#1 format and ASN.1 sequence validation.
+     * Can optionally include CA certificate for trust chain validation.
+     * 
+     * @param keypath Path to PEM-formatted private key file
+     * @param certpath Path to PEM-formatted certificate file
+     * @param capath Path to PEM-formatted CA certificate file (may be empty)
+     * @return Configured SSLUtil instance with key and trust managers
+     * @throws IOException if PEM files cannot be read or parsed
+     * @throws KeyStoreException if keystore operations fail
+     * @throws CertificateException if certificate parsing fails
+     * @throws NoSuchAlgorithmException if required algorithm is unavailable
+     * @throws UnrecoverableKeyException if private key cannot be recovered
+     */
     private SSLUtil getSslUtil(String keypath, String certpath, String capath) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
         logger.debug("Creating SSLUtil (Type=PEM).");
         SSLUtil sslUtil;
 
         KeyManager km = null;
 
-        logger.debug("Key path: " + keypath);
-        logger.debug("Cert path: " + certpath);
+        logger.debug("Key path: {}", keypath);
+        logger.debug("Cert path: {}", certpath);
 
         PEMParser pemParser;
         PemObject pemObject;
@@ -429,7 +513,7 @@ class Applicationlistener implements ApplicationRunner {
                 if (pemObject.getType().equalsIgnoreCase("RSA PRIVATE KEY")) {
                     logger.debug("Parsing RSA Private Key");
                     ASN1Sequence seq = (ASN1Sequence) ASN1Sequence.fromByteArray(pemObject.getContent());
-                    if (seq.size() != 9) {
+                    if (seq.size() != RSA_PRIVATE_KEY_SEQUENCE_SIZE) {
                         logger.debug("Malformed sequence in RSA private key");
                     } else {
                         ASN1Integer mod = (ASN1Integer) seq.getObjectAt(1);
@@ -448,12 +532,11 @@ class Applicationlistener implements ApplicationRunner {
                         kp = new KeyPair(fact.generatePublic(pubSpec), fact.generatePrivate(privSpec));
                     }
                 } else {
-                    logger.error("Private Key file not of type RSA Private Key: " + keypath);
+                    logger.error("Private Key file not of type RSA Private Key: {}", keypath);
                 }
             } catch (Exception e) {
-                logger.error("Unable to parse Private key file: " + keypath);
-                e.printStackTrace();
-                System.exit(0);
+                logger.error("Unable to parse Private key file: {}", keypath, e);
+                throw new IllegalStateException("Failed to load private key from: " + keypath, e);
             } finally {
                 if (pemParser != null) {
                     pemParser.close();
@@ -472,14 +555,13 @@ class Applicationlistener implements ApplicationRunner {
                         for (Certificate certificate : cf
                                 .generateCertificates(new ByteArrayInputStream(pemObject.getContent()))) {
                             certs.add((X509Certificate) certificate);
-                            logger.debug("Found certificate: " + ((X509Certificate) certificate).getSubjectDN().toString());
+                            logger.debug("Found certificate: {}", ((X509Certificate) certificate).getSubjectDN());
                         }
                     }
                 }
             } catch (Exception e) {
-                logger.error("Unable to parse Certificate key file: " + keypath);
-                e.printStackTrace();
-                System.exit(0);
+                logger.error("Unable to parse Certificate file: {}", certpath, e);
+                throw new IllegalStateException("Failed to load certificate from: " + certpath, e);
             } finally {
                 if (pemParser != null) {
                     pemParser.close();
@@ -488,7 +570,7 @@ class Applicationlistener implements ApplicationRunner {
         }
 
         // If KeyPair and Certificate are both available then create a KeyStore
-        if (kp!=null & !certs.isEmpty()) {
+        if (kp != null && !certs.isEmpty()) {
             logger.debug("Creating Keystore Manager.");
             KeyStore ks = KeyStore.getInstance("JKS");
             ks.load(null, null);
@@ -501,7 +583,7 @@ class Applicationlistener implements ApplicationRunner {
 //            JKSkeyStoreOut.close();
         }
 
-        if (km!=null) {
+        if (km != null) {
             logger.debug("Using supplied Certificate and Private Key & TrustAllTrustManager.");
             sslUtil = new SSLUtil(km,new TrustAllTrustManager());
         } else {
@@ -519,9 +601,9 @@ class Applicationlistener implements ApplicationRunner {
         KeyManager km = null;
         TrustManager tm = null;
 
-        logger.debug("Keystore: " + keystore);
+        logger.debug("Keystore: {}", keystore);
 //        logger.debug("Keystore password: " + keystorepw);
-        logger.debug("Truststore: " + truststore);
+        logger.debug("Truststore: {}", truststore);
 //        logger.debug("Truststore password: " + truststorepw);
 
         if (!keystore.isEmpty() && !keystorepw.isEmpty()) {
@@ -540,13 +622,13 @@ class Applicationlistener implements ApplicationRunner {
             tm = tmf.getTrustManagers()[0];
         }
 
-        if (km!=null & tm==null) {
+        if (km != null && tm == null) {
             logger.debug("No Trust managers created using defined KeyManager & TrustAllTrustManager.");
-            sslUtil = new SSLUtil(km,new TrustAllTrustManager());
-        } else if (km!=null & tm!=null) {
+            sslUtil = new SSLUtil(km, new TrustAllTrustManager());
+        } else if (km != null && tm != null) {
             logger.debug("Using configured KeyManager & TrustManager.");
-            sslUtil = new SSLUtil(km,tm);
-        } else if (km==null & tm!=null) {
+            sslUtil = new SSLUtil(km, tm);
+        } else if (km == null && tm != null) {
             logger.debug("Using configured TrustManager.");
             sslUtil = new SSLUtil(tm);
         } else {

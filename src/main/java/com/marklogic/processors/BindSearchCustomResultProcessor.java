@@ -58,6 +58,12 @@ public class BindSearchCustomResultProcessor implements IRequestProcessor, Inter
     // Spring Logger
     private static final Logger logger = LoggerFactory.getLogger(BindSearchCustomResultProcessor.class);
     
+    /**
+     * LDAP result code 53: Unwilling to Perform.
+     * Indicates the server is unwilling to perform the requested operation.
+     */
+    private static final int LDAP_RESULT_UNWILLING_TO_PERFORM = 53;
+    
     // Security constants
     private static final int MAX_BIND_DN_LENGTH = 512;
     private static final int MAX_PASSWORD_LENGTH = 256;
@@ -253,7 +259,7 @@ public class BindSearchCustomResultProcessor implements IRequestProcessor, Inter
         logger.debug("LDAP Request: " + request);
 
         final AddResponseProtocolOp addResponseProtocolOp =
-                new AddResponseProtocolOp(53,
+                new AddResponseProtocolOp(LDAP_RESULT_UNWILLING_TO_PERFORM,
                         null, null,
                         null);
         logger.debug("LDAP Response: " + addResponseProtocolOp);

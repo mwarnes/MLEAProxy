@@ -1,7 +1,6 @@
 package com.marklogic.handlers.undertow;
 
 import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
@@ -71,7 +70,9 @@ import org.opensaml.xmlsec.signature.support.Signer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -81,20 +82,74 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
+import jakarta.annotation.PostConstruct;
+
 import com.marklogic.Utils;
-import com.marklogic.beans.saml;
+import com.marklogic.beans.SamlBean;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 
-@Controller
+@org.springframework.stereotype.Controller
 public class SAMLAuthHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(SAMLAuthHandler.class);
 
     @Autowired
-    private saml saml;
+    private SamlBean saml;
+    
+    @Autowired
+    private ResourceLoader resourceLoader;
+    
+    // Configurable certificate and key paths (works in production JARs)
+    @Value("${saml.certificate.path:classpath:static/certificates/certificate.pem}")
+    private String certificatePath;
+    
+    @Value("${saml.signing.key.path:classpath:static/certificates/privkey.pem}")
+    private String signingKeyPath;
+    
+    // Cache loaded credentials
+    private PrivateKey cachedPrivateKey;
+    private X509Certificate cachedCertificate;
+    private volatile boolean initialized = false;
 
+    @PostConstruct
+    public void init() {
+        try {
+            // Load private key
+            Resource keyResource = resourceLoader.getResource(signingKeyPath);
+            if (keyResource.exists()) {
+                try (java.io.InputStream inputStream = keyResource.getInputStream()) {
+                    this.cachedPrivateKey = loadPrivateKey(inputStream);
+                    logger.info("SAML private key loaded successfully");
+                }
+            } else {
+                logger.warn("SAML private key not found at: {}", signingKeyPath);
+                this.cachedPrivateKey = null;
+            }
+            
+            // Load certificate
+            Resource certResource = resourceLoader.getResource(certificatePath);
+            if (certResource.exists()) {
+                try (java.io.InputStream inputStream = certResource.getInputStream()) {
+                    this.cachedCertificate = loadCertificate(inputStream);
+                    logger.info("SAML certificate loaded successfully");
+                }
+            } else {
+                logger.warn("SAML certificate not found at: {}", certificatePath);
+                this.cachedCertificate = null;
+            }
+            
+            this.initialized = true;
+            
+        } catch (Exception e) {
+            logger.error("Failed to initialize SAML handler", e);
+            this.cachedPrivateKey = null;
+            this.cachedCertificate = null;
+            this.initialized = true; // Still allow SAML to work without signatures
+        }
+    }
+    
     @GetMapping(value = "/saml/auth")
     public String authn(Model model, @RequestParam(value = "SAMLRequest") String req) {
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
@@ -172,10 +227,10 @@ public class SAMLAuthHandler {
     }
     
     /**
-     * Load private key from PEM file
+     * Load private key from PEM InputStream
      */
-    private PrivateKey loadPrivateKey(String keyPath) throws Exception {
-        String key = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(keyPath)));
+    private PrivateKey loadPrivateKey(java.io.InputStream inputStream) throws Exception {
+        String key = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
         
         // Remove PEM header/footer and whitespace
         key = key.replace("-----BEGIN PRIVATE KEY-----", "")
@@ -200,29 +255,28 @@ public class SAMLAuthHandler {
     }
     
     /**
-     * Load X509 certificate from PEM file
+     * Load X509 certificate from PEM InputStream
      */
-    private X509Certificate loadCertificate(String certPath) throws Exception {
-        try (FileInputStream fis = new FileInputStream(certPath)) {
-            CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            return (X509Certificate) cf.generateCertificate(fis);
-        }
+    private X509Certificate loadCertificate(java.io.InputStream inputStream) throws Exception {
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+        return (X509Certificate) cf.generateCertificate(inputStream);
     }
     
     /**
-     * Create signing credential from private key and certificate
+     * Create signing credential from cached private key and certificate
      */
-    private Credential createSigningCredential(String keyPath, String certPath) throws Exception {
-        PrivateKey privateKey = loadPrivateKey(keyPath);
-        X509Certificate certificate = loadCertificate(certPath);
-        return CredentialSupport.getSimpleCredential(certificate, privateKey);
+    private Credential createSigningCredential() throws Exception {
+        if (cachedPrivateKey == null || cachedCertificate == null) {
+            throw new Exception("Private key or certificate not available");
+        }
+        return CredentialSupport.getSimpleCredential(cachedCertificate, cachedPrivateKey);
     }
     
     /**
      * Generate SAML Response using OpenSAML 4.x API
      * This is a temporary local implementation until Utils.generateSAMLResponse is updated
      */
-    private String generateSAMLResponseV4(saml samlBean) throws Exception {
+    private String generateSAMLResponseV4(SamlBean samlBean) throws Exception {
         logger.info("Generating SAML response using OpenSAML 4.x for user: {}", samlBean.getUserid());
         
         try {
@@ -324,8 +378,9 @@ public class SAMLAuthHandler {
                 
                 conditions.setNotBefore(notBeforeInstant);
                 conditions.setNotOnOrAfter(notAfterInstant);
-            } catch (Exception e) {
-                logger.error("Failed to parse Conditions dates", e);
+            } catch (java.time.format.DateTimeParseException e) {
+                logger.error("Failed to parse Conditions dates: notBefore={}, notAfter={}", 
+                             samlBean.getNotbefore_date(), samlBean.getNotafter_date(), e);
                 // Default to now and 5 minutes from now
                 conditions.setNotBefore(java.time.Instant.now());
                 conditions.setNotOnOrAfter(java.time.Instant.now().plusSeconds(300));
@@ -384,14 +439,11 @@ public class SAMLAuthHandler {
                 logger.warn("No roles to add to SAML assertion for user: {} (roles value: '{}')", samlBean.getUserid(), samlBean.getRoles());
             }
             
-            // Sign the assertion if certificate and key paths are configured
-            String certPath = System.getProperty("user.dir") + "/src/main/resources/static/certificates/certificate.pem";
-            String keyPath = System.getProperty("user.dir") + "/src/main/resources/static/certificates/privkey.pem";
-            
+            // Sign the assertion if certificate and key are available
             Signature signature = null;
             try {
-                // Load signing credential
-                Credential signingCredential = createSigningCredential(keyPath, certPath);
+                // Use cached signing credential
+                Credential signingCredential = createSigningCredential();
                 
                 // Create signature
                 var sigBuilder = builderFactory.getBuilder(Signature.DEFAULT_ELEMENT_NAME);
@@ -462,7 +514,7 @@ public class SAMLAuthHandler {
     }
 
     @PostMapping(value = "/saml/auth")
-    public String authz(@ModelAttribute saml saml,
+    public String authz(@ModelAttribute("saml") SamlBean saml,
                         @RequestParam(value = "userid", defaultValue = "") String userid,
                         @RequestParam(value = "roles", defaultValue = "") String roles,
                         @RequestParam(value = "authn", defaultValue = "") String authn,

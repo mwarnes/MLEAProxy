@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.marklogic.beans.saml;
+import com.marklogic.beans.SamlBean;
 
 
 @RestController
@@ -19,7 +19,7 @@ public class SAMLWrapAssertionHandler {
     private static final Logger logger = LoggerFactory.getLogger(SAMLWrapAssertionHandler.class);
 
     @Autowired
-    private saml saml;
+    private SamlBean saml;
 
     @RequestMapping(
             value = "/saml/wrapassertion",

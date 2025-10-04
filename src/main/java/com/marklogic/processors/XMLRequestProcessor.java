@@ -66,6 +66,12 @@ public class XMLRequestProcessor implements IRequestProcessor, IntermediateRespo
     // Spring Logger
     private static final Logger logger = LoggerFactory.getLogger(XMLRequestProcessor.class);
 
+    /**
+     * LDAP result code 53: Unwilling to Perform.
+     * Indicates the server is unwilling to perform the requested operation.
+     */
+    private static final int LDAP_RESULT_UNWILLING_TO_PERFORM = 53;
+
     private ProcessorConfig cfg;
     private XPathFactory xpathFactory;
     private Document document;
@@ -79,7 +85,7 @@ public class XMLRequestProcessor implements IRequestProcessor, IntermediateRespo
         context.getLogger(XMLRequestProcessor.class).setLevel(Level.valueOf(((ProcessorConfig) cfg).debugLevel()));
 
         // Parm1 should contain path to XML LDAP users file
-        logger.debug("XML file path: " + ((ProcessorConfig) cfg).parm1());
+        logger.debug("XML file path: {}", ((ProcessorConfig) cfg).parm1());
 
         // Parse XML Users file
         DocumentBuilderFactory domFactory =
@@ -92,7 +98,7 @@ public class XMLRequestProcessor implements IRequestProcessor, IntermediateRespo
         } else {
             File f = new File(((ProcessorConfig) cfg).parm1());
             if(f.exists() && !f.isDirectory()) {
-                logger.info("Using custom LDAP configuration from: " + ((ProcessorConfig) cfg).parm1());
+                logger.info("Using custom LDAP configuration from: {}", ((ProcessorConfig) cfg).parm1());
                 document = builder.parse(((ProcessorConfig) cfg).parm1());
             } else {
                 logger.error("Custom LDAP configuration file not found.");
@@ -145,9 +151,8 @@ public class XMLRequestProcessor implements IRequestProcessor, IntermediateRespo
                 }
 
             } catch (Exception e) {
-                // Catch and print any exceptions
-                e.printStackTrace();
-                logger.debug(e.getLocalizedMessage());
+                // Catch and log any exceptions
+                logger.error("Error processing bind request: {}", e.getMessage(), e);
                 bindResult = new LDAPResult(1, ResultCode.OPERATIONS_ERROR);
             }
 
@@ -268,11 +273,9 @@ public class XMLRequestProcessor implements IRequestProcessor, IntermediateRespo
             searchResult = new SearchResult(messageID,ResultCode.SUCCESS,null,null,null, entries, null, entries.size(),-1,null);
 
         } catch (Exception e) {
-            // Catch and print any exceptions
-            e.printStackTrace();
-            logger.error(e.getLocalizedMessage());
-            searchResult = new SearchResult(messageID,ResultCode.OPERATIONS_ERROR,e.getLocalizedMessage(),null,null, null, null, 0,0,null);
-//            return searchResult;
+            // Catch and log any exceptions
+            logger.error("Error processing search request: {}", e.getMessage(), e);
+            searchResult = new SearchResult(messageID, ResultCode.OPERATIONS_ERROR, e.getLocalizedMessage(), null, null, null, null, 0, 0, null);
         }
 
         // Return result
@@ -287,7 +290,7 @@ public class XMLRequestProcessor implements IRequestProcessor, IntermediateRespo
         logger.debug("LDAP Request: " + request);
 
         final AddResponseProtocolOp addResponseProtocolOp =
-                new AddResponseProtocolOp(53,
+                new AddResponseProtocolOp(LDAP_RESULT_UNWILLING_TO_PERFORM,
                         null, null,
                         null);
         logger.debug("LDAP Response: " + addResponseProtocolOp);

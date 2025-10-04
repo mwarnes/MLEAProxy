@@ -9,13 +9,18 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.io.FileInputStream;
+import jakarta.annotation.PostConstruct;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
@@ -44,29 +49,58 @@ import java.util.*;
  * 
  * Response: JSON with access_token, token_type, expires_in, and scope
  */
-@Controller
+@RestController
 public class OAuthTokenHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(OAuthTokenHandler.class);
     
-    // Token expiration time in seconds (default: 1 hour)
-    private static final long TOKEN_EXPIRATION_SECONDS = 3600;
+    @Autowired
+    private ResourceLoader resourceLoader;
     
-    // JWT issuer
-    private static final String JWT_ISSUER = "mleaproxy-oauth-server";
+    // Configurable token expiration time in seconds (default: 1 hour)
+    @Value("${oauth.token.expiration.seconds:3600}")
+    private long tokenExpirationSeconds;
+    
+    // Configurable JWT issuer
+    @Value("${oauth.jwt.issuer:mleaproxy-oauth-server}")
+    private String jwtIssuer;
+    
+    // Configurable private key path
+    @Value("${oauth.signing.key.path:classpath:static/certificates/privkey.pem}")
+    private String keyPath;
     
     // Private key for signing tokens
     private RSAPrivateKey privateKey;
     
-    public OAuthTokenHandler() {
+    // Flag to track if handler is properly initialized
+    private volatile boolean initialized = false;
+    
+    /**
+     * Initialize the OAuth handler after Spring context is ready.
+     * Uses @PostConstruct to ensure proper Spring lifecycle management.
+     */
+    @PostConstruct
+    public void init() {
         try {
-            // Load the same private key used for SAML signing
-            String keyPath = System.getProperty("user.dir") + "/src/main/resources/static/certificates/privkey.pem";
-            this.privateKey = loadPrivateKey(keyPath);
-            logger.info("OAuth Token Handler initialized with RSA signing key");
+            logger.info("Initializing OAuth Token Handler with key path: {}", keyPath);
+            Resource resource = resourceLoader.getResource(keyPath);
+            
+            if (!resource.exists()) {
+                logger.error("Private key resource not found at: {}", keyPath);
+                this.privateKey = null;
+                this.initialized = false;
+                return;
+            }
+            
+            try (InputStream inputStream = resource.getInputStream()) {
+                this.privateKey = loadPrivateKey(inputStream);
+                this.initialized = true;
+                logger.info("OAuth Token Handler initialized successfully with RSA signing key");
+            }
         } catch (Exception e) {
             logger.error("Failed to initialize OAuth Token Handler", e);
-            throw new RuntimeException("Failed to load private key for OAuth token signing", e);
+            this.privateKey = null;
+            this.initialized = false;
         }
     }
 
@@ -81,8 +115,19 @@ public class OAuthTokenHandler {
             @RequestParam(value = "roles", defaultValue = "") String rolesParam) {
 
         try {
-            logger.info("OAuth token request - grant_type: {}, client_id: {}, username: {}, scope: {}, roles: {}", 
-                       grantType, clientId, username, scope, rolesParam);
+            // Check if handler is properly initialized
+            if (!initialized || privateKey == null) {
+                logger.error("OAuth Token Handler not properly initialized - private key unavailable");
+                return createErrorResponse("server_error", 
+                    "OAuth service temporarily unavailable - configuration error", 
+                    HttpStatus.SERVICE_UNAVAILABLE);
+            }
+            
+            logger.debug("OAuth token request - grant_type: {}, client_id: {}", grantType, clientId);
+            if (logger.isDebugEnabled()) {
+                logger.debug("OAuth token request details - username: {}, scope: {}, roles: {}", 
+                           username, scope, rolesParam);
+            }
 
             // Validate required parameters
             if (grantType == null || grantType.isEmpty()) {
@@ -125,7 +170,7 @@ public class OAuthTokenHandler {
             Map<String, Object> response = new HashMap<>();
             response.put("access_token", accessToken);
             response.put("token_type", "Bearer");
-            response.put("expires_in", TOKEN_EXPIRATION_SECONDS);
+            response.put("expires_in", tokenExpirationSeconds);
             
             if (scope != null && !scope.isEmpty()) {
                 response.put("scope", scope);
@@ -149,11 +194,11 @@ public class OAuthTokenHandler {
             throws JOSEException {
         
         Instant now = Instant.now();
-        Instant expiration = now.plusSeconds(TOKEN_EXPIRATION_SECONDS);
+        Instant expiration = now.plusSeconds(tokenExpirationSeconds);
         
         // Build JWT claims
         JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
-            .issuer(JWT_ISSUER)
+            .issuer(jwtIssuer)
             .subject(username != null ? username : clientId)
             .audience(clientId)
             .issueTime(Date.from(now))
@@ -211,31 +256,29 @@ public class OAuthTokenHandler {
     }
 
     /**
-     * Load RSA private key from PEM file
+     * Load RSA private key from InputStream (works with classpath resources)
      */
-    private RSAPrivateKey loadPrivateKey(String keyPath) throws Exception {
-        logger.debug("Loading private key from: {}", keyPath);
+    private RSAPrivateKey loadPrivateKey(InputStream inputStream) throws Exception {
+        logger.debug("Loading private key from input stream");
         
-        try (FileInputStream fis = new FileInputStream(keyPath)) {
-            String keyContent = new String(fis.readAllBytes(), StandardCharsets.UTF_8);
-            
-            // Remove PEM headers and whitespace
-            keyContent = keyContent
-                .replace("-----BEGIN PRIVATE KEY-----", "")
-                .replace("-----END PRIVATE KEY-----", "")
-                .replaceAll("\\s", "");
-            
-            // Decode base64
-            byte[] keyBytes = Base64.getDecoder().decode(keyContent);
-            
-            // Create private key
-            PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
-            KeyFactory kf = KeyFactory.getInstance("RSA");
-            PrivateKey privateKey = kf.generatePrivate(spec);
-            
-            logger.info("Private key loaded successfully from: {}", keyPath);
-            return (RSAPrivateKey) privateKey;
-        }
+        String keyContent = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        
+        // Remove PEM headers and whitespace
+        keyContent = keyContent
+            .replace("-----BEGIN PRIVATE KEY-----", "")
+            .replace("-----END PRIVATE KEY-----", "")
+            .replaceAll("\\s", "");
+        
+        // Decode base64
+        byte[] keyBytes = Base64.getDecoder().decode(keyContent);
+        
+        // Create private key
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        PrivateKey privateKey = kf.generatePrivate(spec);
+        
+        logger.info("Private key loaded successfully");
+        return (RSAPrivateKey) privateKey;
     }
 
     /**

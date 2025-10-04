@@ -3,7 +3,7 @@ package com.marklogic.handlers.undertow;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import com.marklogic.Utils;
-import com.marklogic.beans.saml;
+import com.marklogic.beans.SamlBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +24,7 @@ public class SAMLCaCertsHandler {
     private static final Logger logger = LoggerFactory.getLogger(SAMLCaCertsHandler.class);
 
     @Autowired
-    private saml saml;
+    private SamlBean saml;
 
     @RequestMapping(
             value = "/saml/ca",
@@ -37,9 +37,9 @@ public class SAMLCaCertsHandler {
         context.getLogger(SAMLCaCertsHandler.class).setLevel(saml.getCfg().samlDebug() ? Level.DEBUG : Level.INFO);
         String content = null;
         try {
-            content = Utils.getCaCertificate();
+            content = Utils.getCaCertificate(saml);
         } catch (IOException | CertificateException e) {
-            e.printStackTrace();
+            logger.error("Error retrieving CA certificate", e);
         }
         return content;
     }

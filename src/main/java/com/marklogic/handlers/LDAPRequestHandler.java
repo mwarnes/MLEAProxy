@@ -203,9 +203,9 @@ public final class LDAPRequestHandler
         this.listenerConnection = listenerConnection;
         this.requestProcessor = requestProcessor;
         logger.debug("LDAPRequestHandler constructor called.");
-        logger.debug("serverSet" + serverSet);
-        logger.debug("ldapConnection" + ldapConnection);
-        logger.debug("listenerConnection" + listenerConnection);
+        logger.debug("serverSet: {}", serverSet);
+        logger.debug("ldapConnection: {}", ldapConnection);
+        logger.debug("listenerConnection: {}", listenerConnection);
     }
 
 
@@ -217,9 +217,9 @@ public final class LDAPRequestHandler
             final LDAPListenerClientConnection connection)
             throws LDAPException {
         logger.debug("LDAPRequestHandler newInstance called.");
-        logger.debug("serverSet" + serverSet);
-        logger.debug("ldapConnection" + ldapConnection);
-        logger.debug("listenerConnection" + listenerConnection);
+        logger.debug("serverSet: {}", serverSet);
+        logger.debug("ldapConnection: {}", ldapConnection);
+        logger.debug("listenerConnection: {}", listenerConnection);
         return new LDAPRequestHandler(requestProcessor, serverSet, serverSet.getConnection(),
                 connection);
     }
@@ -252,8 +252,12 @@ public final class LDAPRequestHandler
         // Call Configures processor
         logger.debug("processAddRequest called.");
         IRequestProcessor processor = getProcessor();
+        if (processor == null) {
+            logger.error("No processor available for add request");
+            return createErrorResponse(messageID, ResultCode.UNAVAILABLE, "Service temporarily unavailable");
+        }
         LDAPMessage message = processor.processAddRequest(messageID, request, controls, this.ldapConnection, this.listenerConnection);
-        logger.debug("LDAP Message : " + message);
+        logger.debug("LDAP Message : {}", message);
         return message;
     }
 
@@ -300,8 +304,12 @@ public final class LDAPRequestHandler
         // Call Configures processor
         logger.debug("processCompareRequest called.");
         IRequestProcessor processor = getProcessor();
+        if (processor == null) {
+            logger.error("No processor available for compare request");
+            return createErrorResponse(messageID, ResultCode.UNAVAILABLE, "Service temporarily unavailable");
+        }
         LDAPMessage message = processor.processCompareRequest(messageID, request, controls, this.ldapConnection, this.listenerConnection);
-        logger.debug("LDAP Message : " + message);
+        logger.debug("LDAP Message : {}", message);
         return message;
     }
 
@@ -317,8 +325,12 @@ public final class LDAPRequestHandler
         // Call Configures processor
         logger.debug("processDeleteRequest called.");
         IRequestProcessor processor = getProcessor();
+        if (processor == null) {
+            logger.error("No processor available for delete request");
+            return createErrorResponse(messageID, ResultCode.UNAVAILABLE, "Service temporarily unavailable");
+        }
         LDAPMessage message = processor.processDeleteRequest(messageID, request, controls, this.ldapConnection, this.listenerConnection);
-        logger.debug("LDAP Message : " + message);
+        logger.debug("LDAP Message : {}", message);
         return message;
     }
 
@@ -334,8 +346,12 @@ public final class LDAPRequestHandler
         // Call Configures processor
         logger.debug("processExtendedRequest called.");
         IRequestProcessor processor = getProcessor();
+        if (processor == null) {
+            logger.error("No processor available for extended request");
+            return createErrorResponse(messageID, ResultCode.UNAVAILABLE, "Service temporarily unavailable");
+        }
         LDAPMessage message = processor.processExtendedRequest(messageID, request, controls, this.ldapConnection, this.listenerConnection);
-        logger.debug("LDAP Message : " + message);
+        logger.debug("LDAP Message : {}", message);
         return message;
 
     }
@@ -352,8 +368,12 @@ public final class LDAPRequestHandler
         // Call Configures processor
         logger.debug("processModifyRequest called.");
         IRequestProcessor processor = getProcessor();
+        if (processor == null) {
+            logger.error("No processor available for modify request");
+            return createErrorResponse(messageID, ResultCode.UNAVAILABLE, "Service temporarily unavailable");
+        }
         LDAPMessage message = processor.processModifyRequest(messageID, request, controls, this.ldapConnection, this.listenerConnection);
-        logger.debug("LDAP Message : " + message);
+        logger.debug("LDAP Message : {}", message);
         return message;
     }
 
@@ -369,8 +389,12 @@ public final class LDAPRequestHandler
         // Call Configures processor
         logger.debug("processModifyDNRequest called.");
         IRequestProcessor processor = getProcessor();
+        if (processor == null) {
+            logger.error("No processor available for modify DN request");
+            return createErrorResponse(messageID, ResultCode.UNAVAILABLE, "Service temporarily unavailable");
+        }
         LDAPMessage message = processor.processModifyDNRequest(messageID, request, controls, this.ldapConnection, this.listenerConnection);
-        logger.debug("LDAP Message : " + message);
+        logger.debug("LDAP Message : {}", message);
         return message;
     }
 
@@ -415,13 +439,21 @@ public final class LDAPRequestHandler
     }
     
     /**
-     * Helper method to create standardized error responses
+     * Helper method to create standardized error responses for search operations
      */
     private LDAPMessage createErrorResponse(int messageID, ResultCode resultCode, String message) {
-        // Implementation depends on the specific response type needed
-        // This is a placeholder that should be implemented based on the calling context
         logger.debug("Creating error response: {} - {}", resultCode, message);
-        return null; // This should be implemented properly based on response type
+        
+        // Create a SearchResultDone response for search operations
+        com.unboundid.ldap.protocol.SearchResultDoneProtocolOp searchDone = 
+            new com.unboundid.ldap.protocol.SearchResultDoneProtocolOp(
+                resultCode.intValue(), 
+                null, // matchedDN
+                message, // diagnosticMessage
+                null  // referralURLs
+            );
+        
+        return new LDAPMessage(messageID, searchDone, Collections.emptyList());
     }
 
 

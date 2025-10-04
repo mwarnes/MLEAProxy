@@ -3,7 +3,7 @@ package com.marklogic.handlers.undertow;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import com.marklogic.Utils;
-import com.marklogic.beans.saml;
+import com.marklogic.beans.SamlBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +20,7 @@ public class B64EncodeHandler {
     private static final Logger logger = LoggerFactory.getLogger(B64EncodeHandler.class);
 
     @Autowired
-    private saml saml;
+    private SamlBean saml;
 
     @RequestMapping(
             value = "/saml/encode",

@@ -35,7 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 
-import com.marklogic.beans.saml;
+import com.marklogic.beans.SamlBean;
 
 import ch.qos.logback.classic.LoggerContext;
 
@@ -43,6 +43,13 @@ public final class Utils {
 
     private static final Logger LOG = LoggerFactory.getLogger(Utils.class);
     private static final LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+    
+    /**
+     * Expected sequence size for an RSA private key in ASN.1 format.
+     * An RSA private key sequence contains: version, modulus, publicExponent,
+     * privateExponent, prime1, prime2, exponent1, exponent2, and coefficient.
+     */
+    private static final int RSA_PRIVATE_KEY_SEQUENCE_SIZE = 9;
     
     // Security constants for XML processing
     private static final int MAX_XML_SIZE = 10 * 1024 * 1024; // 10MB max XML size
@@ -52,6 +59,15 @@ public final class Utils {
         "SYSTEM", "PUBLIC", "file://", "http://", "ftp://"
     };
 
+    /**
+     * Loads a classpath resource as a string.
+     * Reads the entire resource file into memory and converts it to a UTF-8 string.
+     * 
+     * @param path Classpath resource path (e.g., "templates/authn.html")
+     * @return Complete resource content as a UTF-8 string
+     * @throws IOException if resource cannot be read or does not exist
+     * @throws IllegalArgumentException if path is null or empty
+     */
     public static String resourceToString(String path) throws IOException {
         if (path == null || path.trim().isEmpty()) {
             throw new IllegalArgumentException("Path cannot be null or empty");
@@ -68,6 +84,15 @@ public final class Utils {
         return textBuilder.toString();
     }
 
+    /**
+     * Decodes a Base64-encoded string to bytes.
+     * Supports both standard and URL-safe Base64 encoding with character substitution.
+     * Performs validation on the input string format.
+     * 
+     * @param s Base64-encoded string (supports standard and URL-safe formats)
+     * @return Decoded byte array
+     * @throws IllegalArgumentException if string is null, empty, or invalid Base64
+     */
     public static byte[] b64d(final String s) {
         if (s == null || s.trim().isEmpty()) {
             throw new IllegalArgumentException("Base64 string cannot be null or empty");
@@ -82,6 +107,15 @@ public final class Utils {
         }
     }
 
+    /**
+     * Encodes a string to Base64 format.
+     * Converts the input string to UTF-8 bytes and applies Base64 encoding.
+     * 
+     * @param decoded String to encode
+     * @return Base64-encoded string
+     * @throws IllegalArgumentException if input is null
+     * @throws RuntimeException if encoding operation fails
+     */
     public static final String e(final String decoded) {
         if (decoded == null) {
             throw new IllegalArgumentException("Input string cannot be null");
@@ -97,6 +131,19 @@ public final class Utils {
         }
     }
 
+    /**
+     * Decodes and decompresses a SAML message.
+     * Performs Base64 decoding followed by DEFLATE decompression.
+     * Enforces security limits on decompressed size (10MB maximum).
+     * Validates the decompression completes successfully.
+     * 
+     * @param message Base64-encoded compressed SAML message
+     * @return Decompressed XML message string in UTF-8 format
+     * @throws IOException if decompression fails or resource handling errors occur
+     * @throws DataFormatException if the compressed data format is invalid
+     * @throws SecurityException if decompressed size exceeds 10MB security limit
+     * @throws IllegalArgumentException if message is null, empty, or invalid Base64
+     */
     public static String decodeMessage(String message) throws IOException, DataFormatException {
         if (message == null || message.trim().isEmpty()) {
             throw new IllegalArgumentException("Message cannot be null or empty");
@@ -131,6 +178,16 @@ public final class Utils {
         }
     }
 
+    /**
+     * Parses an X.509 certificate from PEM-formatted string.
+     * Extracts the certificate from PEM format and converts it to X509Certificate object.
+     * Validates that the PEM object contains a certificate.
+     * 
+     * @param cert PEM-formatted certificate string (including BEGIN/END CERTIFICATE markers)
+     * @return Parsed X509Certificate object
+     * @throws IOException if PEM parsing fails
+     * @throws CertificateException if certificate format is invalid or parsing fails
+     */
     public static X509Certificate getX509Certificate(String cert) throws IOException, CertificateException {
         String pem = cert;
         PemObject o = parsePEM(pem);
@@ -146,27 +203,60 @@ public final class Utils {
         return X509cert;
     }
 
-    public static String getCaCertificate() throws CertificateException, IOException {
+    /**
+     * Retrieves the CA certificate from configuration or default location.
+     * If no custom CA certificate path is specified, uses the default certificate from resources.
+     * Returns the certificate in PEM-encoded string format.
+     * 
+     * @param samlBean SAML configuration bean containing certificate paths
+     * @return PEM-encoded CA certificate string (with BEGIN/END CERTIFICATE markers)
+     * @throws CertificateException if certificate parsing fails
+     * @throws IOException if certificate file cannot be read
+     */
+    public static String getCaCertificate(SamlBean samlBean) throws CertificateException, IOException {
         String content;
-        if (Objects.isNull(saml.getCfg().SamlCaPath()) || saml.getCfg().SamlCaPath().isEmpty()) {
+        if (samlBean.getCfg().SamlCaPath() == null || samlBean.getCfg().SamlCaPath().isEmpty()) {
             content = Utils.resourceToString("static/certificates/certificate.pem");
         } else {
-            content = Files.readString(Paths.get(saml.getCfg().SamlCaPath()));
+            content = Files.readString(Paths.get(samlBean.getCfg().SamlCaPath()));
         }
         X509Certificate X509cert = getX509Certificate(content);
         return printPEMstring("CERTIFICATE", X509cert.getEncoded());
     }
 
-    public static String getCaPrivateKey() throws CertificateException, IOException {
+    /**
+     * Retrieves the CA private key from configuration or default location.
+     * If no custom private key path is specified, uses the default key from resources.
+     * Returns the private key in PEM format.
+     * 
+     * @param samlBean SAML configuration bean containing private key paths
+     * @return PEM-formatted private key string (including BEGIN/END markers)
+     * @throws CertificateException if key processing fails
+     * @throws IOException if key file cannot be read
+     */
+    public static String getCaPrivateKey(SamlBean samlBean) throws CertificateException, IOException {
         String content;
-        if (Objects.isNull(saml.getCfg().SamlKeyPath()) || saml.getCfg().SamlKeyPath().isEmpty()) {
+        if (samlBean.getCfg().SamlKeyPath() == null || samlBean.getCfg().SamlKeyPath().isEmpty()) {
             content = Utils.resourceToString("static/certificates/rsakey.pem");
         } else {
-            content = Files.readString(Paths.get(saml.getCfg().SamlKeyPath()));
+            content = Files.readString(Paths.get(samlBean.getCfg().SamlKeyPath()));
         }
         return content;
     }
 
+    /**
+     * Parses an RSA key pair from PEM-formatted private key string.
+     * Extracts and validates the RSA private key using ASN.1 sequence parsing.
+     * Validates the sequence contains exactly 9 elements for a valid RSA private key.
+     * Uses BouncyCastle provider for RSA key pair generation.
+     * 
+     * @param key PEM-formatted RSA private key string (PKCS#1 format)
+     * @return RSA KeyPair containing public and private keys, or null if parsing fails
+     * @throws IOException if PEM parsing fails
+     * @throws NoSuchAlgorithmException if RSA algorithm is unavailable
+     * @throws NoSuchProviderException if BouncyCastle provider is unavailable
+     * @throws InvalidKeySpecException if key specification is invalid
+     */
     public static KeyPair getKeyPair(String key) throws IOException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeySpecException {
         String pem = key;
         PemObject o = parsePEM(pem);
@@ -174,7 +264,7 @@ public final class Utils {
         LOG.debug("Private Key type: {}", o.getType());
         if (o.getType().equalsIgnoreCase("RSA PRIVATE KEY")) {
             ASN1Sequence seq = (ASN1Sequence) ASN1Sequence.fromByteArray(o.getContent());
-            if (seq.size() != 9) {
+            if (seq.size() != RSA_PRIVATE_KEY_SEQUENCE_SIZE) {
                 LOG.debug("Malformed sequence in RSA private key");
             } else {
                 ASN1Integer mod = (ASN1Integer) seq.getObjectAt(1);
@@ -196,6 +286,14 @@ public final class Utils {
         return kp;
     }
 
+    /**
+     * Parses a PEM-formatted string into a PemObject.
+     * Extracts the PEM type and content from standard PEM format (BEGIN/END markers).
+     * 
+     * @param pem PEM-formatted string (e.g., certificate, private key, etc.)
+     * @return Parsed PemObject containing type and binary content
+     * @throws IOException if PEM parsing fails or format is invalid
+     */
     public static PemObject parsePEM(String pem) throws IOException {
         Reader r = new StringReader(pem);
         PEMParser pp = new PEMParser(r);
@@ -204,6 +302,16 @@ public final class Utils {
         return o;
     }
 
+    /**
+     * Generates a PEM-formatted string from binary data.
+     * Creates a PEM object with specified type and converts it to standard PEM string format.
+     * Properly closes all resources after writing.
+     * 
+     * @param type PEM type identifier (e.g., "CERTIFICATE", "RSA PRIVATE KEY")
+     * @param data Binary data to encode in PEM format
+     * @return PEM-formatted string with BEGIN/END markers
+     * @throws IOException if PEM writing fails
+     */
     public static String printPEMstring(String type, byte[] data) throws IOException {
         PemObject pemObject = new PemObject(type, data);
         StringWriter pemString = new StringWriter();
@@ -220,7 +328,7 @@ public final class Utils {
      * TODO: Complete migration from OpenSAML 2.x to 4.x API
      */
     @Deprecated
-    public static String generateSAMLResponse(saml samlBean) throws Exception {
+    public static String generateSAMLResponse(SamlBean samlBean) throws Exception {
         LOG.warn("SAML Response generation temporarily disabled during OpenSAML 4.x migration");
         throw new UnsupportedOperationException(
             "SAML Response generation is temporarily disabled during OpenSAML 4.x migration. " +

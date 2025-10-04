@@ -92,12 +92,6 @@ public class ProxyRequestProcessor implements IRequestProcessor, IntermediateRes
     public LDAPMessage processSearchRequest(int messageID, SearchRequestProtocolOp request, List<Control> controls, LDAPConnection ldapConnection, LDAPListenerClientConnection listenerConnection) {
         logger.debug(messageID + "-+-" + request + "-+-" + controls);
 
-        // 45 second delay
-//        try {
-//            TimeUnit.SECONDS.sleep(45);
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
         final String[] attrs;
         final List<String> mappedList = new ArrayList<>();
         final List<String> attrList = request.getAttributes();

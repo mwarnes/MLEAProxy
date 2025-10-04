@@ -2,7 +2,6 @@ package com.marklogic.handlers.undertow;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +12,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.Base64;
-import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -31,12 +29,8 @@ class OAuthTokenHandlerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
-    @BeforeEach
-    void setUp() {
-        // Setup code if needed
-    }
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Test
     @DisplayName("Should generate valid access token with all parameters")
