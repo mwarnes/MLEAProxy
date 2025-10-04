@@ -62,11 +62,32 @@ import org.opensaml.saml.saml2.core.impl.ConditionsBuilder;
 import org.opensaml.saml.saml2.core.impl.AuthnStatementBuilder;
 import org.opensaml.saml.saml2.core.impl.AuthnContextBuilder;
 import org.opensaml.saml.saml2.core.impl.AuthnContextClassRefBuilder;
+import org.opensaml.saml.saml2.metadata.EntityDescriptor;
+import org.opensaml.saml.saml2.metadata.IDPSSODescriptor;
+import org.opensaml.saml.saml2.metadata.KeyDescriptor;
+import org.opensaml.saml.saml2.metadata.SingleSignOnService;
+import org.opensaml.saml.saml2.metadata.impl.EntityDescriptorBuilder;
+import org.opensaml.saml.saml2.metadata.impl.IDPSSODescriptorBuilder;
+import org.opensaml.saml.saml2.metadata.impl.KeyDescriptorBuilder;
+import org.opensaml.saml.saml2.metadata.impl.SingleSignOnServiceBuilder;
 import org.opensaml.security.credential.Credential;
 import org.opensaml.security.credential.CredentialSupport;
+import org.opensaml.security.credential.UsageType;
 import org.opensaml.xmlsec.signature.Signature;
+import org.opensaml.xmlsec.signature.KeyInfo;
+import org.opensaml.xmlsec.signature.X509Data;
+import org.opensaml.xmlsec.signature.impl.KeyInfoBuilder;
+import org.opensaml.xmlsec.signature.impl.X509DataBuilder;
+import org.opensaml.xmlsec.signature.impl.X509CertificateBuilder;
 import org.opensaml.xmlsec.signature.support.SignatureConstants;
 import org.opensaml.xmlsec.signature.support.Signer;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.StringWriter;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,6 +128,13 @@ public class SAMLAuthHandler {
     
     @Value("${saml.signing.key.path:classpath:static/certificates/privkey.pem}")
     private String signingKeyPath;
+    
+    // Configurable IdP entity ID and SSO endpoint
+    @Value("${saml.idp.entity.id:http://localhost:8080/saml/idp}")
+    private String idpEntityId;
+    
+    @Value("${saml.idp.sso.url:http://localhost:8080/saml/auth}")
+    private String idpSsoUrl;
     
     // Cache loaded credentials
     private PrivateKey cachedPrivateKey;
@@ -562,5 +590,158 @@ public class SAMLAuthHandler {
         }
         
         return "redirect";
+    }
+    
+    /**
+     * IdP Metadata Endpoint
+     * 
+     * Serves the SAML Identity Provider metadata XML document.
+     * This endpoint allows Service Providers (SPs) to automatically discover
+     * and configure their SAML integration with this IdP.
+     * 
+     * GET /saml/idp-metadata
+     * 
+     * @return ResponseEntity containing the IdP metadata XML
+     */
+    @GetMapping(value = "/saml/idp-metadata", produces = MediaType.APPLICATION_XML_VALUE)
+    public ResponseEntity<String> idpMetadata() {
+        try {
+            logger.debug("IdP metadata endpoint called");
+            
+            // Check if handler is properly initialized
+            if (cachedCertificate == null) {
+                logger.error("IdP metadata endpoint - certificate not loaded");
+                return ResponseEntity.status(500)
+                    .body("<?xml version=\"1.0\"?><error>IdP metadata unavailable - certificate not configured</error>");
+            }
+            
+            // Initialize OpenSAML if needed
+            if (!isOpenSAMLInitialized()) {
+                InitializationService.initialize();
+                logger.info("OpenSAML 4.x initialized for IdP metadata generation");
+            }
+            
+            // Generate IdP metadata XML
+            String metadata = generateIdPMetadata();
+            
+            logger.info("IdP metadata served successfully (entity ID: {})", idpEntityId);
+            return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_XML)
+                .body(metadata);
+                
+        } catch (Exception e) {
+            logger.error("Error generating IdP metadata", e);
+            return ResponseEntity.status(500)
+                .body("<?xml version=\"1.0\"?><error>Failed to generate IdP metadata</error>");
+        }
+    }
+    
+    /**
+     * Generate SAML IdP metadata XML document.
+     * Creates an EntityDescriptor with IDPSSODescriptor containing:
+     * - Entity ID
+     * - X.509 certificate for signature verification
+     * - SingleSignOnService endpoint (HTTP-Redirect binding)
+     * - Supported NameID formats
+     * 
+     * @return XML string representing the IdP metadata
+     * @throws Exception if metadata generation fails
+     */
+    private String generateIdPMetadata() throws Exception {
+        XMLObjectBuilderFactory builderFactory = XMLObjectProviderRegistrySupport.getBuilderFactory();
+        
+        // Create EntityDescriptor
+        EntityDescriptorBuilder entityDescriptorBuilder = 
+            (EntityDescriptorBuilder) builderFactory.getBuilder(EntityDescriptor.DEFAULT_ELEMENT_NAME);
+        EntityDescriptor entityDescriptor = entityDescriptorBuilder.buildObject();
+        entityDescriptor.setEntityID(idpEntityId);
+        
+        // Create IDPSSODescriptor
+        IDPSSODescriptorBuilder idpDescriptorBuilder = 
+            (IDPSSODescriptorBuilder) builderFactory.getBuilder(IDPSSODescriptor.DEFAULT_ELEMENT_NAME);
+        IDPSSODescriptor idpDescriptor = idpDescriptorBuilder.buildObject();
+        idpDescriptor.setWantAuthnRequestsSigned(false);
+        idpDescriptor.addSupportedProtocol("urn:oasis:names:tc:SAML:2.0:protocol");
+        
+        // Add signing key descriptor with certificate
+        KeyDescriptorBuilder keyDescriptorBuilder = 
+            (KeyDescriptorBuilder) builderFactory.getBuilder(KeyDescriptor.DEFAULT_ELEMENT_NAME);
+        KeyDescriptor keyDescriptor = keyDescriptorBuilder.buildObject();
+        keyDescriptor.setUse(UsageType.SIGNING);
+        
+        // Create KeyInfo with X509Data
+        KeyInfoBuilder keyInfoBuilder = 
+            (KeyInfoBuilder) builderFactory.getBuilder(KeyInfo.DEFAULT_ELEMENT_NAME);
+        KeyInfo keyInfo = keyInfoBuilder.buildObject();
+        
+        X509DataBuilder x509DataBuilder = 
+            (X509DataBuilder) builderFactory.getBuilder(X509Data.DEFAULT_ELEMENT_NAME);
+        X509Data x509Data = x509DataBuilder.buildObject();
+        
+        X509CertificateBuilder x509CertBuilder = 
+            (X509CertificateBuilder) builderFactory.getBuilder(org.opensaml.xmlsec.signature.X509Certificate.DEFAULT_ELEMENT_NAME);
+        org.opensaml.xmlsec.signature.X509Certificate x509Cert = x509CertBuilder.buildObject();
+        
+        // Encode certificate as Base64 (without PEM headers)
+        String certBase64 = Base64.getEncoder().encodeToString(cachedCertificate.getEncoded());
+        x509Cert.setValue(certBase64);
+        
+        x509Data.getX509Certificates().add(x509Cert);
+        keyInfo.getX509Datas().add(x509Data);
+        keyDescriptor.setKeyInfo(keyInfo);
+        
+        idpDescriptor.getKeyDescriptors().add(keyDescriptor);
+        
+        // Add NameID formats supported
+        idpDescriptor.getNameIDFormats().add(
+            createNameIDFormat(builderFactory, NameIDType.UNSPECIFIED)
+        );
+        idpDescriptor.getNameIDFormats().add(
+            createNameIDFormat(builderFactory, NameIDType.EMAIL)
+        );
+        idpDescriptor.getNameIDFormats().add(
+            createNameIDFormat(builderFactory, NameIDType.PERSISTENT)
+        );
+        idpDescriptor.getNameIDFormats().add(
+            createNameIDFormat(builderFactory, NameIDType.TRANSIENT)
+        );
+        
+        // Add SingleSignOnService endpoint
+        SingleSignOnServiceBuilder ssoServiceBuilder = 
+            (SingleSignOnServiceBuilder) builderFactory.getBuilder(SingleSignOnService.DEFAULT_ELEMENT_NAME);
+        SingleSignOnService ssoService = ssoServiceBuilder.buildObject();
+        ssoService.setBinding("urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect");
+        ssoService.setLocation(idpSsoUrl);
+        
+        idpDescriptor.getSingleSignOnServices().add(ssoService);
+        
+        // Add IDPSSODescriptor to EntityDescriptor
+        entityDescriptor.getRoleDescriptors().add(idpDescriptor);
+        
+        // Marshal to XML
+        MarshallerFactory marshallerFactory = XMLObjectProviderRegistrySupport.getMarshallerFactory();
+        Marshaller marshaller = marshallerFactory.getMarshaller(entityDescriptor);
+        Element element = marshaller.marshall(entityDescriptor);
+        
+        // Convert DOM Element to string
+        StringWriter writer = new StringWriter();
+        TransformerFactory transformerFactory = TransformerFactory.newInstance();
+        Transformer transformer = transformerFactory.newTransformer();
+        transformer.transform(new DOMSource(element), new StreamResult(writer));
+        
+        return writer.toString();
+    }
+    
+    /**
+     * Helper method to create NameIDFormat element
+     */
+    private org.opensaml.saml.saml2.metadata.NameIDFormat createNameIDFormat(
+            XMLObjectBuilderFactory builderFactory, String format) {
+        org.opensaml.saml.saml2.metadata.impl.NameIDFormatBuilder nameIDFormatBuilder = 
+            (org.opensaml.saml.saml2.metadata.impl.NameIDFormatBuilder) 
+            builderFactory.getBuilder(org.opensaml.saml.saml2.metadata.NameIDFormat.DEFAULT_ELEMENT_NAME);
+        org.opensaml.saml.saml2.metadata.NameIDFormat nameIDFormat = nameIDFormatBuilder.buildObject();
+        nameIDFormat.setURI(format);
+        return nameIDFormat;
     }
 }

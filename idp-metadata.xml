@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="http://localhost:8080/saml/idp">
+  <md:IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+        <ds:X509Data>
+          <ds:X509Certificate>MIIDyzCCArOgAwIBAgIUVfpV56K9w6BsaPh9Wd6nRzF4zB0wDQYJKoZIhvcNAQELBQAwdTELMAkGA1UEBhMCVVMxDjAMBgNVBAgMBVN0YXRlMQ0wCwYDVQQHDARDaXR5MRUwEwYDVQQKDAxPcmdhbml6YXRpb24xDTALBgNVBAsMBFVuaXQxITAfBgNVBAMMGFNBTUwgU2lnbmluZyBDZXJ0aWZpY2F0ZTAeFw0yNTEwMDMxMjU5MDFaFw0zNTEwMDExMjU5MDFaMHUxCzAJBgNVBAYTAlVTMQ4wDAYDVQQIDAVTdGF0ZTENMAsGA1UEBwwEQ2l0eTEVMBMGA1UECgwMT3JnYW5pemF0aW9uMQ0wCwYDVQQLDARVbml0MSEwHwYDVQQDDBhTQU1MIFNpZ25pbmcgQ2VydGlmaWNhdGUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC0cI6uJcEbNg/tpEFDW8cfAuKOOLLEOoikFqfVHs3z8q/Rkj7NlzIT9yUi/5ZGoqbw074egpo1087BMW46vEYhAGhfB6FpElk+YiOEf78wBamIVeYTJJXUfNnvd+ZkSNAqsLRdIeMvYTxirjJAonnYwFGvJ16a80eKftDN4iZ+s+JKKdYA6qFqkO3SoLgD1MIyiHn7Ud3bDGoEHmq2nFkf+vcu7/eSfzmdWOziBN+0CriXY3MoAyn3hRw81RJ4xGQi4iw5PMJ0r6WkJPfP85MTwtM9pnh+26HQCo6RUDou7TwmShjuYY+Q+9zXPlr70mkitsxwPTONVaxqzOj2Vn2dAgMBAAGjUzBRMB0GA1UdDgQWBBTKfGm/kXVS2vr4RpJweTgE0K3G9zAfBgNVHSMEGDAWgBTKfGm/kXVS2vr4RpJweTgE0K3G9zAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQBQvZuRV2cMpZKx4QK0y9eEtSZnfNJfrQLdQpBfR7VfcCkLHVwWSdGXT0oQndO5UhVdw2YhhIpNGvf6ufIhqSEtgZJnyklRagfysEspM3EsmwLkvA0msDA4MW/SUH1XF5TnL7Zts2rYRSpnF67+S8uBXXfQcCtbuS8f0uVJWkXp1YA9BEHYkWp/kIpX4owwWNMXpHwWbAPghhoONjDhG2fVVB9aywfcUcnN3ovXWzN9AgInK4LWzQyQ9S34Jdx9KZpFHe8P5aP3uGJOA6pOiKeMWKCbiUzJoL8ccStdckJswc27u0qQbwvmmUgfeCbEOMWPH4Q7WSiUTjRF5Ig3ibuh</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified</md:NameIDFormat>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:persistent</md:NameIDFormat>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:transient</md:NameIDFormat>
+    <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="http://localhost:8080/saml/auth"/>
+  </md:IDPSSODescriptor>
+</md:EntityDescriptor>
