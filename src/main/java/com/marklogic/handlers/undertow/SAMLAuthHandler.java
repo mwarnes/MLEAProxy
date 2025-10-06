@@ -106,8 +106,8 @@ import org.xml.sax.SAXException;
 
 import com.marklogic.Utils;
 import com.marklogic.beans.SamlBean;
-import com.marklogic.repository.XmlUserRepository;
-import com.marklogic.repository.XmlUserRepository.UserInfo;
+import com.marklogic.repository.JsonUserRepository;
+import com.marklogic.repository.JsonUserRepository.UserInfo;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
@@ -125,7 +125,11 @@ public class SAMLAuthHandler {
     private ResourceLoader resourceLoader;
     
     @Autowired(required = false)
-    private XmlUserRepository xmlUserRepository;
+    private JsonUserRepository jsonUserRepository;
+    
+    // Default roles to assign when user not found in repository
+    @Value("${saml.default.roles:user}")
+    private String defaultRoles;
     
     // Configurable certificate and key paths (works in production JARs)
     @Value("${saml.certificate.path:classpath:static/certificates/certificate.pem}")
@@ -569,37 +573,59 @@ public class SAMLAuthHandler {
         
         try {
             // Determine roles to include in SAML assertion
+            // Priority order:
+            // 1. Roles from request parameter (if specified)
+            // 2. Roles from users.json (if user exists and no roles in request)
+            // 3. Default roles from saml.default.roles property (if user not found and no roles in request)
             String finalRoles = roles;
             
-            // If XML user repository is configured, look up user and get roles from memberOf
-            if (xmlUserRepository != null && xmlUserRepository.isInitialized() && 
+            // If JSON user repository is configured, look up user and get roles from memberOf
+            if (jsonUserRepository != null && jsonUserRepository.isInitialized() && 
                 userid != null && !userid.trim().isEmpty()) {
                 
-                logger.info("Looking up user '{}' in XML user repository for SAML", userid);
-                UserInfo userInfo = xmlUserRepository.findByUsername(userid);
+                logger.info("Looking up user '{}' in JSON user repository for SAML", userid);
+                UserInfo userInfo = jsonUserRepository.findByUsername(userid);
                 
                 if (userInfo != null) {
-                    // Prioritize roles from request parameter if provided
+                    // User found in JSON repository
                     if (roles != null && !roles.trim().isEmpty()) {
+                        // Priority 1: Use roles from request parameter if provided
                         finalRoles = roles;
                         logger.info("Using roles from request parameter for user '{}': {}", userid, finalRoles);
                     } else {
-                        // Fall back to XML roles if no roles in request
+                        // Priority 2: Use roles from JSON if no roles in request
                         List<String> userRoles = userInfo.getRoles();
                         if (!userRoles.isEmpty()) {
                             finalRoles = String.join(",", userRoles);
-                            logger.info("Using roles from XML for user '{}': {}", userid, finalRoles);
+                            logger.info("Using roles from JSON for user '{}': {}", userid, finalRoles);
                         } else {
-                            logger.info("User '{}' found in XML but has no roles assigned", userid);
+                            logger.info("User '{}' found in JSON but has no roles assigned, using empty roles", userid);
                             finalRoles = "";
                         }
                     }
                 } else {
-                    logger.warn("User '{}' not found in XML user repository, using provided roles parameter", userid);
-                    // Keep the roles parameter value if user not found
+                    // User not found in JSON repository
+                    if (roles != null && !roles.trim().isEmpty()) {
+                        // Priority 1: Use roles from request parameter if provided
+                        logger.info("User '{}' not found in JSON, using roles from request parameter", userid);
+                        finalRoles = roles;
+                    } else {
+                        // Priority 3: Use default roles from configuration
+                        logger.info("User '{}' not found in JSON, using default roles: {}", userid, defaultRoles);
+                        finalRoles = defaultRoles;
+                    }
                 }
-            } else if (roles != null && !roles.trim().isEmpty()) {
-                logger.debug("XML user repository not configured, using roles parameter: {}", roles);
+            } else {
+                // JSON user repository not configured
+                if (roles != null && !roles.trim().isEmpty()) {
+                    // Priority 1: Use roles from request parameter if provided
+                    logger.debug("JSON user repository not configured, using roles from request parameter: {}", roles);
+                    finalRoles = roles;
+                } else {
+                    // Priority 3: Use default roles from configuration
+                    logger.debug("JSON user repository not configured, using default roles: {}", defaultRoles);
+                    finalRoles = defaultRoles;
+                }
             }
             
             // Set the authentication details in the SAML bean

@@ -105,10 +105,12 @@ class OAuthTokenHandlerTest {
         String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
         JsonNode payloadJson = objectMapper.readTree(payload);
 
-        // Should have empty roles array
+        // Should have default role 'user' since no roles parameter was provided
+        // and JSON user repository is not configured
         assertTrue(payloadJson.has("roles"));
         assertTrue(payloadJson.get("roles").isArray());
-        assertEquals(0, payloadJson.get("roles").size());
+        assertEquals(1, payloadJson.get("roles").size());
+        assertEquals("user", payloadJson.get("roles").get(0).asText());
     }
 
     @Test
@@ -188,8 +190,10 @@ class OAuthTokenHandlerTest {
         String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
         JsonNode payloadJson = objectMapper.readTree(payload);
 
+        // Empty roles parameter should fallback to default role 'user'
         assertTrue(payloadJson.get("roles").isArray());
-        assertEquals(0, payloadJson.get("roles").size());
+        assertEquals(1, payloadJson.get("roles").size());
+        assertEquals("user", payloadJson.get("roles").get(0).asText());
     }
 
     @Test

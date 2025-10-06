@@ -32,8 +32,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.marklogic.repository.XmlUserRepository;
-import com.marklogic.repository.XmlUserRepository.UserInfo;
+import com.marklogic.repository.JsonUserRepository;
+import com.marklogic.repository.JsonUserRepository.UserInfo;
 
 import io.jsonwebtoken.Jwts;
 import jakarta.annotation.PostConstruct;
@@ -67,11 +67,15 @@ public class OAuthTokenHandler {
     private ResourceLoader resourceLoader;
     
     @Autowired(required = false)
-    private XmlUserRepository xmlUserRepository;
+    private JsonUserRepository jsonUserRepository;
     
     // Configurable token expiration time in seconds (default: 1 hour)
     @Value("${oauth.token.expiration.seconds:3600}")
     private long tokenExpirationSeconds;
+    
+    // Default roles to assign when user not found in repository
+    @Value("${oauth.default.roles:user}")
+    private String defaultRoles;
     
     // Configurable JWT issuer
     @Value("${oauth.jwt.issuer:mleaproxy-oauth-server}")
@@ -186,15 +190,20 @@ public class OAuthTokenHandler {
             }
 
             // Determine roles to include in token
+            // Priority order:
+            // 1. Roles from request parameter (if specified)
+            // 2. Roles from users.json (if user exists and no roles in request)
+            // 3. Default roles from oauth.default.roles property (if user not found and no roles in request)
             List<String> roles = new ArrayList<>();
             
-            // If XML user repository is configured, look up user for validation
-            if (xmlUserRepository != null && xmlUserRepository.isInitialized() && username != null) {
-                logger.info("Looking up user '{}' in XML user repository", username);
-                UserInfo userInfo = xmlUserRepository.findByUsername(username);
+            // If JSON user repository is configured, look up user for validation
+            if (jsonUserRepository != null && jsonUserRepository.isInitialized() && username != null) {
+                logger.info("Looking up user '{}' in JSON user repository", username);
+                UserInfo userInfo = jsonUserRepository.findByUsername(username);
                 
                 if (userInfo != null) {
-                    // Optional: validate password if provided in XML
+                    // User found in JSON repository
+                    // Optional: validate password if provided in JSON
                     if (grantType.equals("password") && userInfo.getPassword() != null) {
                         if (!userInfo.getPassword().equals(password)) {
                             logger.warn("Password validation failed for user: {}", username);
@@ -204,36 +213,40 @@ public class OAuthTokenHandler {
                         }
                     }
                     
-                    // Prioritize roles from request parameter if provided
+                    // Priority 1: Use roles from request parameter if provided
                     if (rolesParam != null && !rolesParam.trim().isEmpty()) {
                         roles = parseRoles(rolesParam);
                         logger.info("Using roles from request parameter for user '{}': {}", 
                                    username, String.join(",", roles));
                     } else {
-                        // Fall back to XML roles if no roles in request
+                        // Priority 2: Use roles from JSON if no roles in request
                         roles = userInfo.getRoles();
-                        logger.info("Using roles from XML for user '{}': {}", 
+                        logger.info("Using roles from JSON for user '{}': {}", 
                                    username, String.join(",", roles));
                     }
                 } else {
-                    // User not found in XML - if roles are explicitly provided in request, allow it
-                    // This supports test scenarios and external authentication
+                    // User not found in JSON repository
                     if (rolesParam != null && !rolesParam.trim().isEmpty()) {
-                        logger.info("User '{}' not in XML, but roles provided in request - allowing", username);
+                        // Priority 1: Use roles from request parameter if provided
+                        logger.info("User '{}' not in JSON, using roles from request parameter", username);
                         roles = parseRoles(rolesParam);
                     } else {
-                        logger.warn("User '{}' not found in XML user repository and no roles provided", username);
-                        return createErrorResponse("invalid_grant", 
-                            "Invalid username or password", 
-                            HttpStatus.UNAUTHORIZED);
+                        // Priority 3: Use default roles from configuration
+                        logger.info("User '{}' not found in JSON, using default roles: {}", username, defaultRoles);
+                        roles = parseRoles(defaultRoles);
                     }
                 }
             } else {
-                // Fall back to roles parameter if XML not configured
-                if (xmlUserRepository == null || !xmlUserRepository.isInitialized()) {
-                    logger.debug("XML user repository not configured, using roles parameter");
+                // JSON user repository not configured
+                if (rolesParam != null && !rolesParam.trim().isEmpty()) {
+                    // Priority 1: Use roles from request parameter if provided
+                    logger.debug("JSON user repository not configured, using roles from request parameter");
+                    roles = parseRoles(rolesParam);
+                } else {
+                    // Priority 3: Use default roles from configuration
+                    logger.debug("JSON user repository not configured, using default roles: {}", defaultRoles);
+                    roles = parseRoles(defaultRoles);
                 }
-                roles = parseRoles(rolesParam);
             }
             
             logger.debug("Using roles for token: {}", roles);
