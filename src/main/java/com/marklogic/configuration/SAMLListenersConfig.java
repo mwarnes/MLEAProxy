@@ -3,12 +3,19 @@ package com.marklogic.configuration;
 import org.aeonbits.owner.Config;
 import org.springframework.stereotype.Component;
 
-@Config.LoadPolicy(Config.LoadType.FIRST)
-@Config.Sources({ "file:${mleaproxy.properties}",
+@Config.LoadPolicy(Config.LoadType.MERGE)
+@Config.Sources({ 
+        "system:properties",
+        "file:${mleaproxy.properties}",
         "file:./mleaproxy.properties",
         "file:${HOME}/mleaproxy.properties",
         "file:/etc/mleaproxy.properties",
-        "classpath:mleaproxy.properties" })
+        "classpath:mleaproxy.properties",
+        "file:./ldap.properties",
+        "file:./saml.properties",
+        "file:./oauth.properties",
+        "file:./directory.properties"
+})
 public interface SAMLListenersConfig extends Config {
 
     @Key("samllistener.${listener}.ipaddress")

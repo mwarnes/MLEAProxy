@@ -31,4 +31,13 @@ public class B64DecodeHandler {
         return new String(Utils.b64d(body), java.nio.charset.StandardCharsets.UTF_8);
     }
 
+    @GetMapping(
+            value = "/decode",
+            produces = "text/plain"
+    )
+    @ResponseBody
+    public String decodeGet(@RequestParam("data") String data) {
+        return new String(Utils.b64d(data), java.nio.charset.StandardCharsets.UTF_8);
+    }
+
 }

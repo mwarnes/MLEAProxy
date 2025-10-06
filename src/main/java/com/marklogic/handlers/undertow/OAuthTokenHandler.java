@@ -1,20 +1,5 @@
 package com.marklogic.handlers.undertow;
 
-import io.jsonwebtoken.Jwts;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-
-import jakarta.annotation.PostConstruct;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -25,7 +10,33 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.marklogic.repository.XmlUserRepository;
+import com.marklogic.repository.XmlUserRepository.UserInfo;
+
+import io.jsonwebtoken.Jwts;
+import jakarta.annotation.PostConstruct;
 
 /**
  * OAuth 2.0 Token Endpoint Handler
@@ -54,6 +65,9 @@ public class OAuthTokenHandler {
     
     @Autowired
     private ResourceLoader resourceLoader;
+    
+    @Autowired(required = false)
+    private XmlUserRepository xmlUserRepository;
     
     // Configurable token expiration time in seconds (default: 1 hour)
     @Value("${oauth.token.expiration.seconds:3600}")
@@ -171,9 +185,58 @@ public class OAuthTokenHandler {
                 }
             }
 
-            // Parse roles
-            List<String> roles = parseRoles(rolesParam);
-            logger.debug("Parsed roles: {}", roles);
+            // Determine roles to include in token
+            List<String> roles = new ArrayList<>();
+            
+            // If XML user repository is configured, look up user for validation
+            if (xmlUserRepository != null && xmlUserRepository.isInitialized() && username != null) {
+                logger.info("Looking up user '{}' in XML user repository", username);
+                UserInfo userInfo = xmlUserRepository.findByUsername(username);
+                
+                if (userInfo != null) {
+                    // Optional: validate password if provided in XML
+                    if (grantType.equals("password") && userInfo.getPassword() != null) {
+                        if (!userInfo.getPassword().equals(password)) {
+                            logger.warn("Password validation failed for user: {}", username);
+                            return createErrorResponse("invalid_grant", 
+                                "Invalid username or password", 
+                                HttpStatus.UNAUTHORIZED);
+                        }
+                    }
+                    
+                    // Prioritize roles from request parameter if provided
+                    if (rolesParam != null && !rolesParam.trim().isEmpty()) {
+                        roles = parseRoles(rolesParam);
+                        logger.info("Using roles from request parameter for user '{}': {}", 
+                                   username, String.join(",", roles));
+                    } else {
+                        // Fall back to XML roles if no roles in request
+                        roles = userInfo.getRoles();
+                        logger.info("Using roles from XML for user '{}': {}", 
+                                   username, String.join(",", roles));
+                    }
+                } else {
+                    // User not found in XML - if roles are explicitly provided in request, allow it
+                    // This supports test scenarios and external authentication
+                    if (rolesParam != null && !rolesParam.trim().isEmpty()) {
+                        logger.info("User '{}' not in XML, but roles provided in request - allowing", username);
+                        roles = parseRoles(rolesParam);
+                    } else {
+                        logger.warn("User '{}' not found in XML user repository and no roles provided", username);
+                        return createErrorResponse("invalid_grant", 
+                            "Invalid username or password", 
+                            HttpStatus.UNAUTHORIZED);
+                    }
+                }
+            } else {
+                // Fall back to roles parameter if XML not configured
+                if (xmlUserRepository == null || !xmlUserRepository.isInitialized()) {
+                    logger.debug("XML user repository not configured, using roles parameter");
+                }
+                roles = parseRoles(rolesParam);
+            }
+            
+            logger.debug("Using roles for token: {}", roles);
 
             // Generate JWT access token
             String accessToken = generateAccessToken(clientId, username, scope, roles, grantType);

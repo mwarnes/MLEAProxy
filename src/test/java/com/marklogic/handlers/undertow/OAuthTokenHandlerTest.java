@@ -22,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Comprehensive test suite for OAuth 2.0 Token Endpoint
  * Tests token generation, JWT structure, role inclusion, and error handling
  */
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "spring.profiles.active=test")
 @AutoConfigureMockMvc
 @DisplayName("OAuth Token Endpoint Tests")
 class OAuthTokenHandlerTest {
@@ -41,7 +41,7 @@ class OAuthTokenHandlerTest {
                         .param("client_id", "test-client")
                         .param("client_secret", "test-secret")
                         .param("username", "testuser")
-                        .param("password", "testpass")
+                        .param("password", "password")
                         .param("scope", "read write")
                         .param("roles", "admin,user,developer")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED))
@@ -89,7 +89,7 @@ class OAuthTokenHandlerTest {
                         .param("client_id", "test-client")
                         .param("client_secret", "test-secret")
                         .param("username", "testuser")
-                        .param("password", "testpass")
+                        .param("password", "password")
                         .param("scope", "read")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())
@@ -119,7 +119,7 @@ class OAuthTokenHandlerTest {
                         .param("client_id", "test-client")
                         .param("client_secret", "test-secret")
                         .param("username", "testuser")
-                        .param("password", "testpass")
+                        .param("password", "password")
                         .param("roles", "admin")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())
@@ -146,7 +146,7 @@ class OAuthTokenHandlerTest {
                         .param("client_id", "test-client")
                         .param("client_secret", "test-secret")
                         .param("username", "testuser")
-                        .param("password", "testpass")
+                        .param("password", "password")
                         .param("roles", " admin , user , developer ")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())
@@ -174,7 +174,7 @@ class OAuthTokenHandlerTest {
                         .param("client_id", "test-client")
                         .param("client_secret", "test-secret")
                         .param("username", "testuser")
-                        .param("password", "testpass")
+                        .param("password", "password")
                         .param("roles", "")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())
@@ -209,7 +209,7 @@ class OAuthTokenHandlerTest {
                         .param("client_id", "test-client")
                         .param("client_secret", "test-secret")
                         .param("username", "testuser")
-                        .param("password", "testpass")
+                        .param("password", "password")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -237,7 +237,7 @@ class OAuthTokenHandlerTest {
                         .param("client_id", "test-client")
                         .param("client_secret", "test-secret")
                         .param("username", "testuser")
-                        .param("password", "testpass")
+                        .param("password", "password")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -269,7 +269,7 @@ class OAuthTokenHandlerTest {
                         .param("client_id", "test-client")
                         .param("client_secret", "test-secret")
                         .param("username", "user@example.com")
-                        .param("password", "testpass")
+                        .param("password", "password")
                         .param("roles", "admin")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())
@@ -294,7 +294,7 @@ class OAuthTokenHandlerTest {
                         .param("client_id", "test-client")
                         .param("client_secret", "test-secret")
                         .param("username", "testuser")
-                        .param("password", "testpass")
+                        .param("password", "password")
                         .param("scope", "read write admin profile")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())

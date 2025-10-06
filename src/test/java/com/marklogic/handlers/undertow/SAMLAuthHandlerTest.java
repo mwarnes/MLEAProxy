@@ -24,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Test suite for SAML authentication handler
  */
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "spring.profiles.active=test")
 @AutoConfigureMockMvc
 public class SAMLAuthHandlerTest {
 

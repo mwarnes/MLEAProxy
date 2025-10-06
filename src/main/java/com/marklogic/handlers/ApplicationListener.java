@@ -47,6 +47,7 @@ import java.security.cert.X509Certificate;
 import java.security.spec.RSAPrivateCrtKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.*;
+import org.springframework.context.annotation.Profile;
 
 // SAML handler imports removed - using lambda handlers instead for Undertow
 // import com.marklogic.handlers.undertow.B64DecodeHandler;
@@ -59,6 +60,7 @@ import java.util.*;
  * Created by mwarnes on 29/01/2017.
  */
 @Component
+@Profile("!test")
 class Applicationlistener implements ApplicationRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(Applicationlistener.class);
@@ -182,7 +184,7 @@ class Applicationlistener implements ApplicationRunner {
 
                 if (dsCfg.dsLDIF().isEmpty()) {
                     logger.info("Using internal LDIF");
-                    try (LDIFReader ldr = new LDIFReader(Objects.requireNonNull(ClassLoader.class.getResourceAsStream("/marklogic.ldif")))) {
+                    try (LDIFReader ldr = new LDIFReader(Objects.requireNonNull(getClass().getResourceAsStream("/marklogic.ldif")))) {
                         ds.importFromLDIF(true, ldr);
                     }
                 } else {

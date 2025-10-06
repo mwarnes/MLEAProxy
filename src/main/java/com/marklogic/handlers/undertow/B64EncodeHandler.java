@@ -35,4 +35,13 @@ public class B64EncodeHandler {
         return Utils.e(body);
     }
 
+    @GetMapping(
+            value = "/encode",
+            produces = "text/plain"
+    )
+    @ResponseBody
+    public String encodeGet(@RequestParam("data") String data) {
+        return Utils.e(data);
+    }
+
 }

@@ -2,6 +2,7 @@ package com.marklogic.handlers.undertow;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
@@ -11,11 +12,16 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
+import java.util.List;
 import java.util.zip.DataFormatException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 import org.opensaml.core.config.InitializationException;
 import org.opensaml.core.config.InitializationService;
@@ -26,9 +32,18 @@ import org.opensaml.core.xml.io.MarshallerFactory;
 import org.opensaml.core.xml.io.Unmarshaller;
 import org.opensaml.core.xml.io.UnmarshallerFactory;
 import org.opensaml.core.xml.io.UnmarshallingException;
+import org.opensaml.core.xml.schema.XSString;
+import org.opensaml.core.xml.schema.impl.XSStringBuilder;
 import org.opensaml.saml.common.SAMLVersion;
 import org.opensaml.saml.saml2.core.Assertion;
+import org.opensaml.saml.saml2.core.Attribute;
+import org.opensaml.saml.saml2.core.AttributeStatement;
+import org.opensaml.saml.saml2.core.AttributeValue;
+import org.opensaml.saml.saml2.core.AuthnContext;
+import org.opensaml.saml.saml2.core.AuthnContextClassRef;
 import org.opensaml.saml.saml2.core.AuthnRequest;
+import org.opensaml.saml.saml2.core.AuthnStatement;
+import org.opensaml.saml.saml2.core.Conditions;
 import org.opensaml.saml.saml2.core.Issuer;
 import org.opensaml.saml.saml2.core.NameID;
 import org.opensaml.saml.saml2.core.NameIDType;
@@ -38,30 +53,21 @@ import org.opensaml.saml.saml2.core.StatusCode;
 import org.opensaml.saml.saml2.core.Subject;
 import org.opensaml.saml.saml2.core.SubjectConfirmation;
 import org.opensaml.saml.saml2.core.SubjectConfirmationData;
-import org.opensaml.saml.saml2.core.Conditions;
-import org.opensaml.saml.saml2.core.AuthnStatement;
-import org.opensaml.saml.saml2.core.AuthnContext;
-import org.opensaml.saml.saml2.core.AuthnContextClassRef;
-import org.opensaml.saml.saml2.core.Attribute;
-import org.opensaml.saml.saml2.core.AttributeStatement;
-import org.opensaml.saml.saml2.core.AttributeValue;
-import org.opensaml.core.xml.schema.XSString;
-import org.opensaml.core.xml.schema.impl.XSStringBuilder;
 import org.opensaml.saml.saml2.core.impl.AssertionBuilder;
+import org.opensaml.saml.saml2.core.impl.AttributeBuilder;
+import org.opensaml.saml.saml2.core.impl.AttributeStatementBuilder;
+import org.opensaml.saml.saml2.core.impl.AuthnContextBuilder;
+import org.opensaml.saml.saml2.core.impl.AuthnContextClassRefBuilder;
+import org.opensaml.saml.saml2.core.impl.AuthnStatementBuilder;
+import org.opensaml.saml.saml2.core.impl.ConditionsBuilder;
 import org.opensaml.saml.saml2.core.impl.IssuerBuilder;
 import org.opensaml.saml.saml2.core.impl.NameIDBuilder;
 import org.opensaml.saml.saml2.core.impl.ResponseBuilder;
-import org.opensaml.saml.saml2.core.impl.AttributeBuilder;
-import org.opensaml.saml.saml2.core.impl.AttributeStatementBuilder;
 import org.opensaml.saml.saml2.core.impl.StatusBuilder;
 import org.opensaml.saml.saml2.core.impl.StatusCodeBuilder;
 import org.opensaml.saml.saml2.core.impl.SubjectBuilder;
 import org.opensaml.saml.saml2.core.impl.SubjectConfirmationBuilder;
 import org.opensaml.saml.saml2.core.impl.SubjectConfirmationDataBuilder;
-import org.opensaml.saml.saml2.core.impl.ConditionsBuilder;
-import org.opensaml.saml.saml2.core.impl.AuthnStatementBuilder;
-import org.opensaml.saml.saml2.core.impl.AuthnContextBuilder;
-import org.opensaml.saml.saml2.core.impl.AuthnContextClassRefBuilder;
 import org.opensaml.saml.saml2.metadata.EntityDescriptor;
 import org.opensaml.saml.saml2.metadata.IDPSSODescriptor;
 import org.opensaml.saml.saml2.metadata.KeyDescriptor;
@@ -73,27 +79,22 @@ import org.opensaml.saml.saml2.metadata.impl.SingleSignOnServiceBuilder;
 import org.opensaml.security.credential.Credential;
 import org.opensaml.security.credential.CredentialSupport;
 import org.opensaml.security.credential.UsageType;
-import org.opensaml.xmlsec.signature.Signature;
 import org.opensaml.xmlsec.signature.KeyInfo;
+import org.opensaml.xmlsec.signature.Signature;
 import org.opensaml.xmlsec.signature.X509Data;
 import org.opensaml.xmlsec.signature.impl.KeyInfoBuilder;
-import org.opensaml.xmlsec.signature.impl.X509DataBuilder;
 import org.opensaml.xmlsec.signature.impl.X509CertificateBuilder;
+import org.opensaml.xmlsec.signature.impl.X509DataBuilder;
 import org.opensaml.xmlsec.signature.support.SignatureConstants;
 import org.opensaml.xmlsec.signature.support.Signer;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-import java.io.StringWriter;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -103,13 +104,14 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
-import jakarta.annotation.PostConstruct;
-
 import com.marklogic.Utils;
 import com.marklogic.beans.SamlBean;
+import com.marklogic.repository.XmlUserRepository;
+import com.marklogic.repository.XmlUserRepository.UserInfo;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
+import jakarta.annotation.PostConstruct;
 
 @org.springframework.stereotype.Controller
 public class SAMLAuthHandler {
@@ -121,6 +123,9 @@ public class SAMLAuthHandler {
     
     @Autowired
     private ResourceLoader resourceLoader;
+    
+    @Autowired(required = false)
+    private XmlUserRepository xmlUserRepository;
     
     // Configurable certificate and key paths (works in production JARs)
     @Value("${saml.certificate.path:classpath:static/certificates/certificate.pem}")
@@ -182,7 +187,7 @@ public class SAMLAuthHandler {
     public String authn(Model model, @RequestParam(value = "SAMLRequest") String req) {
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
         context.getLogger(SAMLAuthHandler.class).setLevel(saml.getCfg().samlDebug() ? Level.DEBUG : Level.INFO);
-        model.addAttribute(saml);
+        model.addAttribute("saml", saml);
         
         try {
             logger.debug("Processing SAML Request: {}", req);
@@ -551,12 +556,55 @@ public class SAMLAuthHandler {
                         @RequestParam(value = "samlid", required = false) String samlid,
                         @RequestParam(value = "assertionUrl", required = false) String assertionUrl) throws Exception {
         
+        // Sanitize null bytes from all parameters
+        userid = sanitizeNullBytes(userid);
+        roles = sanitizeNullBytes(roles);
+        authn = sanitizeNullBytes(authn);
+        notbefore_date = sanitizeNullBytes(notbefore_date);
+        notafter_date = sanitizeNullBytes(notafter_date);
+        samlid = sanitizeNullBytes(samlid);
+        assertionUrl = sanitizeNullBytes(assertionUrl);
+        
         logger.info("Processing SAML authentication for user: {}", userid);
         
         try {
+            // Determine roles to include in SAML assertion
+            String finalRoles = roles;
+            
+            // If XML user repository is configured, look up user and get roles from memberOf
+            if (xmlUserRepository != null && xmlUserRepository.isInitialized() && 
+                userid != null && !userid.trim().isEmpty()) {
+                
+                logger.info("Looking up user '{}' in XML user repository for SAML", userid);
+                UserInfo userInfo = xmlUserRepository.findByUsername(userid);
+                
+                if (userInfo != null) {
+                    // Prioritize roles from request parameter if provided
+                    if (roles != null && !roles.trim().isEmpty()) {
+                        finalRoles = roles;
+                        logger.info("Using roles from request parameter for user '{}': {}", userid, finalRoles);
+                    } else {
+                        // Fall back to XML roles if no roles in request
+                        List<String> userRoles = userInfo.getRoles();
+                        if (!userRoles.isEmpty()) {
+                            finalRoles = String.join(",", userRoles);
+                            logger.info("Using roles from XML for user '{}': {}", userid, finalRoles);
+                        } else {
+                            logger.info("User '{}' found in XML but has no roles assigned", userid);
+                            finalRoles = "";
+                        }
+                    }
+                } else {
+                    logger.warn("User '{}' not found in XML user repository, using provided roles parameter", userid);
+                    // Keep the roles parameter value if user not found
+                }
+            } else if (roles != null && !roles.trim().isEmpty()) {
+                logger.debug("XML user repository not configured, using roles parameter: {}", roles);
+            }
+            
             // Set the authentication details in the SAML bean
             saml.setUserid(userid);
-            saml.setRoles(roles);
+            saml.setRoles(finalRoles);
             saml.setAuthnResult(authn);
             
             // Use provided dates or current ones
@@ -582,7 +630,7 @@ public class SAMLAuthHandler {
             }
             saml.setSamlResponse(response);
             
-            logger.info("SAML authentication successful for user: {} with roles: {}", userid, roles);
+            logger.info("SAML authentication successful for user: {} with roles: {}", userid, finalRoles);
             
         } catch (Exception e) {
             logger.error("Error generating SAML response for user: {}", userid, e);
@@ -743,5 +791,15 @@ public class SAMLAuthHandler {
         org.opensaml.saml.saml2.metadata.NameIDFormat nameIDFormat = nameIDFormatBuilder.buildObject();
         nameIDFormat.setURI(format);
         return nameIDFormat;
+    }
+    
+    /**
+     * Sanitize null bytes from input strings to prevent XML parsing issues
+     */
+    private String sanitizeNullBytes(String input) {
+        if (input == null) {
+            return null;
+        }
+        return input.replace("\u0000", "");
     }
 }
