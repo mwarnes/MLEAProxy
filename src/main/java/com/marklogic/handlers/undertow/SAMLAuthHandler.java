@@ -589,41 +589,42 @@ public class SAMLAuthHandler {
                 if (userInfo != null) {
                     // User found in JSON repository
                     if (roles != null && !roles.trim().isEmpty()) {
-                        // Priority 1: Use roles from request parameter if provided
+                        // Priority 1: Use roles from request parameter if provided (non-empty)
                         finalRoles = roles;
-                        logger.info("Using roles from request parameter for user '{}': {}", userid, finalRoles);
+                        logger.info("Priority 1: Using roles from request parameter for user '{}': {}", userid, finalRoles);
                     } else {
                         // Priority 2: Use roles from JSON if no roles in request
                         List<String> userRoles = userInfo.getRoles();
                         if (!userRoles.isEmpty()) {
                             finalRoles = String.join(",", userRoles);
-                            logger.info("Using roles from JSON for user '{}': {}", userid, finalRoles);
+                            logger.info("Priority 2: Using roles from JSON for user '{}': {}", userid, finalRoles);
                         } else {
-                            logger.info("User '{}' found in JSON but has no roles assigned, using empty roles", userid);
-                            finalRoles = "";
+                            // User has empty roles in JSON, use default roles
+                            finalRoles = defaultRoles;
+                            logger.info("Priority 3: User '{}' found in JSON but has no roles assigned, using default roles: {}", userid, defaultRoles);
                         }
                     }
                 } else {
                     // User not found in JSON repository
                     if (roles != null && !roles.trim().isEmpty()) {
-                        // Priority 1: Use roles from request parameter if provided
-                        logger.info("User '{}' not found in JSON, using roles from request parameter", userid);
+                        // Priority 1: Use roles from request parameter if provided (non-empty)
+                        logger.info("Priority 1: User '{}' not found in JSON, using roles from request parameter: {}", userid, roles);
                         finalRoles = roles;
                     } else {
                         // Priority 3: Use default roles from configuration
-                        logger.info("User '{}' not found in JSON, using default roles: {}", userid, defaultRoles);
+                        logger.info("Priority 3: User '{}' not found in JSON, using default roles: {}", userid, defaultRoles);
                         finalRoles = defaultRoles;
                     }
                 }
             } else {
                 // JSON user repository not configured
                 if (roles != null && !roles.trim().isEmpty()) {
-                    // Priority 1: Use roles from request parameter if provided
-                    logger.debug("JSON user repository not configured, using roles from request parameter: {}", roles);
+                    // Priority 1: Use roles from request parameter if provided (non-empty)
+                    logger.info("Priority 1: JSON user repository not configured, using roles from request parameter: {}", roles);
                     finalRoles = roles;
                 } else {
                     // Priority 3: Use default roles from configuration
-                    logger.debug("JSON user repository not configured, using default roles: {}", defaultRoles);
+                    logger.info("Priority 3: JSON user repository not configured, using default roles: {}", defaultRoles);
                     finalRoles = defaultRoles;
                 }
             }

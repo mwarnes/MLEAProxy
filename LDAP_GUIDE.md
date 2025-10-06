@@ -917,6 +917,7 @@ public class CustomRequestProcessor extends InMemoryOperationInterceptor {
 ## Related Documentation
 
 - **[README.md](./README.md)** - General application overview
+- **[IN_MEMORY_LDAP_GUIDE.md](./IN_MEMORY_LDAP_GUIDE.md)** - In-memory LDAP server for testing/development
 - **[OAUTH_GUIDE.md](./OAUTH_GUIDE.md)** - OAuth 2.0 functionality
 - **[SAML_GUIDE.md](./SAML_GUIDE.md)** - SAML 2.0 functionality
 - **[TESTING_GUIDE.md](./TESTING_GUIDE.md)** - Testing procedures

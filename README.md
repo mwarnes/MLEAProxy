@@ -70,8 +70,8 @@ java -jar mleaproxy.jar
 
 # All services start automatically:
 # - LDAP server on ldap://localhost:10389
-# - OAuth endpoints on http://localhost:30389/oauth/*
-# - SAML endpoints on http://localhost:30389/saml/*
+# - OAuth endpoints on http://localhost:8080/oauth/*
+# - SAML endpoints on http://localhost:8080/saml/*
 ```
 
 ### Quick Tests
@@ -84,12 +84,12 @@ ldapsearch -H ldap://localhost:10389 \
   -b "ou=users,dc=marklogic,dc=local"
 
 # Test OAuth
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=password&username=admin&password=admin" \
   -d "client_id=marklogic&client_secret=secret"
 
 # Test SAML
-curl http://localhost:30389/saml/idp-metadata
+curl http://localhost:8080/saml/idp-metadata
 ```
 
 ---
@@ -140,7 +140,7 @@ mlproxy-dev
 |-----------|-------------|-------|
 | **Java Runtime** | OpenJDK 21+ | LTS version recommended |
 | **Memory** | 512MB+ | Depends on load |
-| **Network** | TCP ports | Defaults: 10389 (LDAP), 30389 (HTTP) |
+| **Network** | TCP ports | Defaults: 10389 (LDAP), 8080 (HTTP - SAML/OAuth) |
 | **Disk Space** | 100MB+ | For JAR and logs |
 
 ---
@@ -152,11 +152,13 @@ mlproxy-dev
 | Protocol | Endpoint | Method | Purpose | Port |
 |----------|----------|--------|---------|------|
 | **LDAP** | `ldap://localhost:10389` | LDAP | LDAP proxy/server | 10389 |
-| **OAuth** | `/oauth/token` | POST | Generate JWT tokens | 30389 |
-| **OAuth** | `/oauth/jwks` | GET | Public key discovery | 30389 |
-| **OAuth** | `/oauth/.well-known/config` | GET | Server metadata (RFC 8414) | 30389 |
-| **SAML** | `/saml/auth` | GET | SAML authentication (SSO) | 30389 |
-| **SAML** | `/saml/idp-metadata` | GET | IdP metadata XML | 30389 |
+| **OAuth** | `/oauth/token` | POST | Generate JWT tokens | 8080 |
+| **OAuth** | `/oauth/jwks` | GET | Public key discovery | 8080 |
+| **OAuth** | `/oauth/.well-known/config` | GET | Server metadata (RFC 8414) | 8080 |
+| **SAML** | `/saml/auth` | GET | SAML authentication (SSO) | 8080 |
+| **SAML** | `/saml/idp-metadata` | GET | IdP metadata XML | 8080 |
+
+> **Note**: OAuth and SAML share the same Spring Boot web server port (default: 8080). They are distinguished by URL path prefixes (`/oauth/*` vs `/saml/*`), not separate ports. Configure via `server.port` property.
 
 ### LDAP Endpoints
 
@@ -182,7 +184,7 @@ ldapsearch -H ldap://localhost:10389 \
 Generate JWT access tokens with user roles:
 
 ```bash
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=password" \
   -d "username=admin" \
   -d "password=admin" \
@@ -195,7 +197,7 @@ curl -X POST http://localhost:30389/oauth/token \
 Retrieve public keys for JWT verification:
 
 ```bash
-curl http://localhost:30389/oauth/jwks
+curl http://localhost:8080/oauth/jwks
 ```
 
 **Well-Known Config** (`/oauth/.well-known/config`)
@@ -203,7 +205,7 @@ curl http://localhost:30389/oauth/jwks
 OAuth 2.0 authorization server metadata:
 
 ```bash
-curl http://localhost:30389/oauth/.well-known/config
+curl http://localhost:8080/oauth/.well-known/config
 ```
 
 Documentation: See [OAUTH_GUIDE.md](./OAUTH_GUIDE.md)
@@ -215,7 +217,7 @@ Documentation: See [OAUTH_GUIDE.md](./OAUTH_GUIDE.md)
 SAML 2.0 Identity Provider authentication:
 
 ```bash
-curl "http://localhost:30389/saml/auth?SAMLRequest=<base64>&RelayState=<state>"
+curl "http://localhost:8080/saml/auth?SAMLRequest=<base64>&RelayState=<state>"
 ```
 
 **IdP Metadata Endpoint** (`/saml/idp-metadata`)
@@ -223,7 +225,7 @@ curl "http://localhost:30389/saml/auth?SAMLRequest=<base64>&RelayState=<state>"
 SAML 2.0 Identity Provider metadata:
 
 ```bash
-curl http://localhost:30389/saml/idp-metadata
+curl http://localhost:8080/saml/idp-metadata
 ```
 
 Documentation: See [SAML_GUIDE.md](./SAML_GUIDE.md)
@@ -483,6 +485,7 @@ See [TESTING_GUIDE.md](./TESTING_GUIDE.md) for complete testing procedures.
 |----------|-------------|---------|
 | **[README.md](./README.md)** | This file - General overview | 2025 |
 | **[LDAP_GUIDE.md](./LDAP_GUIDE.md)** | Complete LDAP/LDAPS guide | 2025 |
+| **[IN_MEMORY_LDAP_GUIDE.md](./IN_MEMORY_LDAP_GUIDE.md)** | In-Memory LDAP server guide | 2025 |
 | **[OAUTH_GUIDE.md](./OAUTH_GUIDE.md)** | Complete OAuth 2.0 guide | 2025 |
 | **[SAML_GUIDE.md](./SAML_GUIDE.md)** | Complete SAML 2.0 guide | 2025 |
 | **[TEST_SUITE_SUMMARY.md](./TEST_SUITE_SUMMARY.md)** | Test suite documentation | 2025 |

@@ -49,7 +49,7 @@ MLEAProxy provides complete SAML 2.0 Identity Provider (IdP) functionality for S
 java -jar mleaproxy.jar
 
 # Get IdP metadata
-curl http://localhost:30389/saml/idp-metadata
+curl http://localhost:8080/saml/idp-metadata
 ```
 
 **Response:**
@@ -57,7 +57,7 @@ curl http://localhost:30389/saml/idp-metadata
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" 
-                  entityID="http://localhost:30389/saml/idp">
+                  entityID="http://localhost:8080/saml/idp">
   <IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
     <KeyDescriptor use="signing">
       <KeyInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
@@ -67,7 +67,7 @@ curl http://localhost:30389/saml/idp-metadata
       </KeyInfo>
     </KeyDescriptor>
     <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" 
-                        Location="http://localhost:30389/saml/auth"/>
+                        Location="http://localhost:8080/saml/auth"/>
   </IDPSSODescriptor>
 </EntityDescriptor>
 ```
@@ -77,7 +77,7 @@ curl http://localhost:30389/saml/idp-metadata
 ```bash
 # Redirect user to SAML authentication endpoint
 # (Requires base64-encoded SAMLRequest)
-curl "http://localhost:30389/saml/auth?SAMLRequest=<base64-request>&RelayState=test"
+curl "http://localhost:8080/saml/auth?SAMLRequest=<base64-request>&RelayState=test"
 ```
 
 ---
@@ -113,7 +113,7 @@ The response is sent to the Service Provider's Assertion Consumer Service (ACS) 
 
 ```xml
 <saml:Assertion xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
-  <saml:Issuer>http://localhost:30389/saml/idp</saml:Issuer>
+  <saml:Issuer>http://localhost:8080/saml/idp</saml:Issuer>
   <saml:Subject>
     <saml:NameID>admin</saml:NameID>
   </saml:Subject>
@@ -148,7 +148,7 @@ Complete IdP metadata XML:
 <?xml version="1.0" encoding="UTF-8"?>
 <EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" 
                   xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
-                  entityID="http://localhost:30389/saml/idp">
+                  entityID="http://localhost:8080/saml/idp">
   
   <IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
     
@@ -166,7 +166,7 @@ Complete IdP metadata XML:
     <!-- Single Sign-On Service -->
     <SingleSignOnService 
       Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" 
-      Location="http://localhost:30389/saml/auth"/>
+      Location="http://localhost:8080/saml/auth"/>
     
   </IDPSSODescriptor>
   
@@ -177,10 +177,10 @@ Complete IdP metadata XML:
 
 ```bash
 # Download metadata
-curl http://localhost:30389/saml/idp-metadata > mleaproxy-idp-metadata.xml
+curl http://localhost:8080/saml/idp-metadata > mleaproxy-idp-metadata.xml
 
 # View metadata
-curl http://localhost:30389/saml/idp-metadata | xmllint --format -
+curl http://localhost:8080/saml/idp-metadata | xmllint --format -
 ```
 
 ---
@@ -193,9 +193,9 @@ curl http://localhost:30389/saml/idp-metadata | xmllint --format -
 # ==========================================
 # IdP Configuration
 # ==========================================
-saml.idp.entity-id=http://localhost:30389/saml/idp
-saml.idp.sso-url=http://localhost:30389/saml/auth
-saml.idp.metadata-url=http://localhost:30389/saml/idp-metadata
+saml.idp.entity-id=http://localhost:8080/saml/idp
+saml.idp.sso-url=http://localhost:8080/saml/auth
+saml.idp.metadata-url=http://localhost:8080/saml/idp-metadata
 
 # ==========================================
 # Signing Configuration
@@ -454,10 +454,10 @@ INFO  - User 'admin' found in JSON but has no roles assigned
 
 ```bash
 # Download metadata for SP configuration
-curl http://localhost:30389/saml/idp-metadata > mleaproxy-idp.xml
+curl http://localhost:8080/saml/idp-metadata > mleaproxy-idp.xml
 
 # Format and view
-curl http://localhost:30389/saml/idp-metadata | xmllint --format -
+curl http://localhost:8080/saml/idp-metadata | xmllint --format -
 ```
 
 ### Scenario 2: Basic SAML Authentication
@@ -490,7 +490,7 @@ Test SAML flow with specific roles:
 
 ```bash
 # Authenticate with custom roles
-curl -G http://localhost:30389/saml/auth \
+curl -G http://localhost:8080/saml/auth \
   --data-urlencode "SAMLRequest=$(echo '<saml:AuthnRequest.../>' | base64)" \
   --data-urlencode "userid=testuser" \
   --data-urlencode "password=password" \
@@ -507,7 +507,7 @@ Authenticate unknown user:
 
 ```bash
 # Authenticate user not in repository
-curl -G http://localhost:30389/saml/auth \
+curl -G http://localhost:8080/saml/auth \
   --data-urlencode "SAMLRequest=$(echo '<saml:AuthnRequest.../>' | base64)" \
   --data-urlencode "userid=new_user" \
   --data-urlencode "password=password"
@@ -558,7 +558,7 @@ First, retrieve the Identity Provider metadata from MLEAProxy:
 
 ```bash
 # Get IdP metadata
-curl http://localhost:30389/saml/idp-metadata > mleaproxy-idp-metadata.xml
+curl http://localhost:8080/saml/idp-metadata > mleaproxy-idp-metadata.xml
 
 # View the metadata
 cat mleaproxy-idp-metadata.xml
@@ -605,8 +605,8 @@ In **MarkLogic Admin Console** (http://localhost:8001):
 
 | Setting | Value | Example |
 |---------|-------|---------|
-| **SAML entity ID** | `http://localhost:30389/saml/idp` | IdP Entity ID from metadata |
-| **SAML destination** | `http://localhost:30389/saml/auth` | IdP SSO endpoint URL |
+| **SAML entity ID** | `http://localhost:8080/saml/idp` | IdP Entity ID from metadata |
+| **SAML destination** | `http://localhost:8080/saml/auth` | IdP SSO endpoint URL |
 | **SAML issuer** | `marklogic-server` | Your MarkLogic server identifier |
 | **SAML assertion host** | `localhost:8000` | Your MarkLogic app server host:port |
 | **SAML IDP certificate authority** | *(see below)* | PEM-encoded X.509 certificate |
@@ -670,7 +670,7 @@ Click **OK** to save.
    
    MarkLogic will automatically redirect you to:
    ```
-   http://localhost:30389/saml/auth?SAMLRequest=...
+   http://localhost:8080/saml/auth?SAMLRequest=...
    ```
 
 3. **Login Form:**
@@ -748,8 +748,8 @@ curl -X POST http://localhost:8002/manage/v2/external-security \
     "authentication": "saml",
     "cache-timeout": 300,
     "authorization": "saml",
-    "saml-entity-id": "http://localhost:30389/saml/idp",
-    "saml-destination": "http://localhost:30389/saml/auth",
+    "saml-entity-id": "http://localhost:8080/saml/idp",
+    "saml-destination": "http://localhost:8080/saml/auth",
     "saml-issuer": "marklogic-server",
     "saml-assertion-host": "localhost:8000",
     "saml-idp-certificate": "-----BEGIN CERTIFICATE-----\nMIIDyzCC...\n-----END CERTIFICATE-----"
@@ -834,8 +834,8 @@ xdmp:log("SAML Authentication", "debug")
   <authentication>saml</authentication>
   <cache-timeout>300</cache-timeout>
   <authorization>saml</authorization>
-  <saml-entity-id>http://localhost:30389/saml/idp</saml-entity-id>
-  <saml-destination>http://localhost:30389/saml/auth</saml-destination>
+  <saml-entity-id>http://localhost:8080/saml/idp</saml-entity-id>
+  <saml-destination>http://localhost:8080/saml/auth</saml-destination>
   <saml-issuer>marklogic-server</saml-issuer>
   <saml-assertion-host>localhost:8000</saml-assertion-host>
   <saml-idp-certificate>
@@ -884,8 +884,8 @@ General Settings:
   App Name: MLEAProxy SAML
 
 SAML Settings:
-  Single sign on URL: http://localhost:30389/saml/auth
-  Audience URI (SP Entity ID): http://localhost:30389/saml/idp
+  Single sign on URL: http://localhost:8080/saml/auth
+  Audience URI (SP Entity ID): http://localhost:8080/saml/idp
   Default RelayState: (leave blank)
   Name ID format: EmailAddress or unspecified
   Application username: Email or Okta username
@@ -905,7 +905,7 @@ Attribute Statements:
 
 ```bash
 # Download MLEAProxy metadata
-curl http://localhost:30389/saml/idp-metadata > mleaproxy-idp.xml
+curl http://localhost:8080/saml/idp-metadata > mleaproxy-idp.xml
 
 # Upload to Okta:
 # SAML Settings → Identity Provider Metadata → Upload File
@@ -925,8 +925,8 @@ curl http://localhost:30389/saml/idp-metadata > mleaproxy-idp.xml
 # Using Azure CLI
 az ad app create \
   --display-name "MLEAProxy SAML" \
-  --identifier-uris "http://localhost:30389/saml/idp" \
-  --reply-urls "http://localhost:30389/saml/auth"
+  --identifier-uris "http://localhost:8080/saml/idp" \
+  --reply-urls "http://localhost:8080/saml/auth"
 ```
 
 **2. Configure SAML (Azure Portal):**
@@ -937,9 +937,9 @@ az ad app create \
 
 ```
 Basic SAML Configuration:
-  Identifier (Entity ID): http://localhost:30389/saml/idp
-  Reply URL (ACS URL): http://localhost:30389/saml/auth
-  Sign on URL: http://localhost:30389/saml/auth
+  Identifier (Entity ID): http://localhost:8080/saml/idp
+  Reply URL (ACS URL): http://localhost:8080/saml/auth
+  Sign on URL: http://localhost:8080/saml/auth
 
 User Attributes & Claims:
   roles: user.assignedroles
@@ -966,7 +966,7 @@ User Attributes & Claims:
 **1. Download IdP Metadata:**
 
 ```bash
-curl http://localhost:30389/saml/idp-metadata > metadata/mleaproxy-idp.xml
+curl http://localhost:8080/saml/idp-metadata > metadata/mleaproxy-idp.xml
 ```
 
 **2. Configure authsources.php:**
@@ -980,7 +980,7 @@ $config = [
         'saml:SP',
         
         // IdP metadata
-        'idp' => 'http://localhost:30389/saml/idp',
+        'idp' => 'http://localhost:8080/saml/idp',
         
         // Or use metadata file
         'metadata.sign.enable' => true,
@@ -996,8 +996,8 @@ $config = [
 <?php
 // metadata/saml20-idp-remote.php
 
-$metadata['http://localhost:30389/saml/idp'] = [
-    'SingleSignOnService' => 'http://localhost:30389/saml/auth',
+$metadata['http://localhost:8080/saml/idp'] = [
+    'SingleSignOnService' => 'http://localhost:8080/saml/auth',
     'certData' => 'MIICmzCCAYMCBgF...',  // From IdP metadata
 ];
 ```
@@ -1016,9 +1016,9 @@ https://your-sp.com/simplesaml/module.php/core/authenticate.php?as=mleaproxy-sp
 ```xml
 <!-- From /saml/idp-metadata -->
 
-Entity ID: http://localhost:30389/saml/idp
+Entity ID: http://localhost:8080/saml/idp
 
-SSO URL: http://localhost:30389/saml/auth
+SSO URL: http://localhost:8080/saml/auth
 
 Binding: urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect
 
@@ -1027,8 +1027,8 @@ Certificate: <X509Certificate>MIICmzCCAYMCBgF...</X509Certificate>
 
 **Configure in SP:**
 
-1. **IdP Entity ID**: `http://localhost:30389/saml/idp`
-2. **SSO URL**: `http://localhost:30389/saml/auth`
+1. **IdP Entity ID**: `http://localhost:8080/saml/idp`
+2. **SSO URL**: `http://localhost:8080/saml/auth`
 3. **Binding**: HTTP-Redirect
 4. **Certificate**: Copy from IdP metadata
 5. **NameID Format**: `urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified`
@@ -1197,9 +1197,9 @@ curl https://auth.company.com/saml/idp-metadata > new-metadata.xml
 # ==========================================
 # IdP Configuration
 # ==========================================
-saml.idp.entity-id=http://localhost:30389/saml/idp
-saml.idp.sso-url=http://localhost:30389/saml/auth
-saml.idp.metadata-url=http://localhost:30389/saml/idp-metadata
+saml.idp.entity-id=http://localhost:8080/saml/idp
+saml.idp.sso-url=http://localhost:8080/saml/auth
+saml.idp.metadata-url=http://localhost:8080/saml/idp-metadata
 
 # ==========================================
 # Signing Configuration
@@ -1256,7 +1256,7 @@ saml.default.roles=user                          # Comma-separated list
                 IssueInstant="2025-01-01T12:00:00Z"
                 Destination="https://sp.example.com/acs">
   
-  <saml:Issuer>http://localhost:30389/saml/idp</saml:Issuer>
+  <saml:Issuer>http://localhost:8080/saml/idp</saml:Issuer>
   
   <samlp:Status>
     <samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/>
@@ -1267,7 +1267,7 @@ saml.default.roles=user                          # Comma-separated list
                   Version="2.0"
                   IssueInstant="2025-01-01T12:00:00Z">
     
-    <saml:Issuer>http://localhost:30389/saml/idp</saml:Issuer>
+    <saml:Issuer>http://localhost:8080/saml/idp</saml:Issuer>
     
     <!-- Digital Signature (if enabled) -->
     <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">

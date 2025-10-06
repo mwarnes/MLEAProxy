@@ -50,7 +50,7 @@ MLEAProxy provides complete OAuth 2.0 authorization server functionality with JW
 java -jar mleaproxy.jar
 
 # Generate OAuth token
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=password" \
   -d "username=admin" \
   -d "password=admin" \
@@ -72,7 +72,7 @@ curl -X POST http://localhost:30389/oauth/token \
 
 ```bash
 # Get public keys for verification
-curl http://localhost:30389/oauth/jwks
+curl http://localhost:8080/oauth/jwks
 ```
 
 **Response:**
@@ -134,7 +134,7 @@ Generate JWT access tokens with user roles and permissions.
 ```json
 {
   "sub": "admin",
-  "iss": "http://localhost:30389",
+  "iss": "http://localhost:8080",
   "iat": 1704067200,
   "exp": 1704070800,
   "roles": ["admin", "user"],
@@ -148,7 +148,7 @@ Generate JWT access tokens with user roles and permissions.
 **Password Grant:**
 
 ```bash
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=password" \
   -d "username=admin" \
   -d "password=admin" \
@@ -159,7 +159,7 @@ curl -X POST http://localhost:30389/oauth/token \
 **With Custom Roles:**
 
 ```bash
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=password" \
   -d "username=admin" \
   -d "password=admin" \
@@ -171,7 +171,7 @@ curl -X POST http://localhost:30389/oauth/token \
 **Client Credentials Grant:**
 
 ```bash
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=client_credentials" \
   -d "client_id=service-account" \
   -d "client_secret=service-secret"
@@ -180,7 +180,7 @@ curl -X POST http://localhost:30389/oauth/token \
 **With Basic Authentication:**
 
 ```bash
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -u "marklogic:secret" \
   -d "grant_type=password" \
   -d "username=admin" \
@@ -216,7 +216,7 @@ Retrieve public keys for JWT signature verification.
 #### Usage
 
 ```bash
-curl http://localhost:30389/oauth/jwks
+curl http://localhost:8080/oauth/jwks
 ```
 
 **Purpose:**
@@ -237,9 +237,9 @@ OAuth 2.0 authorization server metadata for automated discovery.
 
 ```json
 {
-  "issuer": "http://localhost:30389",
-  "token_endpoint": "http://localhost:30389/oauth/token",
-  "jwks_uri": "http://localhost:30389/oauth/jwks",
+  "issuer": "http://localhost:8080",
+  "token_endpoint": "http://localhost:8080/oauth/token",
+  "jwks_uri": "http://localhost:8080/oauth/jwks",
   "grant_types_supported": ["password", "client_credentials"],
   "response_types_supported": ["token"],
   "token_endpoint_auth_methods_supported": ["client_secret_post", "client_secret_basic"]
@@ -249,7 +249,7 @@ OAuth 2.0 authorization server metadata for automated discovery.
 #### Usage
 
 ```bash
-curl http://localhost:30389/oauth/.well-known/config
+curl http://localhost:8080/oauth/.well-known/config
 ```
 
 **Purpose:**
@@ -267,7 +267,7 @@ curl http://localhost:30389/oauth/.well-known/config
 # ==========================================
 # OAuth Issuer Configuration
 # ==========================================
-oauth.issuer=http://localhost:30389
+oauth.issuer=http://localhost:8080
 
 # ==========================================
 # Token Configuration
@@ -383,7 +383,7 @@ When `roles` parameter is provided in the token request, it **always overrides**
 
 ```bash
 # Explicitly request specific roles
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=password" \
   -d "username=admin" \
   -d "password=admin" \
@@ -418,7 +418,7 @@ When no `roles` parameter is provided and user exists in `users.json`:
 
 ```bash
 # Request without roles parameter
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=password" \
   -d "username=admin" \
   -d "password=admin" \
@@ -445,7 +445,7 @@ oauth.default.roles=user,guest
 
 ```bash
 # Authenticate with unknown user
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=password" \
   -d "username=unknown_user" \
   -d "password=password" \
@@ -519,7 +519,7 @@ INFO  - User 'unknown' not found in JSON, using default roles: user
 Simple password grant with default roles:
 
 ```bash
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=password" \
   -d "username=testuser" \
   -d "password=password" \
@@ -537,7 +537,7 @@ curl -X POST http://localhost:30389/oauth/token \
 Override user's default roles for testing:
 
 ```bash
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=password" \
   -d "username=testuser" \
   -d "password=password" \
@@ -556,7 +556,7 @@ curl -X POST http://localhost:30389/oauth/token \
 Authenticate user not in repository:
 
 ```bash
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=password" \
   -d "username=new_user" \
   -d "password=password" \
@@ -574,7 +574,7 @@ curl -X POST http://localhost:30389/oauth/token \
 Client credentials grant (no user):
 
 ```bash
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=client_credentials" \
   -d "client_id=service-account" \
   -d "client_secret=service-secret"
@@ -589,7 +589,7 @@ curl -X POST http://localhost:30389/oauth/token \
 
 ```bash
 # Generate token
-TOKEN=$(curl -s -X POST http://localhost:30389/oauth/token \
+TOKEN=$(curl -s -X POST http://localhost:8080/oauth/token \
   -d "grant_type=password&username=admin&password=admin" \
   -d "client_id=marklogic&client_secret=secret" \
   | jq -r .access_token)
@@ -615,14 +615,14 @@ const axios = require('axios');
 
 // Create JWKS client
 const JWKS = jose.createRemoteJWKSet(
-  new URL('http://localhost:30389/oauth/jwks')
+  new URL('http://localhost:8080/oauth/jwks')
 );
 
 // Verify token
 async function verifyToken(token) {
   try {
     const { payload } = await jose.jwtVerify(token, JWKS, {
-      issuer: 'http://localhost:30389',
+      issuer: 'http://localhost:8080',
       audience: 'marklogic'
     });
     
@@ -638,7 +638,7 @@ async function verifyToken(token) {
 
 // Generate token
 async function generateToken(username, password) {
-  const response = await axios.post('http://localhost:30389/oauth/token', 
+  const response = await axios.post('http://localhost:8080/oauth/token', 
     new URLSearchParams({
       grant_type: 'password',
       username: username,
@@ -668,7 +668,7 @@ import requests
 
 # Get JWKS
 def get_jwks():
-    response = requests.get('http://localhost:30389/oauth/jwks')
+    response = requests.get('http://localhost:8080/oauth/jwks')
     return response.json()
 
 # Verify token
@@ -681,7 +681,7 @@ def verify_token(token):
             token, 
             public_key, 
             algorithms=['RS256'],
-            issuer='http://localhost:30389',
+            issuer='http://localhost:8080',
             audience='marklogic'
         )
         print(f"Valid token for user: {claims['sub']}")
@@ -693,7 +693,7 @@ def verify_token(token):
 
 # Generate token
 def generate_token(username, password):
-    response = requests.post('http://localhost:30389/oauth/token',
+    response = requests.post('http://localhost:8080/oauth/token',
         data={
             'grant_type': 'password',
             'username': username,
@@ -729,7 +729,7 @@ public class ResourceServerConfig {
             )
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt
-                    .jwkSetUri("http://localhost:30389/oauth/jwks")
+                    .jwkSetUri("http://localhost:8080/oauth/jwks")
                     .jwtAuthenticationConverter(jwtAuthenticationConverter())
                 )
             );
@@ -758,8 +758,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:30389
-          jwk-set-uri: http://localhost:30389/oauth/jwks
+          issuer-uri: http://localhost:8080
+          jwk-set-uri: http://localhost:8080/oauth/jwks
 ```
 
 ### cURL Examples
@@ -768,7 +768,7 @@ spring:
 
 ```bash
 # 1. Generate token
-TOKEN=$(curl -s -X POST http://localhost:30389/oauth/token \
+TOKEN=$(curl -s -X POST http://localhost:8080/oauth/token \
   -d "grant_type=password" \
   -d "username=admin" \
   -d "password=admin" \
@@ -807,7 +807,7 @@ oauth.token.audience=marklogic  # Audience validation
 
 ```json
 {
-  "iss": "http://localhost:30389",    // Validated issuer
+  "iss": "http://localhost:8080",    // Validated issuer
   "sub": "admin",                      // Subject (username)
   "aud": "marklogic",                  // Audience validation
   "exp": 1704070800,                   // Expiration timestamp
@@ -825,7 +825,7 @@ oauth.token.audience=marklogic  # Audience validation
 
 ```bash
 # Method 1: Client Secret in POST body
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=password" \
   -d "username=admin" \
   -d "password=admin" \
@@ -833,7 +833,7 @@ curl -X POST http://localhost:30389/oauth/token \
   -d "client_secret=secret"
 
 # Method 2: HTTP Basic Authentication
-curl -X POST http://localhost:30389/oauth/token \
+curl -X POST http://localhost:8080/oauth/token \
   -u "marklogic:secret" \
   -d "grant_type=password" \
   -d "username=admin" \
@@ -892,7 +892,7 @@ oauth.token.audience=your-application-name
 # ==========================================
 # OAuth Issuer
 # ==========================================
-oauth.issuer=http://localhost:30389
+oauth.issuer=http://localhost:8080
 
 # ==========================================
 # Token Configuration
