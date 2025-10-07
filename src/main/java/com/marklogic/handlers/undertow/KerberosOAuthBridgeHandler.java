@@ -2,6 +2,8 @@ package com.marklogic.handlers.undertow;
 
 import com.marklogic.repository.JsonUserRepository;
 import com.marklogic.repository.JsonUserRepository.UserInfo;
+import com.marklogic.service.LDAPRoleService;
+import com.marklogic.service.RefreshTokenService;
 import io.jsonwebtoken.Jwts;
 import jakarta.annotation.PostConstruct;
 import org.ietf.jgss.*;
@@ -13,10 +15,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.util.MultiValueMap;
 
 import javax.security.auth.Subject;
 import javax.security.auth.login.LoginContext;
@@ -80,6 +80,12 @@ public class KerberosOAuthBridgeHandler {
 
     @Autowired(required = false)
     private JsonUserRepository jsonUserRepository;
+
+    @Autowired(required = false)
+    private LDAPRoleService ldapRoleService;
+
+    @Autowired(required = false)
+    private RefreshTokenService refreshTokenService;
 
     @Autowired
     private ResourceLoader resourceLoader;
@@ -227,6 +233,13 @@ public class KerberosOAuthBridgeHandler {
             // Generate OAuth JWT token
             String accessToken = generateOAuthToken(username, roles);
 
+            // Generate refresh token (Phase 4 enhancement)
+            String refreshToken = null;
+            if (refreshTokenService != null && refreshTokenService.isEnabled()) {
+                refreshToken = refreshTokenService.generateRefreshToken(username, String.join(" ", roles));
+                logger.debug("Generated refresh token for user: {}", username);
+            }
+
             // Build OAuth 2.0 response
             Map<String, Object> response = new LinkedHashMap<>();
             response.put("access_token", accessToken);
@@ -237,8 +250,14 @@ public class KerberosOAuthBridgeHandler {
             response.put("kerberos_principal", fullPrincipal);
             response.put("roles", roles);
             response.put("auth_method", "kerberos-oauth-bridge");
+            
+            // Add refresh token if available
+            if (refreshToken != null) {
+                response.put("refresh_token", refreshToken);
+            }
 
-            logger.info("OAuth token issued for Kerberos principal: {} (username: {})", fullPrincipal, username);
+            logger.info("OAuth token issued for Kerberos principal: {} (username: {}, has_refresh: {})", 
+                fullPrincipal, username, refreshToken != null);
 
             return ResponseEntity.ok(response);
 
@@ -371,30 +390,47 @@ public class KerberosOAuthBridgeHandler {
     }
 
     /**
-     * Load user roles from JSON user repository.
+     * Load user roles from JSON user repository with LDAP fallback (Phase 4 enhancement).
+     * 
+     * Resolution order:
+     * 1. Try JsonUserRepository first (users.json)
+     * 2. If not found, try LDAP role service
+     * 3. If both fail, use default roles
      * 
      * @param username Username (without realm)
      * @return List of roles
      */
     private List<String> loadUserRoles(String username) {
-        if (jsonUserRepository == null) {
-            logger.warn("JsonUserRepository not available, using default roles");
-            return Arrays.asList(defaultRoles.split(","));
+        // Try JSON repository first
+        if (jsonUserRepository != null) {
+            try {
+                UserInfo userInfo = jsonUserRepository.findByUsername(username);
+                if (userInfo != null && userInfo.getRoles() != null) {
+                    logger.debug("Loaded {} roles from JSON repository for user: {}", 
+                        userInfo.getRoles().size(), username);
+                    return new ArrayList<>(userInfo.getRoles());
+                }
+            } catch (Exception e) {
+                logger.error("Error loading roles from JSON repository for user: {}", username, e);
+            }
         }
 
-        try {
-            UserInfo userInfo = jsonUserRepository.findByUsername(username);
-            if (userInfo != null && userInfo.getRoles() != null) {
-                logger.debug("Loaded {} roles from repository for user: {}", userInfo.getRoles().size(), username);
-                return new ArrayList<>(userInfo.getRoles());
-            } else {
-                logger.debug("User {} not found in repository, using default roles", username);
-                return Arrays.asList(defaultRoles.split(","));
+        // Fallback to LDAP (Phase 4 enhancement)
+        if (ldapRoleService != null && ldapRoleService.isInitialized()) {
+            try {
+                List<String> ldapRoles = ldapRoleService.getUserRoles(username);
+                if (!ldapRoles.isEmpty()) {
+                    logger.info("Loaded {} roles from LDAP for user: {}", ldapRoles.size(), username);
+                    return ldapRoles;
+                }
+            } catch (Exception e) {
+                logger.error("Error loading roles from LDAP for user: {}", username, e);
             }
-        } catch (Exception e) {
-            logger.error("Error loading roles for user: {}", username, e);
-            return Arrays.asList(defaultRoles.split(","));
         }
+
+        // Ultimate fallback: default roles
+        logger.debug("User {} not found in JSON or LDAP, using default roles", username);
+        return Arrays.asList(defaultRoles.split(","));
     }
 
     /**
@@ -454,5 +490,110 @@ public class KerberosOAuthBridgeHandler {
         BigInteger modulus = publicKey.getModulus();
         String modulusHex = modulus.toString(16);
         return modulusHex.substring(0, Math.min(16, modulusHex.length()));
+    }
+
+    /**
+     * Refresh OAuth token using refresh token (Phase 4 enhancement).
+     * 
+     * This endpoint implements OAuth 2.0 refresh token flow.
+     * It accepts a refresh token, validates it, and issues a new access token.
+     * 
+     * Token rotation: old refresh token is consumed and a new one is issued.
+     * 
+     * @param grantType Must be "refresh_token"
+     * @param refreshToken The refresh token to exchange
+     * @return New OAuth token response with new access and refresh tokens
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<Map<String, Object>> refreshToken(
+            @RequestParam(value = "grant_type", required = false) String grantType,
+            @RequestParam(value = "refresh_token", required = false) String refreshToken) {
+        
+        if (!initialized) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of(
+                    "error", "service_unavailable",
+                    "error_description", "OAuth service is not configured"
+                ));
+        }
+
+        if (refreshTokenService == null || !refreshTokenService.isEnabled()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of(
+                    "error", "unsupported_grant_type",
+                    "error_description", "Refresh tokens are not enabled"
+                ));
+        }
+
+        // Validate grant_type
+        if (!"refresh_token".equals(grantType)) {
+            logger.debug("Invalid grant_type: {}", grantType);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                    "error", "invalid_request",
+                    "error_description", "grant_type must be 'refresh_token'"
+                ));
+        }
+
+        // Validate refresh token presence
+        if (refreshToken == null || refreshToken.trim().isEmpty()) {
+            logger.debug("Missing refresh_token parameter");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                    "error", "invalid_request",
+                    "error_description", "refresh_token is required"
+                ));
+        }
+
+        try {
+            // Validate and consume refresh token (single-use)
+            RefreshTokenService.TokenValidationResult result = 
+                refreshTokenService.validateAndConsumeToken(refreshToken);
+            
+            if (!result.isValid()) {
+                logger.warn("Invalid refresh token: {}", result.getErrorMessage());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                        "error", "invalid_grant",
+                        "error_description", result.getErrorMessage()
+                    ));
+            }
+
+            String username = result.getUsername();
+            String scope = result.getScope();
+            
+            logger.info("Refresh token validated for user: {}", username);
+
+            // Parse scope back to roles list
+            List<String> roles = Arrays.asList(scope.split(" "));
+
+            // Generate new access token
+            String newAccessToken = generateOAuthToken(username, roles);
+
+            // Generate new refresh token (token rotation)
+            String newRefreshToken = refreshTokenService.generateRefreshToken(username, scope);
+
+            // Build OAuth 2.0 response
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("access_token", newAccessToken);
+            response.put("token_type", "Bearer");
+            response.put("expires_in", tokenExpirationSeconds);
+            response.put("scope", scope);
+            response.put("refresh_token", newRefreshToken);
+            response.put("principal", username);
+            response.put("auth_method", "refresh_token");
+
+            logger.info("New tokens issued via refresh for user: {}", username);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Error refreshing token", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                    "error", "server_error",
+                    "error_description", "Failed to refresh token: " + e.getMessage()
+                ));
+        }
     }
 }
