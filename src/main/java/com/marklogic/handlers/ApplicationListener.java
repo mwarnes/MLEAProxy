@@ -82,6 +82,8 @@ class Applicationlistener implements ApplicationRunner {
      * @param args Command-line arguments passed to the application
      * @throws Exception if any initialization step fails
      */
+    private KerberosKDCServer kerberosKdc;
+
     @Override
     public void run(ApplicationArguments args) throws Exception {
         ApplicationConfig cfg = initializeConfiguration();
@@ -89,6 +91,7 @@ class Applicationlistener implements ApplicationRunner {
         setupLDAPDebugging(cfg);
         logApplicationArguments(args);
         startInMemoryDirectoryServers(cfg);
+        startKerberosKDC(cfg);
         startLDAPListeners(cfg);
         initializeSAMLConfiguration(cfg);
     }
@@ -195,6 +198,37 @@ class Applicationlistener implements ApplicationRunner {
                 logger.info("Directory Server listening on: {}:{} ({})", addr, port, dsCfg.dsName());
 
             }
+        }
+    }
+
+    /**
+     * Starts the embedded Kerberos KDC (Key Distribution Center).
+     * The KDC provides Kerberos authentication for testing and development.
+     * 
+     * Features:
+     * - Auto-imports principals from in-memory LDAP
+     * - Generates krb5.conf configuration file
+     * - Creates service principal keytabs
+     * - Localhost-optimized (no DNS requirements)
+     * 
+     * @param cfg Application configuration (not directly used, KerberosConfig loaded separately)
+     * @throws Exception if KDC initialization or startup fails
+     */
+    private void startKerberosKDC(ApplicationConfig cfg) throws Exception {
+        try {
+            KerberosConfig krbCfg = ConfigFactory.create(KerberosConfig.class);
+            
+            if (krbCfg.kerberosEnabled()) {
+                logger.info("Initializing Kerberos KDC...");
+                kerberosKdc = new KerberosKDCServer(krbCfg);
+                kerberosKdc.start();
+            } else {
+                logger.debug("Kerberos KDC is disabled (set kerberos.enabled=true in kerberos.properties to enable)");
+            }
+        } catch (Exception e) {
+            logger.error("Failed to start Kerberos KDC", e);
+            // Don't fail application startup if Kerberos fails
+            logger.warn("Application will continue without Kerberos support");
         }
     }
 

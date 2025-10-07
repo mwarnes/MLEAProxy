@@ -247,6 +247,33 @@
             <artifactId>threetenbp</artifactId>
             <version>1.6.8</version>
         </dependency>
+        
+        <!-- Apache Kerby - Embedded Kerberos KDC -->
+        <dependency>
+            <groupId>org.apache.kerby</groupId>
+            <artifactId>kerb-simplekdc</artifactId>
+            <version>2.0.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kerby</groupId>
+            <artifactId>kerb-core</artifactId>
+            <version>2.0.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kerby</groupId>
+            <artifactId>kerby-config</artifactId>
+            <version>2.0.3</version>
+        </dependency>
+        
+        <!-- Spring Security for Kerberos/SPNEGO HTTP Authentication -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-config</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
