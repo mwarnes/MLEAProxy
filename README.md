@@ -1,9 +1,27 @@
 # 🚀 MLEAProxy
 
 [![Java](https://img.shields.io/badge/Java-21+-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.5-6DB33F?style=for-the-badge&logo=spring-boot)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.5-6DB33F?style=f### LDAP Guide
+
+**[LDAP_GUIDE.md](./LDAP_GUIDE.md)** - Complete LDAP functionality
+
+- Configuration (servers, server sets, listeners, processors, in-memory directories)
+- Standalone JSON LDAP server
+- In-memory directory servers for testing
+- Proxy mode and load balancing
+- Security features (LDAPS, injection protection)
+- Multiple usage scenarios with examples
+- Troubleshooting guidege&logo=spring-boot)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Maven-3.9+-C71A36?style=for-the-badge&logo=apache-maven)](https://maven.apache.org/)
-[![Tests](https://img.shields.io/badge/Tests-107%2F107_Passing-brightgreen?style=for-the-badge)](./TEST_SUITE_SUMMARY.md)
+[![Tests](https://img.shields.io/badge/Tests-107%| Document | Description | Updated |
+|----------|-------------|---------|------|
+| **[README.md](./README.md)** | This file - General overview | 2025 |
+| **[docs/user/LDAP_GUIDE.md](./docs/user/LDAP_GUIDE.md)** | Complete LDAP/LDAPS guide (includes in-memory server) | 2025 |
+| **[docs/user/OAUTH_GUIDE.md](./docs/user/OAUTH_GUIDE.md)** | Complete OAuth 2.0 guide | 2025 |
+| **[docs/user/SAML_GUIDE.md](./docs/user/SAML_GUIDE.md)** | Complete SAML 2.0 guide | 2025 |
+| **[docs/user/KERBEROS_GUIDE.md](./docs/user/KERBEROS_GUIDE.md)** | Complete Kerberos implementation | 2025 |
+| **[docs/user/TESTING_GUIDE.md](./docs/user/TESTING_GUIDE.md)** | Testing procedures | 2025 |
+| **[docs/user/CONFIGURATION_GUIDE.md](./docs/user/CONFIGURATION_GUIDE.md)** | Configuration reference | 2025 |ing-brightgreen?style=for-the-badge)](./TEST_SUITE_SUMMARY.md)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
 > **A Multi-Protocol Authentication Proxy & Development Server** 🔐
@@ -18,15 +36,23 @@
 
 ### 🎯 Key Features
 
-- **LDAP/LDAPS**: Proxy mode, load balancing, standalone JSON server, injection protection
-- **OAuth 2.0**: JWT token generation, JWKS endpoint, RFC 8414 metadata, 3-tier role resolution
+- **LDAP/LDAPS**: Proxy mode, load balancing, standalone JSON server, in-memory directory, injection protection
+- **OAuth 2.0**: JWT token generation, JWKS endpoint, RFC 8414 metadata, 3-tier role resolution, refresh tokens
 - **SAML 2.0**: Full IdP implementation, metadata endpoint, digital signatures, 3-tier role resolution
-- **Modern Stack**: Java 21, Spring Boot 3.3.5, Jackson JSON processing
+- **Kerberos**: Embedded KDC, SPNEGO authentication, OAuth/SAML protocol bridges, LDAP integration (Phase 4)
+- **Modern Stack**: Java 21, Spring Boot 3.3.5, Jackson JSON processing, Apache Kerby 2.0.3
 - **Comprehensive Testing**: 107/107 tests passing (100% coverage)
 - **Extensive Documentation**: Separate protocol-specific guides
 
 ### 🆕 What's New in 2025
 
+- **Kerberos Support (Phase 4)**: Complete Kerberos implementation with OAuth/SAML bridges
+  - Embedded Kerberos KDC (Apache Kerby 2.0.3)
+  - SPNEGO HTTP authentication
+  - OAuth JWT token generation from Kerberos tickets
+  - SAML assertion generation from Kerberos tickets
+  - LDAP role integration for group-based authorization
+  - OAuth 2.0 refresh token support with token rotation
 - **JSON User Repository**: Converted from XML to JSON format for better performance
 - **3-Tier Role Resolution**: Sophisticated role assignment for OAuth and SAML:
   1. Request parameter roles (explicit override - highest priority)
@@ -152,11 +178,16 @@ mlproxy-dev
 | Protocol | Endpoint | Method | Purpose | Port |
 |----------|----------|--------|---------|------|
 | **LDAP** | `ldap://localhost:10389` | LDAP | LDAP proxy/server | 10389 |
+| **LDAP** | `ldap://localhost:60389` | LDAP | In-memory directory server | 60389 |
 | **OAuth** | `/oauth/token` | POST | Generate JWT tokens | 8080 |
+| **OAuth** | `/oauth/token-from-kerberos` | POST | Kerberos → OAuth bridge | 8080 |
+| **OAuth** | `/oauth/refresh` | POST | Refresh access tokens | 8080 |
 | **OAuth** | `/oauth/jwks` | GET | Public key discovery | 8080 |
 | **OAuth** | `/oauth/.well-known/config` | GET | Server metadata (RFC 8414) | 8080 |
 | **SAML** | `/saml/auth` | GET | SAML authentication (SSO) | 8080 |
+| **SAML** | `/saml/assertion-from-kerberos` | POST | Kerberos → SAML bridge | 8080 |
 | **SAML** | `/saml/idp-metadata` | GET | IdP metadata XML | 8080 |
+| **Kerberos** | N/A | Kerberos | Embedded KDC & SPNEGO | 88/HTTP |
 
 > **Note**: OAuth and SAML share the same Spring Boot web server port (default: 8080). They are distinguished by URL path prefixes (`/oauth/*` vs `/saml/*`), not separate ports. Configure via `server.port` property.
 
@@ -234,14 +265,15 @@ Documentation: See [SAML_GUIDE.md](./SAML_GUIDE.md)
 
 ## 📚 Protocol Guides
 
-Complete documentation for each protocol has been organized into separate guides:
+Complete documentation for each protocol is now organized in the `docs/user/` folder:
 
 ### LDAP/LDAPS Guide
 
-**[LDAP_GUIDE.md](./LDAP_GUIDE.md)** - Complete LDAP functionality
+**[docs/user/LDAP_GUIDE.md](./docs/user/LDAP_GUIDE.md)** - Complete LDAP functionality
 
-- Configuration (servers, server sets, listeners, processors)
+- Configuration (servers, server sets, listeners, processors, in-memory directories)
 - Standalone JSON LDAP server
+- In-memory directory servers for testing
 - Proxy mode and load balancing
 - Security features (LDAPS, injection protection)
 - Multiple usage scenarios with examples
@@ -249,7 +281,7 @@ Complete documentation for each protocol has been organized into separate guides
 
 ### OAuth 2.0 Guide
 
-**[OAUTH_GUIDE.md](./OAUTH_GUIDE.md)** - Complete OAuth 2.0 functionality
+**[docs/user/OAUTH_GUIDE.md](./docs/user/OAUTH_GUIDE.md)** - Complete OAuth 2.0 functionality
 
 - All OAuth endpoints (token, JWKS, well-known config)
 - Configuration and user repository setup
@@ -260,7 +292,7 @@ Complete documentation for each protocol has been organized into separate guides
 
 ### SAML 2.0 Guide
 
-**[SAML_GUIDE.md](./SAML_GUIDE.md)** - Complete SAML 2.0 functionality
+**[docs/user/SAML_GUIDE.md](./docs/user/SAML_GUIDE.md)** - Complete SAML 2.0 functionality
 
 - All SAML endpoints (auth, IdP metadata)
 - Configuration and certificate setup
@@ -268,6 +300,22 @@ Complete documentation for each protocol has been organized into separate guides
 - Service Provider integration (Okta, Azure AD, SimpleSAMLphp)
 - Security and certificate management
 - Complete API reference
+
+### Kerberos Guide
+
+**[docs/user/KERBEROS_GUIDE.md](./docs/user/KERBEROS_GUIDE.md)** - Complete Kerberos functionality
+
+- **All Phases Integrated** - Phase 2 (SPNEGO), Phase 3 (OAuth/SAML bridges), and Phase 4 (LDAP integration & refresh tokens)
+- Embedded Kerberos KDC setup and configuration
+- SPNEGO HTTP authentication with detailed examples
+- Kerberos → OAuth JWT bridge with refresh token support
+- Kerberos → SAML assertion bridge
+- LDAP role integration (query in-memory LDAP for groups)
+- OAuth 2.0 refresh tokens with token rotation
+- Multi-tier role resolution (JSON → LDAP → defaults)
+- Principal and realm configuration
+- Keytab management and security
+- Complete API reference and testing examples
 
 ---
 
@@ -479,27 +527,42 @@ See [TESTING_GUIDE.md](./TESTING_GUIDE.md) for complete testing procedures.
 
 ## 📚 Documentation
 
-### Complete Documentation Index
+All documentation has been organized into a structured folder system for easier navigation.
 
-| Document | Description | Updated |
-|----------|-------------|---------|
-| **[README.md](./README.md)** | This file - General overview | 2025 |
-| **[LDAP_GUIDE.md](./LDAP_GUIDE.md)** | Complete LDAP/LDAPS guide | 2025 |
-| **[IN_MEMORY_LDAP_GUIDE.md](./IN_MEMORY_LDAP_GUIDE.md)** | In-Memory LDAP server guide | 2025 |
-| **[OAUTH_GUIDE.md](./OAUTH_GUIDE.md)** | Complete OAuth 2.0 guide | 2025 |
-| **[SAML_GUIDE.md](./SAML_GUIDE.md)** | Complete SAML 2.0 guide | 2025 |
-| **[TEST_SUITE_SUMMARY.md](./TEST_SUITE_SUMMARY.md)** | Test suite documentation | 2025 |
-| **[TESTING_GUIDE.md](./TESTING_GUIDE.md)** | Testing procedures | 2025 |
-| **[CONFIGURATION_GUIDE.md](./CONFIGURATION_GUIDE.md)** | Configuration reference | 2025 |
+### 📘 [User Documentation](./docs/user/)
 
-### Additional Documentation
+Complete guides for configuration, usage, and integration:
 
-- **[OAUTH_JWKS_WELLKNOWN_COMPLETE.md](./OAUTH_JWKS_WELLKNOWN_COMPLETE.md)** - Detailed JWKS/well-known documentation
-- **[SAML_IDP_METADATA_COMPLETE.md](./SAML_IDP_METADATA_COMPLETE.md)** - Detailed SAML IdP metadata documentation
-- **[OAUTH_SAML_DISCOVERY_SUMMARY.md](./OAUTH_SAML_DISCOVERY_SUMMARY.md)** - Discovery endpoints summary
-- **[DISCOVERY_ENDPOINTS_QUICK_REF.md](./DISCOVERY_ENDPOINTS_QUICK_REF.md)** - Quick command reference
-- **[CODE_FIXES_SUMMARY_2025.md](./CODE_FIXES_SUMMARY_2025.md)** - Recent changes and fixes
-- **[JJWT_MIGRATION_COMPLETE.md](./JJWT_MIGRATION_COMPLETE.md)** - JJWT 0.12.6 migration notes
+- **[Configuration Guide](./docs/user/CONFIGURATION_GUIDE.md)** - Complete configuration reference
+- **[LDAP Guide](./docs/user/LDAP_GUIDE.md)** - LDAP/LDAPS proxy and server guide
+- **[OAuth Guide](./docs/user/OAUTH_GUIDE.md)** - OAuth 2.0 JWT token generation
+- **[SAML Guide](./docs/user/SAML_GUIDE.md)** - SAML 2.0 Identity Provider guide
+- **[Kerberos Guide](./docs/user/KERBEROS_GUIDE.md)** - Complete Kerberos implementation
+- **[Testing Guide](./docs/user/TESTING_GUIDE.md)** - Testing procedures and examples
+- **[MarkLogic SAML Configuration](./docs/user/MarkLogic-SAML-configuration.md)** - Configure MarkLogic with SAML IdP
+
+👉 **[Browse All User Documentation →](./docs/user/)**
+
+### 🔧 [Developer Documentation](./docs/developer/)
+
+Technical implementation details, build notes, and development history:
+
+- **[Kerberos Phases](./docs/developer/KERBEROS_PHASE1_COMPLETE.md)** - Complete implementation phases
+- **[Code Review 2025](./docs/developer/CODE_REVIEW_2025.md)** - Code quality review
+- **[Test Suite Summary](./docs/developer/TEST_SUITE_SUMMARY.md)** - Test coverage details
+- **[JJWT Migration](./docs/developer/JJWT_MIGRATION_COMPLETE.md)** - JJWT 0.12.6 migration notes
+- **[Build Process](./docs/developer/build.md)** - Build documentation
+
+👉 **[Browse All Developer Documentation →](./docs/developer/)**
+
+### 📚 Quick Reference
+
+| Protocol | User Guide | Quick Reference |
+|----------|------------|-----------------|
+| **LDAP** | [LDAP Guide](./docs/user/LDAP_GUIDE.md) | In-memory server included |
+| **OAuth 2.0** | [OAuth Guide](./docs/user/OAUTH_GUIDE.md) | [Discovery Endpoints](./docs/user/DISCOVERY_ENDPOINTS_QUICK_REF.md) |
+| **SAML 2.0** | [SAML Guide](./docs/user/SAML_GUIDE.md) | [MarkLogic Config](./docs/user/MarkLogic-SAML-configuration.md) |
+| **Kerberos** | [Kerberos Guide](./docs/user/KERBEROS_GUIDE.md) | All phases integrated |
 
 ### Standards and Specifications
 
@@ -520,6 +583,13 @@ See [TESTING_GUIDE.md](./TESTING_GUIDE.md) for complete testing procedures.
 - [OASIS SAML 2.0](http://docs.oasis-open.org/security/saml/v2.0/) - Security Assertion Markup Language
 - [SAML 2.0 Metadata](http://docs.oasis-open.org/security/saml/v2.0/saml-metadata-2.0-os.pdf) - Metadata Specification
 - [SAML 2.0 Bindings](http://docs.oasis-open.org/security/saml/v2.0/saml-bindings-2.0-os.pdf) - Protocol Bindings
+
+#### Kerberos
+
+- [RFC 4120](https://tools.ietf.org/html/rfc4120) - Kerberos V5 Protocol
+- [RFC 4559](https://tools.ietf.org/html/rfc4559) - SPNEGO-based Kerberos and NTLM HTTP Authentication
+- [RFC 7617](https://tools.ietf.org/html/rfc7617) - HTTP Basic Authentication (comparison)
+- [Apache Kerby](https://directory.apache.org/kerby/) - Java Kerberos implementation
 
 ---
 
@@ -563,11 +633,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📊 Project Statistics
 
 - **Languages**: Java 21, JSON, Properties
-- **Lines of Code**: ~5,000+ (application) + 2,000+ (tests)
+- **Lines of Code**: ~6,500+ (application) + 2,000+ (tests)
 - **Test Coverage**: 100% (107/107 tests passing)
-- **Documentation**: 4,000+ lines across multiple guides
-- **Endpoints**: 6 (3 protocols: LDAP, OAuth 2.0, SAML 2.0)
-- **Supported Standards**: 10+ RFCs and OASIS specifications
+- **Documentation**: 6,000+ lines across multiple guides
+- **Endpoints**: 11 (4 protocols: LDAP, OAuth 2.0, SAML 2.0, Kerberos)
+- **Supported Standards**: 14+ RFCs and OASIS specifications
+- **Authentication Methods**: 4 (LDAP, OAuth, SAML, Kerberos/SPNEGO)
 
 ---
 
