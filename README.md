@@ -1,32 +1,29 @@
+
 # 🚀 MLEAProxy
 
 [![Java](https://img.shields.io/badge/Java-21+-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.5-6DB33F?style=f### LDAP Guide
-
-**[LDAP_GUIDE.md](./LDAP_GUIDE.md)** - Complete LDAP functionality
-
-- Configuration (servers, server sets, listeners, processors, in-memory directories)
-- Standalone JSON LDAP server
-- In-memory directory servers for testing
-- Proxy mode and load balancing
-- Security features (LDAPS, injection protection)
-- Multiple usage scenarios with examples
-- Troubleshooting guidege&logo=spring-boot)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.5-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Maven-3.9+-C71A36?style=for-the-badge&logo=apache-maven)](https://maven.apache.org/)
-[![Tests](https://img.shields.io/badge/Tests-107%| Document | Description | Updated |
-|----------|-------------|---------|------|
+[![Tests](https://img.shields.io/badge/Tests-107-brightgreen?style=for-the-badge)](./TEST_SUITE_SUMMARY.md)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+
+> **A Multi-Protocol Authentication Proxy & Development Server** 🔐
+>
+> Supporting **LDAP/LDAPS**, **OAuth 2.0**, and **SAML 2.0** for MarkLogic Server and beyond
+
+---
+
+## 📚 Documentation Index
+
+| Document | Description | Updated |
+|----------|-------------|---------|
 | **[README.md](./README.md)** | This file - General overview | 2025 |
 | **[docs/user/LDAP_GUIDE.md](./docs/user/LDAP_GUIDE.md)** | Complete LDAP/LDAPS guide (includes in-memory server) | 2025 |
 | **[docs/user/OAUTH_GUIDE.md](./docs/user/OAUTH_GUIDE.md)** | Complete OAuth 2.0 guide | 2025 |
 | **[docs/user/SAML_GUIDE.md](./docs/user/SAML_GUIDE.md)** | Complete SAML 2.0 guide | 2025 |
 | **[docs/user/KERBEROS_GUIDE.md](./docs/user/KERBEROS_GUIDE.md)** | Complete Kerberos implementation | 2025 |
 | **[docs/user/TESTING_GUIDE.md](./docs/user/TESTING_GUIDE.md)** | Testing procedures | 2025 |
-| **[docs/user/CONFIGURATION_GUIDE.md](./docs/user/CONFIGURATION_GUIDE.md)** | Configuration reference | 2025 |ing-brightgreen?style=for-the-badge)](./TEST_SUITE_SUMMARY.md)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
-
-> **A Multi-Protocol Authentication Proxy & Development Server** 🔐
->
-> Supporting **LDAP/LDAPS**, **OAuth 2.0**, and **SAML 2.0** for MarkLogic Server and beyond
+| **[docs/user/CONFIGURATION_GUIDE.md](./docs/user/CONFIGURATION_GUIDE.md)** | Configuration reference | 2025 |
 
 ---
 
