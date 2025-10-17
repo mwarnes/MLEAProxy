@@ -38,12 +38,12 @@ RSA Modulus (n): vG5pJE-wQNbH7tvZU3IgjdeHugdw2x5eXPe47vOP3dI...
 RSA Exponent (e): AQAB
 ```
 
-### 2. `extract-jwks-simple.sh` - Simple Extractor
+### 2. `scripts/extract-jwks-keys.sh` - Simple Extractor
 A minimal script that outputs just the key ID and key data on separate lines.
 
 **Usage:**
 ```bash
-./extract-jwks-simple.sh <JWKS_ENDPOINT_URL>
+./scripts/extract-jwks-keys.sh <JWKS_ENDPOINT_URL>
 ```
 
 **Features:**

@@ -63,13 +63,13 @@ Enhanced the JWKS extraction script with intelligent duplicate detection to prev
 
 #### First Run (New Keys)
 ```bash
-./extract-jwks-simple.sh https://oauth.endpoint.com/certs --upload-to-marklogic
+./scripts/extract-jwks-keys.sh https://oauth.endpoint.com/certs --upload-to-marklogic
 # Output: Keys detected as new, uploaded successfully
 ```
 
 #### Subsequent Runs (Existing Keys)
 ```bash
-./extract-jwks-simple.sh https://oauth.endpoint.com/certs --upload-to-marklogic
+./scripts/extract-jwks-keys.sh https://oauth.endpoint.com/certs --upload-to-marklogic
 # Output: Keys detected as existing, upload skipped
 ```
 

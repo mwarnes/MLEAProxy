@@ -3,33 +3,46 @@
 ## Scripts Overview
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `extract-jwks-simple.sh` | Add new keys | `./extract-jwks-simple.sh <JWKS_URL> [--upload-to-marklogic]` |
-| `cleanup-obsolete-jwks-keys.sh` | Remove old keys | `./cleanup-obsolete-jwks-keys.sh <JWKS_URL> [--delete-keys]` |
+| `scripts/extract-jwks-keys.sh` | Add new keys | `./scripts/extract-jwks-keys.sh <JWKS_URL> [--upload-to-marklogic] [OPTIONS]` |
+| `scripts/cleanup-obsolete-jwks-keys.sh` | Remove old keys | `./scripts/cleanup-obsolete-jwks-keys.sh <JWKS_URL> [--delete-keys] [OPTIONS]` |
 
 ## Quick Start Workflow
 
 ### 1. First Time Setup
 ```bash
-# Extract and upload all current keys
-./extract-jwks-simple.sh https://your-idp.com/jwks --upload-to-marklogic
+# Extract and upload all current keys with custom configuration
+./scripts/extract-jwks-keys.sh https://your-idp.com/jwks \
+  --upload-to-marklogic \
+  --marklogic-host ml.company.com \
+  --external-security OAuth2-Production
 ```
 
 ### 2. After Key Rotation
 ```bash
 # Add new keys (skips duplicates)
-./extract-jwks-simple.sh https://your-idp.com/jwks --upload-to-marklogic
+./scripts/extract-jwks-keys.sh https://your-idp.com/jwks \
+  --upload-to-marklogic \
+  --marklogic-host ml.company.com \
+  --external-security OAuth2-Production
 
 # Check for obsolete keys
-./cleanup-obsolete-jwks-keys.sh https://your-idp.com/jwks
+./scripts/cleanup-obsolete-jwks-keys.sh https://your-idp.com/jwks \
+  --marklogic-host ml.company.com \
+  --external-security OAuth2-Production
 
 # Remove obsolete keys (with confirmation)
-./cleanup-obsolete-jwks-keys.sh https://your-idp.com/jwks --delete-keys
+./scripts/cleanup-obsolete-jwks-keys.sh https://your-idp.com/jwks \
+  --delete-keys \
+  --marklogic-host ml.company.com \
+  --external-security OAuth2-Production
 ```
 
 ### 3. Regular Maintenance
 ```bash
 # Weekly analysis (safe)
-./cleanup-obsolete-jwks-keys.sh https://your-idp.com/jwks
+./scripts/cleanup-obsolete-jwks-keys.sh https://your-idp.com/jwks \
+  --marklogic-host ml.company.com \
+  --external-security OAuth2-Production
 ```
 
 ## Common JWKS URLs
@@ -45,14 +58,30 @@ brew install curl jq                    # macOS
 sudo apt-get install curl jq openssl    # Ubuntu/Debian
 ```
 
-## Configuration
-Edit these variables in both scripts:
+## Configuration Options
+
+### Command-Line Parameters (Recommended)
 ```bash
-MARKLOGIC_HOST="your-marklogic-server.com"
-MARKLOGIC_PORT="8002"
-MARKLOGIC_USER="admin"
-MARKLOGIC_PASS="your-admin-password"
-EXTERNAL_SECURITY_NAME="Your-External-Security-Profile"
+--marklogic-host HOST      # MarkLogic server hostname
+--marklogic-port PORT      # Management API port (default: 8002)
+--marklogic-user USER      # Admin username
+--marklogic-pass PASS      # Admin password
+--external-security NAME   # External Security profile name
+```
+
+### Environment Variables (Most Secure)
+```bash
+export ML_HOST="your-server.com"
+export ML_USER="admin"
+export ML_PASS="secure-password"
+export ML_PROFILE="OAuth2-Production"
+
+./scripts/extract-jwks-keys.sh https://idp.com/jwks \
+  --upload-to-marklogic \
+  --marklogic-host "$ML_HOST" \
+  --marklogic-user "$ML_USER" \
+  --marklogic-pass "$ML_PASS" \
+  --external-security "$ML_PROFILE"
 ```
 
 ## Safety Features
@@ -80,7 +109,7 @@ EXTERNAL_SECURITY_NAME="Your-External-Security-Profile"
 ```
 🗑️  OBSOLETE KEYS: 1
    🔴 OldKeyId789
-📋 To delete: ./cleanup-obsolete-jwks-keys.sh <URL> --delete-keys
+📋 To delete: ./scripts/scripts/cleanup-obsolete-jwks-keys.sh <URL> --delete-keys
 ```
 
 ## Troubleshooting

@@ -23,7 +23,7 @@ Successfully implemented a complete pipeline for extracting JWKS (JSON Web Key S
   - Updated `generateMarkLogicExternalSecurity()` methods to create instruction text files
   - Creates both JSON configuration and curl command instruction files
 
-### 2. extract-jwks-simple.sh ✅
+### 2. scripts/extract-jwks-keys.sh ✅
 - **Purpose**: Main JWKS extraction and MarkLogic integration script
 - **Features**:
   - Extracts Key ID and key data from JWKS endpoints
@@ -107,12 +107,12 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8I5S+2YnzUeYsV0K0b8A...
 
 ### Basic JWKS Extraction
 ```bash
-./extract-jwks-simple.sh https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
+./scripts/extract-jwks-keys.sh https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
 ```
 
 ### With MarkLogic Upload
 ```bash
-./extract-jwks-simple.sh https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs --upload-to-marklogic
+./scripts/extract-jwks-keys.sh https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs --upload-to-marklogic
 ```
 
 ### Detailed Analysis

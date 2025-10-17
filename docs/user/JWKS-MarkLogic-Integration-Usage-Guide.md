@@ -11,17 +11,15 @@
 - Always test in a development environment before using in production
 - Review and understand the code before executing in your infrastructure
 
-By using these scripts, you acknowledge and accept full responsibility for any consequences resulting from their use.
-
 ---
 
 ## Overview
 
-This guide covers two powerful scripts designed to manage JWT public keys between JWKS (JSON Web Key Set) endpoints and MarkLogic External Security profiles. These tools automate the synchronization of cryptographic keys used for JWT token validation.
+This guide covers two useful scripts designed to manage JWT public keys between JWKS (JSON Web Key Set) endpoints and MarkLogic External Security profiles. These tools automate the synchronization of cryptographic keys used for JWT token validation.
 
 ### Scripts Included
-1. **`extract-jwks-simple.sh`** - Extracts and uploads new keys from JWKS endpoints to MarkLogic
-2. **`cleanup-obsolete-jwks-keys.sh`** - Analyzes and removes obsolete keys from MarkLogic
+1. **`scripts/extract-jwks-keys.sh`** - Extracts and uploads new keys from JWKS endpoints to MarkLogic
+2. **`scripts/cleanup-obsolete-jwks-keys.sh`** - Analyzes and removes obsolete keys from MarkLogic
 
 ---
 
@@ -56,26 +54,37 @@ sudo yum install curl jq openssl python3
 
 ---
 
-## Script 1: extract-jwks-simple.sh
+## Script 1: scripts/extract-jwks-keys.sh
 
 ### Purpose
 Extracts RSA public keys from JWKS endpoints, converts them to PEM format, and uploads them to MarkLogic External Security profiles. Includes intelligent duplicate detection to prevent adding existing keys.
 
 ### Usage Syntax
 ```bash
-./extract-jwks-simple.sh <JWKS_ENDPOINT_URL> [--upload-to-marklogic]
+./scripts/extract-jwks-keys.sh <JWKS_ENDPOINT_URL> [--upload-to-marklogic] [OPTIONS]
 ```
 
 ### Parameters
-- **`<JWKS_ENDPOINT_URL>`** (required) - The HTTPS/HTTP URL of the JWKS endpoint
-- **`--upload-to-marklogic`** (optional) - Uploads keys to MarkLogic (analysis only without this flag)
+
+#### Required
+- **`<JWKS_ENDPOINT_URL>`** - The HTTPS/HTTP URL of the JWKS endpoint
+
+#### Flags
+- **`--upload-to-marklogic`** - Upload new keys to MarkLogic (default: analysis only)
+
+#### MarkLogic Configuration Options
+- **`--marklogic-host HOST`** - MarkLogic server hostname (default: your-marklogic-server.com)
+- **`--marklogic-port PORT`** - MarkLogic Management API port (default: 8002)
+- **`--marklogic-user USER`** - MarkLogic admin username (default: admin)
+- **`--marklogic-pass PASS`** - MarkLogic admin password (default: your-admin-password)
+- **`--external-security NAME`** - External Security profile name (default: Your-External-Security-Profile)
 
 ### Examples
 
 #### Basic Key Extraction (Analysis Only)
 ```bash
 # Extract and display keys without uploading
-./extract-jwks-simple.sh https://auth.example.com/.well-known/jwks.json
+./scripts/extract-jwks-keys.sh https://auth.example.com/.well-known/jwks.json
 ```
 
 **Output:**
@@ -94,7 +103,8 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8I5S+2YnzUeYsV0K0b8A...
 #### Upload New Keys to MarkLogic
 ```bash
 # Extract and upload new keys (skips duplicates)
-./extract-jwks-simple.sh https://auth.example.com/.well-known/jwks.json --upload-to-marklogic
+# Upload new keys to MarkLogic
+./scripts/extract-jwks-keys.sh https://auth.example.com/.well-known/jwks.json --upload-to-marklogic
 ```
 
 **Output with Duplicate Detection:**
@@ -109,6 +119,48 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8I5S+2YnzUeYsV0K0b8A...
 
 🔄 Preparing to upload 1 new key(s) to MarkLogic...
 ✅ Successfully uploaded JWT secrets to MarkLogic!
+```
+
+#### Advanced Usage with Custom Configuration
+
+**Custom MarkLogic Configuration:**
+```bash
+# Upload with custom MarkLogic server settings
+./scripts/extract-jwks-keys.sh https://auth.example.com/jwks \
+  --upload-to-marklogic \
+  --marklogic-host ml.company.com \
+  --marklogic-port 8002 \
+  --external-security OAuth2-Production
+```
+
+**Using Environment Variables for Security:**
+```bash
+# Set sensitive credentials in environment variables
+export ML_USER="your-admin-user"
+export ML_PASS="your-secure-password"
+
+# Use variables to avoid exposing credentials in command history
+./scripts/extract-jwks-keys.sh https://auth.example.com/jwks \
+  --upload-to-marklogic \
+  --marklogic-host ml.company.com \
+  --marklogic-user "$ML_USER" \
+  --marklogic-pass "$ML_PASS" \
+  --external-security OAuth2-Production
+```
+
+**Multiple Environment Support:**
+```bash
+# Development environment
+./scripts/extract-jwks-keys.sh https://dev-idp.company.com/jwks \
+  --upload-to-marklogic \
+  --marklogic-host dev-ml.company.com \
+  --external-security OAuth2-Dev
+
+# Production environment
+./scripts/extract-jwks-keys.sh https://prod-idp.company.com/jwks \
+  --upload-to-marklogic \
+  --marklogic-host prod-ml.company.com \
+  --external-security OAuth2-Prod
 ```
 
 ### Common JWKS Endpoints
@@ -127,26 +179,38 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8I5S+2YnzUeYsV0K0b8A...
 
 ---
 
-## Script 2: cleanup-obsolete-jwks-keys.sh
+## Script 2: scripts/cleanup-obsolete-jwks-keys.sh
 
 ### Purpose
 Compares keys in MarkLogic External Security profiles with current JWKS endpoints to identify and optionally remove obsolete keys that are no longer active.
 
 ### Usage Syntax
 ```bash
-./cleanup-obsolete-jwks-keys.sh <JWKS_ENDPOINT_URL> [--delete-keys]
+./scripts/cleanup-obsolete-jwks-keys.sh <JWKS_ENDPOINT_URL> [--delete-keys] [OPTIONS]
 ```
 
 ### Parameters
-- **`<JWKS_ENDPOINT_URL>`** (required) - The HTTPS/HTTP URL of the JWKS endpoint
-- **`--delete-keys`** (optional) - Actually removes obsolete keys (analysis only without this flag)
+
+#### Required
+- **`<JWKS_ENDPOINT_URL>`** - The HTTPS/HTTP URL of the JWKS endpoint
+
+#### Modes
+- **(default)** - Analysis mode - identifies obsolete keys but doesn't delete them
+- **`--delete-keys`** - Delete mode - actually removes obsolete keys from MarkLogic
+
+#### MarkLogic Configuration Options
+- **`--marklogic-host HOST`** - MarkLogic server hostname (default: your-marklogic-server.com)
+- **`--marklogic-port PORT`** - MarkLogic Management API port (default: 8002)
+- **`--marklogic-user USER`** - MarkLogic admin username (default: admin)
+- **`--marklogic-pass PASS`** - MarkLogic admin password (default: your-admin-password)
+- **`--external-security NAME`** - External Security profile name (default: Your-External-Security-Profile)
 
 ### Two-Step Workflow
 
 #### Step 1: Analysis Mode (Safe)
 ```bash
 # Identify obsolete keys without making changes
-./cleanup-obsolete-jwks-keys.sh https://auth.example.com/.well-known/jwks.json
+./scripts/cleanup-obsolete-jwks-keys.sh https://auth.example.com/.well-known/jwks.json
 ```
 
 **Sample Output:**
@@ -176,13 +240,13 @@ Mode: ANALYSIS MODE - Will identify obsolete keys only
 
 🧹 Cleanup Options:
    4. To delete obsolete keys, run:
-      ./cleanup-obsolete-jwks-keys.sh https://auth.example.com/.well-known/jwks.json --delete-keys
+      ./scripts/cleanup-obsolete-jwks-keys.sh https://auth.example.com/.well-known/jwks.json --delete-keys
 ```
 
 #### Step 2: Deletion Mode (Destructive)
 ```bash
 # Remove obsolete keys with confirmation
-./cleanup-obsolete-jwks-keys.sh https://auth.example.com/.well-known/jwks.json --delete-keys
+./scripts/cleanup-obsolete-jwks-keys.sh https://auth.example.com/.well-known/jwks.json --delete-keys
 ```
 
 **Interactive Deletion Process:**
@@ -209,6 +273,31 @@ Are you sure you want to delete these keys? (yes/no): yes
 🎉 All obsolete keys have been successfully removed from MarkLogic!
 ```
 
+#### Advanced Usage with Custom Configuration
+
+**Custom MarkLogic Configuration:**
+```bash
+# Delete obsolete keys with custom configuration
+./scripts/cleanup-obsolete-jwks-keys.sh https://auth.example.com/jwks \
+  --delete-keys \
+  --marklogic-host ml.company.com \
+  --external-security OAuth2-Production
+```
+
+**Using Environment Variables for Security:**
+```bash
+# Set sensitive credentials in environment variables
+export ML_USER="your-admin-user"
+export ML_PASS="your-secure-password"
+
+# Analyze with secure credentials
+./scripts/cleanup-obsolete-jwks-keys.sh https://auth.example.com/jwks \
+  --marklogic-host ml.company.com \
+  --marklogic-user "$ML_USER" \
+  --marklogic-pass "$ML_PASS" \
+  --external-security OAuth2-Production
+```
+
 ### Safety Features
 - **Confirmation Required**: Must type "yes" to proceed with deletion
 - **Analysis First**: Encourages running analysis mode before deletion  
@@ -220,24 +309,54 @@ Are you sure you want to delete these keys? (yes/no): yes
 
 ## Configuration
 
-### MarkLogic Settings
-Both scripts use hardcoded MarkLogic configuration. Modify these variables in the scripts if needed:
+### MarkLogic Configuration
 
+Both scripts support flexible configuration through command-line parameters, allowing you to override default settings without modifying the scripts.
+
+#### Configuration Options
+
+All scripts accept these MarkLogic configuration parameters:
+
+- **`--marklogic-host HOST`**: MarkLogic server hostname or IP address
+- **`--marklogic-port PORT`**: Management API port (typically 8002)
+- **`--marklogic-user USER`**: Admin user with External Security management permissions
+- **`--marklogic-pass PASS`**: Admin password
+- **`--external-security NAME`**: Name of the External Security profile configured for JWT
+
+#### Configuration Methods
+
+**1. Command-Line Parameters (Recommended):**
 ```bash
-# MarkLogic configuration (edit in both scripts)
-MARKLOGIC_HOST="your-marklogic-server.com"
-MARKLOGIC_PORT="8002"
-MARKLOGIC_USER="admin"
-MARKLOGIC_PASS="your-admin-password"
-EXTERNAL_SECURITY_NAME="Your-External-Security-Profile"
+./scripts/extract-jwks-keys.sh https://idp.company.com/jwks \
+  --upload-to-marklogic \
+  --marklogic-host ml.company.com \
+  --marklogic-user admin \
+  --marklogic-pass secret123 \
+  --external-security OAuth2-Production
 ```
 
-**Configuration Parameters:**
-- **MARKLOGIC_HOST**: MarkLogic server hostname or IP address
-- **MARKLOGIC_PORT**: Management API port (typically 8002)
-- **MARKLOGIC_USER**: Admin username with External Security permissions
-- **MARKLOGIC_PASS**: Admin password
-- **EXTERNAL_SECURITY_NAME**: Name of the External Security profile
+**2. Environment Variables (Most Secure):**
+```bash
+export ML_HOST="ml.company.com"
+export ML_USER="admin" 
+export ML_PASS="secret123"
+export ML_PROFILE="OAuth2-Production"
+
+./scripts/extract-jwks-keys.sh https://idp.company.com/jwks \
+  --upload-to-marklogic \
+  --marklogic-host "$ML_HOST" \
+  --marklogic-user "$ML_USER" \
+  --marklogic-pass "$ML_PASS" \
+  --external-security "$ML_PROFILE"
+```
+
+**3. Default Values (Fallback):**
+If no parameters are provided, scripts use these defaults:
+- Host: your-marklogic-server.com
+- Port: 8002  
+- User: admin
+- Password: your-admin-password
+- Profile: Your-External-Security-Profile
 
 ### SSL Certificate Handling
 Both scripts include SSL certificate bypass for development environments with self-signed certificates. The `-k` flag is used with curl commands.
@@ -253,19 +372,38 @@ Both scripts include SSL certificate bypass for development environments with se
 #### 1. Initial Setup
 ```bash
 # First time: Extract and upload all current keys
-./extract-jwks-simple.sh https://your-idp.com/jwks --upload-to-marklogic
+./scripts/extract-jwks-keys.sh https://your-idp.com/jwks \
+  --upload-to-marklogic \
+  --marklogic-host your-ml-server.com \
+  --marklogic-user admin \
+  --marklogic-pass your-admin-password \
+  --external-security OAuth2-Production
 ```
 
 #### 2. Key Rotation Handling
 ```bash
 # After IdP key rotation: Add new keys (automatic duplicate detection)
-./extract-jwks-simple.sh https://your-idp.com/jwks --upload-to-marklogic
+./scripts/extract-jwks-keys.sh https://your-idp.com/jwks \
+  --upload-to-marklogic \
+  --marklogic-host your-ml-server.com \
+  --marklogic-user admin \
+  --marklogic-pass your-admin-password \
+  --external-security OAuth2-Production
 
 # Clean up old keys: Analyze first
-./cleanup-obsolete-jwks-keys.sh https://your-idp.com/jwks
+./scripts/cleanup-obsolete-jwks-keys.sh https://your-idp.com/jwks \
+  --marklogic-host your-ml-server.com \
+  --marklogic-user admin \
+  --marklogic-pass your-admin-password \
+  --external-security OAuth2-Production
 
 # Clean up old keys: Delete after verification
-./cleanup-obsolete-jwks-keys.sh https://your-idp.com/jwks --delete-keys
+./scripts/cleanup-obsolete-jwks-keys.sh https://your-idp.com/jwks \
+  --delete-keys \
+  --marklogic-host your-ml-server.com \
+  --marklogic-user admin \
+  --marklogic-pass your-admin-password \
+  --external-security OAuth2-Production
 ```
 
 #### 3. Scheduled Maintenance
@@ -276,10 +414,10 @@ JWKS_URL="https://your-idp.com/jwks"
 
 echo "=== Key Synchronization Maintenance ==="
 echo "Adding new keys..."
-./extract-jwks-simple.sh "$JWKS_URL" --upload-to-marklogic
+./scripts/extract-jwks-keys.sh "$JWKS_URL" --upload-to-marklogic
 
 echo "Analyzing obsolete keys..."
-./cleanup-obsolete-jwks-keys.sh "$JWKS_URL"
+./scripts/cleanup-obsolete-jwks-keys.sh "$JWKS_URL"
 
 echo "=== Maintenance Complete ==="
 ```
@@ -362,8 +500,8 @@ which openssl python3
 **Problem**: Script execution permission denied
 ```bash
 # Make scripts executable
-chmod +x extract-jwks-simple.sh
-chmod +x cleanup-obsolete-jwks-keys.sh
+chmod +x scripts/extract-jwks-keys.sh
+chmod +x scripts/cleanup-obsolete-jwks-keys.sh
 ```
 
 ### Debug Mode
@@ -410,7 +548,7 @@ Before deleting keys, always verify:
 ### Cron Job Example
 ```bash
 # /etc/crontab entry for daily key synchronization
-0 2 * * * /path/to/extract-jwks-simple.sh https://idp.company.com/jwks --upload-to-marklogic >> /var/log/jwks-sync.log 2>&1
+0 2 * * * /path/to/scripts/extract-jwks-keys.sh https://idp.company.com/jwks --upload-to-marklogic >> /var/log/jwks-sync.log 2>&1
 ```
 
 ### CI/CD Integration
@@ -439,7 +577,7 @@ jobs:
           MARKLOGIC_USER: ${{ secrets.MARKLOGIC_USER }}
           MARKLOGIC_PASS: ${{ secrets.MARKLOGIC_PASS }}
         run: |
-          ./extract-jwks-simple.sh ${{ vars.JWKS_URL }} --upload-to-marklogic
+          ./scripts/extract-jwks-keys.sh ${{ vars.JWKS_URL }} --upload-to-marklogic
 ```
 
 ### Monitoring Integration
@@ -450,7 +588,7 @@ JWKS_URL="https://idp.company.com/jwks"
 WEBHOOK_URL="https://monitoring.company.com/webhook"
 
 # Run analysis
-RESULT=$(./cleanup-obsolete-jwks-keys.sh "$JWKS_URL" 2>&1)
+RESULT=$(./scripts/cleanup-obsolete-jwks-keys.sh "$JWKS_URL" 2>&1)
 
 # Check for obsolete keys
 if echo "$RESULT" | grep -q "Obsolete keys: [1-9]"; then

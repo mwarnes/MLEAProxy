@@ -5,8 +5,8 @@ A complete solution for managing JWT public keys between JWKS endpoints and Mark
 ## 📁 Files Included
 
 ### Scripts
-- **`extract-jwks-simple.sh`** - Extracts and uploads new keys from JWKS endpoints
-- **`cleanup-obsolete-jwks-keys.sh`** - Analyzes and removes obsolete keys from MarkLogic
+- **`scripts/extract-jwks-keys.sh`** - Extracts and uploads new keys from JWKS endpoints
+- **`scripts/cleanup-obsolete-jwks-keys.sh`** - Analyzes and removes obsolete keys from MarkLogic
 
 ### Documentation
 - **`JWKS-MarkLogic-Integration-Usage-Guide.md`** - Complete usage guide (📖 **START HERE**)
@@ -18,31 +18,51 @@ A complete solution for managing JWT public keys between JWKS endpoints and Mark
 
 ### 1. Make Scripts Executable
 ```bash
-chmod +x extract-jwks-simple.sh cleanup-obsolete-jwks-keys.sh
+chmod +x scripts/extract-jwks-keys.sh scripts/cleanup-obsolete-jwks-keys.sh
 ```
 
 ### 2. Configure MarkLogic Settings
-Edit the configuration variables in both scripts:
+Use command-line parameters (recommended) or environment variables:
 ```bash
-MARKLOGIC_HOST="your-marklogic-server.com"
-MARKLOGIC_USER="admin"
-MARKLOGIC_PASS="your-admin-password"
-EXTERNAL_SECURITY_NAME="Your-External-Security-Profile"
+# Method 1: Command-line parameters
+./scripts/extract-jwks-keys.sh https://your-idp.com/jwks \
+  --upload-to-marklogic \
+  --marklogic-host your-server.com \
+  --marklogic-user admin \
+  --marklogic-pass your-password \
+  --external-security Your-Profile-Name
+
+# Method 2: Environment variables (more secure)
+export ML_HOST="your-server.com"
+export ML_USER="admin"
+export ML_PASS="your-password"
+export ML_PROFILE="Your-Profile-Name"
 ```
 
 ### 3. First Time Setup
 ```bash
 # Add all current keys to MarkLogic
-./extract-jwks-simple.sh https://your-idp.com/jwks --upload-to-marklogic
+./scripts/extract-jwks-keys.sh https://your-idp.com/jwks \
+  --upload-to-marklogic \
+  --marklogic-host "$ML_HOST" \
+  --marklogic-user "$ML_USER" \
+  --marklogic-pass "$ML_PASS" \
+  --external-security "$ML_PROFILE"
 ```
 
 ### 4. After Key Rotation
 ```bash
 # Add new keys (skips duplicates)
-./extract-jwks-simple.sh https://your-idp.com/jwks --upload-to-marklogic
+./scripts/extract-jwks-keys.sh https://your-idp.com/jwks \
+  --upload-to-marklogic \
+  --marklogic-host "$ML_HOST" \
+  --external-security "$ML_PROFILE"
 
 # Remove obsolete keys
-./cleanup-obsolete-jwks-keys.sh https://your-idp.com/jwks --delete-keys
+./scripts/cleanup-obsolete-jwks-keys.sh https://your-idp.com/jwks \
+  --delete-keys \
+  --marklogic-host "$ML_HOST" \
+  --external-security "$ML_PROFILE"
 ```
 
 ## 📋 Prerequisites
@@ -89,16 +109,16 @@ For complete instructions, troubleshooting, and best practices, see:
 ### Daily Maintenance
 ```bash
 # Check for new keys and add them
-./extract-jwks-simple.sh https://idp.company.com/jwks --upload-to-marklogic
+./scripts/extract-jwks-keys.sh https://idp.company.com/jwks --upload-to-marklogic
 
 # Analyze for obsolete keys  
-./cleanup-obsolete-jwks-keys.sh https://idp.company.com/jwks
+./scripts/scripts/cleanup-obsolete-jwks-keys.sh https://idp.company.com/jwks
 ```
 
 ### Weekly Cleanup
 ```bash
 # Remove obsolete keys after verification
-./cleanup-obsolete-jwks-keys.sh https://idp.company.com/jwks --delete-keys
+./scripts/scripts/cleanup-obsolete-jwks-keys.sh https://idp.company.com/jwks --delete-keys
 ```
 
 ## ⚠️ Important Notes

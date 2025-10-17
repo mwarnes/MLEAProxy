@@ -2,7 +2,7 @@
 
 ## Summary
 
-The `extract-jwks-simple.sh` script has been updated to convert RSA keys from JWKS format to proper PEM format, making them ready for use in MarkLogic External Security configurations or other applications that require PEM-formatted RSA public keys.
+The `scripts/extract-jwks-keys.sh` script has been updated to convert RSA keys from JWKS format to proper PEM format, making them ready for use in MarkLogic External Security configurations or other applications that require PEM-formatted RSA public keys.
 
 ## What the Script Now Does
 
@@ -56,7 +56,7 @@ If `python3` or `openssl` are not available, the script falls back to outputting
 ## Usage
 
 ```bash
-./extract-jwks-simple.sh https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
+./scripts/extract-jwks-keys.sh https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
 ```
 
 ## Verification
@@ -65,7 +65,7 @@ The generated PEM keys can be verified using OpenSSL:
 
 ```bash
 # Test first key from output
-./extract-jwks-simple.sh <JWKS_URL> | grep -A 10 "BEGIN PUBLIC KEY" | head -9 | openssl rsa -pubin -text -noout
+./scripts/extract-jwks-keys.sh <JWKS_URL> | grep -A 10 "BEGIN PUBLIC KEY" | head -9 | openssl rsa -pubin -text -noout
 ```
 
 This will show the key details including:

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # JWKS Key Cleanup Analysis Script
-# Usage: ./cleanup-obsolete-jwks-keys.sh <JWKS_ENDPOINT_URL>
+# Usage: ./cleanup-obsolete-jwks-keys.sh <JWKS_ENDPOINT_URL> [--delete-keys] [OPTIONS]
 # 
 # This script compares keys in MarkLogic External Security profile with
 # keys currently available in the JWKS endpoint and identifies obsolete
@@ -18,40 +18,147 @@
 
 set -e  # Exit on any error
 
-# Check if URL parameter is provided
-if [ $# -eq 0 ]; then
-    echo "Usage: $0 <JWKS_ENDPOINT_URL> [--delete-keys]"
+# Default configuration values
+DEFAULT_MARKLOGIC_HOST="your-marklogic-server.com"
+DEFAULT_MARKLOGIC_PORT="8002"
+DEFAULT_MARKLOGIC_USER="admin"
+DEFAULT_MARKLOGIC_PASS="your-admin-password"
+DEFAULT_EXTERNAL_SECURITY_NAME="Your-External-Security-Profile"
+
+# Function to show usage
+show_usage() {
+    echo "Usage: $0 <JWKS_ENDPOINT_URL> [--delete-keys] [OPTIONS]"
     echo ""
-    echo "Examples:"
-    echo "  $0 https://your-idp.example.com/realms/your-realm/protocol/openid-connect/certs"
-    echo "  $0 https://your-idp.example.com/realms/your-realm/protocol/openid-connect/certs --delete-keys"
-    echo "  $0 http://localhost:8080/oauth/jwks"
+    echo "Required:"
+    echo "  <JWKS_ENDPOINT_URL>        The HTTPS/HTTP URL of the JWKS endpoint"
     echo ""
     echo "Modes:"
-    echo "  Analysis Mode (default): Identifies obsolete keys but doesn't delete them"
-    echo "  Delete Mode (--delete-keys): Actually removes obsolete keys from MarkLogic"
+    echo "  (default)                  Analysis mode - identifies obsolete keys but doesn't delete them"
+    echo "  --delete-keys              Delete mode - actually removes obsolete keys from MarkLogic"
+    echo ""
+    echo "MarkLogic Configuration Options:"
+    echo "  --marklogic-host HOST      MarkLogic server hostname (default: $DEFAULT_MARKLOGIC_HOST)"
+    echo "  --marklogic-port PORT      MarkLogic Management API port (default: $DEFAULT_MARKLOGIC_PORT)"
+    echo "  --marklogic-user USER      MarkLogic admin username (default: $DEFAULT_MARKLOGIC_USER)"
+    echo "  --marklogic-pass PASS      MarkLogic admin password (default: $DEFAULT_MARKLOGIC_PASS)"
+    echo "  --external-security NAME   External Security profile name (default: $DEFAULT_EXTERNAL_SECURITY_NAME)"
+    echo ""
+    echo "Examples:"
+    echo "  # Analyze obsolete keys (safe mode)"
+    echo "  $0 https://your-idp.example.com/realms/your-realm/protocol/openid-connect/certs"
+    echo ""
+    echo "  # Delete obsolete keys with default settings"
+    echo "  $0 https://your-idp.example.com/jwks --delete-keys"
+    echo ""
+    echo "  # Analyze with custom MarkLogic configuration"
+    echo "  $0 https://your-idp.example.com/jwks \\"
+    echo "     --marklogic-host ml.company.com --external-security OAuth2-Production"
+    echo ""
+    echo "  # Delete with environment variables for sensitive data"
+    echo "  $0 https://your-idp.example.com/jwks --delete-keys \\"
+    echo "     --marklogic-user \"\$ML_USER\" --marklogic-pass \"\$ML_PASS\""
     echo ""
     echo "This script analyzes key differences between MarkLogic and JWKS endpoint"
     echo "and identifies obsolete keys that are no longer in the JWKS."
     exit 1
+}
+
+# Initialize variables with defaults
+JWKS_URL=""
+DELETE_KEYS=false
+MARKLOGIC_HOST="$DEFAULT_MARKLOGIC_HOST"
+MARKLOGIC_PORT="$DEFAULT_MARKLOGIC_PORT"
+MARKLOGIC_USER="$DEFAULT_MARKLOGIC_USER"
+MARKLOGIC_PASS="$DEFAULT_MARKLOGIC_PASS"
+EXTERNAL_SECURITY_NAME="$DEFAULT_EXTERNAL_SECURITY_NAME"
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --delete-keys)
+            DELETE_KEYS=true
+            shift
+            ;;
+        --marklogic-host)
+            if [[ -z "$2" || "$2" == --* ]]; then
+                echo "Error: --marklogic-host requires a value"
+                show_usage
+            fi
+            MARKLOGIC_HOST="$2"
+            shift 2
+            ;;
+        --marklogic-port)
+            if [[ -z "$2" || "$2" == --* ]]; then
+                echo "Error: --marklogic-port requires a value"
+                show_usage
+            fi
+            if ! [[ "$2" =~ ^[0-9]+$ ]] || [ "$2" -lt 1 ] || [ "$2" -gt 65535 ]; then
+                echo "Error: --marklogic-port must be a valid port number (1-65535)"
+                show_usage
+            fi
+            MARKLOGIC_PORT="$2"
+            shift 2
+            ;;
+        --marklogic-user)
+            if [[ -z "$2" || "$2" == --* ]]; then
+                echo "Error: --marklogic-user requires a value"
+                show_usage
+            fi
+            MARKLOGIC_USER="$2"
+            shift 2
+            ;;
+        --marklogic-pass)
+            if [[ -z "$2" || "$2" == --* ]]; then
+                echo "Error: --marklogic-pass requires a value"
+                show_usage
+            fi
+            MARKLOGIC_PASS="$2"
+            shift 2
+            ;;
+        --external-security)
+            if [[ -z "$2" || "$2" == --* ]]; then
+                echo "Error: --external-security requires a value"
+                show_usage
+            fi
+            EXTERNAL_SECURITY_NAME="$2"
+            shift 2
+            ;;
+        --help|-h)
+            show_usage
+            ;;
+        --*)
+            echo "Error: Unknown option $1"
+            show_usage
+            ;;
+        *)
+            if [[ -z "$JWKS_URL" ]]; then
+                JWKS_URL="$1"
+            else
+                echo "Error: Unexpected argument $1"
+                show_usage
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Check if JWKS URL is provided
+if [[ -z "$JWKS_URL" ]]; then
+    echo "Error: JWKS endpoint URL is required"
+    show_usage
 fi
 
-JWKS_URL="$1"
-DELETE_KEYS=false
+# Validate JWKS URL format
+if ! [[ "$JWKS_URL" =~ ^https?:// ]]; then
+    echo "Error: JWKS URL must start with http:// or https://"
+    show_usage
+fi
 
-# Check for delete flag
-if [ "$2" = "--delete-keys" ]; then
-    DELETE_KEYS=true
+# Show delete mode warning if enabled
+if [ "$DELETE_KEYS" = true ]; then
     echo "⚠️  DELETE MODE ENABLED - Obsolete keys will be removed from MarkLogic!"
     echo ""
 fi
-
-# MarkLogic configuration (customize these settings for your environment)
-MARKLOGIC_HOST="your-marklogic-server.com"
-MARKLOGIC_PORT="8002"
-MARKLOGIC_USER="admin"
-MARKLOGIC_PASS="your-admin-password"
-EXTERNAL_SECURITY_NAME="Your-External-Security-Profile"
 
 # Check if required tools are available
 command -v curl >/dev/null 2>&1 || { echo "Error: curl is required but not installed." >&2; exit 1; }
@@ -227,7 +334,7 @@ analyze_key_differences() {
         while IFS= read -r key_id; do
             [ -n "$key_id" ] && echo "   ➕ $key_id"
         done <<< "$MISSING_KEYS"
-        echo "   💡 Use extract-jwks-simple.sh --upload-to-marklogic to add these keys"
+        echo "   💡 Use scripts/extract-jwks-keys.sh --upload-to-marklogic to add these keys"
     else
         echo "   Count: 0"
         echo "   ✅ All JWKS keys are already in MarkLogic"
@@ -348,7 +455,7 @@ display_summary() {
     if [ $MISSING_COUNT -gt 0 ]; then
         echo "📝 Next Actions:"
         echo "   1. Add missing keys:"
-        echo "      ./extract-jwks-simple.sh $JWKS_URL --upload-to-marklogic"
+        echo "      ./scripts/extract-jwks-keys.sh $JWKS_URL --upload-to-marklogic"
         echo ""
     fi
     

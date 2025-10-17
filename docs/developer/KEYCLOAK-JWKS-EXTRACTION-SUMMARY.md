@@ -32,7 +32,7 @@ Your Keycloak realm currently has **2 RSA keys**:
 
 ### Simple Format (Key ID and Key Data on separate lines)
 ```bash
-./extract-jwks-simple.sh https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
+./scripts/extract-jwks-keys.sh https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
 ```
 
 ### Detailed Format (Full information)
