@@ -11,6 +11,7 @@ Complete guide for LDAP/LDAPS authentication proxy functionality in MLEAProxy.
 - [Configuration](#configuration)
 - [Usage Examples](#usage-examples)
 - [In-Memory LDAP Server](#in-memory-ldap-server)
+- [MarkLogic Integration](#marklogic-integration)
 - [Security Features](#security-features)
 - [Troubleshooting](#troubleshooting)
 - [API Reference](#api-reference)
@@ -29,11 +30,13 @@ MLEAProxy provides comprehensive LDAP/LDAPS proxy and server capabilities with t
 - 🏗️ **Standalone Mode**: JSON-based LDAP server for testing without backend infrastructure
 - 🔒 **Security Hardening**: Built-in protection against LDAP injection and XML attacks
 
-### 🔌 LDAP Endpoint
+### 🔌 LDAP Endpoints
 
 | Protocol | Port | Purpose | Features |
 |----------|------|---------|----------|
-| **LDAP** | 10389 (configurable) | LDAP proxy/server | Standalone server, Proxy mode, Load balancing, LDAPS support |
+| **LDAP** | 10389 (configurable) | LDAP proxy (requires backend) | Proxy mode, Load balancing, LDAPS support |
+| **LDAP** | 20389 (configurable) | JSON LDAP server | JSON user repository, no backend required |
+| **LDAP** | 60389 (configurable) | In-memory LDAP server | In-memory directory, LDIF data, testing |
 
 ---
 
@@ -47,19 +50,21 @@ The simplest way to get started - no backend LDAP server required:
 # Run with default configuration
 java -jar mleaproxy.jar
 
-# LDAP server starts on ldap://localhost:10389
-# Uses built-in JSON user repository
+# Available LDAP services:
+# - LDAP proxy: ldap://localhost:10389 (requires backend server)
+# - JSON LDAP server: ldap://localhost:20389 (uses JSON user data)
+# - In-memory server: ldap://localhost:60389 (uses LDIF data, optional)
 ```
 
-Test the default server:
+Test the JSON LDAP server:
 
 ```bash
-# Test LDAP connection
-ldapsearch -H ldap://localhost:10389 \
-  -D "cn=manager,ou=users,dc=marklogic,dc=local" \
+# Test JSON LDAP connection (works without backend LDAP server)
+ldapsearch -H ldap://localhost:20389 \
+  -D "cn=manager" \
   -w password \
   -b "ou=users,dc=marklogic,dc=local" \
-  "(sAMAccountName=user1)"
+  "(sAMAccountName=admin)"
 ```
 
 ---
@@ -189,14 +194,14 @@ listener.<name>.description     # Description (Optional)
 
 # Example: Standalone JSON LDAP Server
 listener.ldapjson.ipaddress=0.0.0.0
-listener.ldapjson.port=10389
+listener.ldapjson.port=20389
 listener.ldapjson.debuglevel=DEBUG
 listener.ldapjson.ldapmode=internal
 listener.ldapjson.requestProcessor=jsonauthenticator
 listener.ldapjson.description=Simple LDAP Server using JSON user store
 ```
 
-### 5️⃣ **In-Memory Directory Servers** (NEW - merged from directory.properties)
+### 5️⃣ **In-Memory Directory Servers** 
 
 Define embedded LDAP directory servers for testing and development:
 
@@ -285,7 +290,7 @@ listeners=ldapjson
 
 ## Listener
 listener.ldapjson.ipaddress=0.0.0.0
-listener.ldapjson.port=10389
+listener.ldapjson.port=20389
 listener.ldapjson.debuglevel=DEBUG
 listener.ldapjson.ldapmode=internal
 listener.ldapjson.requestProcessor=jsonauthenticator
@@ -336,28 +341,26 @@ requestProcessor.jsonauthenticator.debuglevel=DEBUG
 **Testing:**
 
 ```bash
-# Test LDAP search
-ldapsearch -H ldap://localhost:10389 \
-  -x -D "cn=manager,ou=users,dc=marklogic,dc=local" \
+# Test JSON LDAP server authentication and search
+ldapsearch -H ldap://localhost:20389 \
+  -x -D "cn=manager" \
   -w password \
   -b "ou=users,dc=marklogic,dc=local" \
   -s sub -a always -z 1000 \
-  "(sAMAccountName=user1)" \
+  "(sAMAccountName=admin)" \
   "memberOf" "objectClass"
 ```
 
 **Output:**
 
 ```ldif
-# user1, users, marklogic.local
-dn: cn=user1,ou=users,dc=marklogic,dc=local
+# admin, users, marklogic.local  
+dn: cn=admin,ou=users,dc=marklogic,dc=local
 objectClass: top
 objectClass: person
 objectClass: organizationalPerson
 objectClass: inetOrgPerson
-memberOf: cn=appreader,ou=groups,dc=marklogic,dc=local
-memberOf: cn=appwriter,ou=groups,dc=marklogic,dc=local
-memberOf: cn=appadmin,ou=groups,dc=marklogic,dc=local
+memberOf: admin
 ```
 
 ### Scenario 2: Simple LDAP Proxy
@@ -428,6 +431,23 @@ requestProcessor.ldapproxy.parm1=memberOf:isMemberOf
 
 Proxy LDAP requests with secure LDAPS connection to backend.
 
+**🔍 Debugging Benefits:**
+
+This configuration is **ideal for troubleshooting LDAPS issues** because MLEAProxy acts as a "man in the middle":
+
+✅ **Clear Text Visibility**: LDAP client connects via unencrypted LDAP, allowing you to see all requests/responses in clear text logs  
+✅ **LDAPS Backend Testing**: MLEAProxy handles the complex LDAPS connection to the backend server  
+✅ **Certificate Validation**: Test SSL certificate chains, hostname verification, and client authentication  
+✅ **Protocol Debugging**: View detailed LDAP operations without encryption obscuring the data  
+✅ **Performance Analysis**: Measure LDAPS connection overhead vs plain LDAP  
+
+**Use Cases:**
+- Debugging LDAPS certificate issues
+- Testing LDAP queries before deploying LDAPS client configuration
+- Troubleshooting Active Directory LDAPS connectivity
+- Performance testing with encrypted backend connections
+- Development/testing with production-like security (backend LDAPS) but clear debugging (client LDAP)
+
 **Architecture:**
 
 ```mermaid
@@ -445,38 +465,90 @@ graph LR
 **Configuration:**
 
 ```properties
+# Enable maximum LDAP debugging for troubleshooting
 ldap.debug=true
 
 ## Listeners
 listeners=proxy
 
-## Listener
+## Listener (Clear LDAP for debugging visibility)
 listener.proxy.ipaddress=0.0.0.0
 listener.proxy.port=30389
 listener.proxy.debuglevel=DEBUG
-listener.proxy.secure=false
+listener.proxy.secure=false                    # Client connects via clear LDAP
 listener.proxy.ldapset=set1
 listener.proxy.ldapmode=single
 listener.proxy.requestProcessor=ldapproxy
-listener.proxy.description=LDAP proxy with LDAPS backend
+listener.proxy.description=LDAP proxy with LDAPS backend (debugging mode)
 
-## Processor
+## Processor (Maximum debugging)
 requestProcessor.ldapproxy.authclass=com.marklogic.processors.ProxyRequestProcessor
 requestProcessor.ldapproxy.debuglevel=DEBUG
 
-## LDAP Server Set
+## LDAP Server Set (Secure backend connection)
 ldapset.set1.servers=server1
-ldapset.set1.secure=true
-# Optional: Add truststore for CA certificate validation
+ldapset.set1.secure=true                       # Backend uses LDAPS
+# Truststore for CA certificate validation (REQUIRED for LDAPS)
 ldapset.set1.truststore=/path/to/truststore.jks
 ldapset.set1.truststorepasswd=password
-# Optional: Add keystore for TLS client authentication
-ldapset.set1.keystore=/path/to/keystore.jks
+# Optional: Client certificate for mutual TLS authentication
+ldapset.set1.keystore=/path/to/client-keystore.jks
 ldapset.set1.keystorepasswd=password
 
-## LDAP Server
-ldapserver.server1.host=kerberos.marklogic.local
-ldapserver.server1.port=636
+## LDAP Server (Backend LDAPS server)
+ldapserver.server1.host=ldap.company.com       # Your LDAPS server
+ldapserver.server1.port=636                    # Standard LDAPS port
+```
+
+**Debugging Output Example:**
+
+With this configuration, you'll see clear text logs of all LDAP operations:
+
+```log
+2025-10-16 14:30:15.123 DEBUG --- Client Request: BindRequest(dn='cn=testuser,ou=users,dc=company,dc=com', password='***')
+2025-10-16 14:30:15.150 DEBUG --- Backend LDAPS Connection: Establishing SSL connection to ldap.company.com:636
+2025-10-16 14:30:15.280 DEBUG --- Backend Response: BindResponse(resultCode=SUCCESS)
+2025-10-16 14:30:15.281 DEBUG --- Client Response: BindResponse(resultCode=SUCCESS)
+2025-10-16 14:30:15.290 DEBUG --- Client Request: SearchRequest(baseDN='ou=users,dc=company,dc=com', filter='(uid=testuser)')
+2025-10-16 14:30:15.310 DEBUG --- Backend Response: SearchResultEntry(dn='cn=testuser,ou=users,dc=company,dc=com', attributes=['cn', 'memberOf'])
+```
+
+**Testing LDAPS Backend:**
+
+```bash
+# Test via proxy (client uses clear LDAP, backend uses LDAPS)
+ldapsearch -H ldap://localhost:30389 \
+  -D "cn=testuser,ou=users,dc=company,dc=com" \
+  -w password \
+  -b "ou=users,dc=company,dc=com" \
+  "(uid=testuser)"
+
+# All LDAP requests/responses visible in MLEAProxy logs
+# LDAPS complexity handled transparently by the proxy
+```
+
+**🔧 LDAPS Troubleshooting Checklist:**
+
+| Issue | Check | Solution |
+|-------|-------|----------|
+| **Certificate Errors** | Truststore contains CA cert | `keytool -import -file ca.crt -keystore truststore.jks` |
+| **Hostname Mismatch** | Certificate CN matches server hostname | Update DNS or use IP in certificate |
+| **Connection Timeout** | Network connectivity to port 636 | `telnet ldap.company.com 636` |
+| **Protocol Errors** | LDAP vs LDAPS port confusion | Verify port 636 (LDAPS) not 389 (LDAP) |
+| **Client Auth Required** | Server requires client certificate | Configure `keystore` and `keystorepasswd` |
+| **Cipher Suite Issues** | Java crypto policy restrictions | Install unlimited strength crypto policy |
+
+**Common LDAPS Error Messages:**
+
+```log
+# Certificate validation failed
+javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException: PKIX path building failed
+
+# Hostname verification failed  
+javax.net.ssl.SSLPeerUnverifiedException: hostname ldap.company.com not verified
+
+# Connection refused (wrong port or firewall)
+java.net.ConnectException: Connection refused: connect
 ```
 
 ### Scenario 4: Fully Secure LDAP Proxy (LDAPS Both Sides)
@@ -754,6 +826,12 @@ java -jar mlesproxy-2.0.0.jar
 Starting inMemory LDAP servers.
 Using internal LDIF
 Directory Server listening on: /0.0.0.0:60389 (MarkLogic1)
+📋 MarkLogic External Security Configuration Generated:
+   📄 Configuration file: marklogic-external-security-ldapjson.json
+   🔗 LDAP URI: ldap://localhost:20389
+   📂 LDAP Base: ou=users,dc=marklogic,dc=local
+   🏷️  LDAP Attribute: sAMAccountName
+   ⚡ Apply with: curl -X POST --anyauth -u admin:admin -H "Content-Type:application/json" -d @marklogic-external-security-ldapjson.json http://localhost:8002/manage/v2/external-security
 ```
 
 #### 3. Test Connection
@@ -1244,6 +1322,129 @@ Shows how tests use in-memory servers.
 
 ---
 
+## MarkLogic Integration
+
+### 🔗 Automatic External Security Configuration Generation
+
+**New Feature (2025):** MLEAProxy now automatically generates MarkLogic External Security configurations for each LDAP listener at startup.
+
+#### 🎯 Benefits
+
+✅ **Zero Manual Configuration**: Automatically creates JSON configurations for MarkLogic Management REST API  
+✅ **Smart Defaults**: Intelligently determines LDAP base DN and attributes based on listener type  
+✅ **Ready-to-Use**: Generates complete curl commands for immediate deployment  
+✅ **Multiple Listeners**: Creates separate configurations for each LDAP listener  
+✅ **Protocol Detection**: Automatically uses correct LDAP/LDAPS protocol in URIs  
+
+#### 📋 Generated Files
+
+For each LDAP listener, MLEAProxy creates:
+
+**File Pattern**: `marklogic-external-security-{listener-name}.json`
+
+**Example Configuration:**
+```json
+{
+  "external-security-name": "MLEAProxy-ldapjson",
+  "description": "External security for MLEAProxy LDAP listener 'ldapjson'",
+  "authentication": "ldap",
+  "cache-timeout": "300",
+  "authorization": "ldap",
+  "ldap-server-uri": "ldap://localhost:20389",
+  "ldap-base": "ou=users,dc=marklogic,dc=local",
+  "ldap-attribute": "sAMAccountName",
+  "ldap-default-user": "default",
+  "ldap-password": "password",
+  "ldap-bind-method": "simple"
+}
+```
+
+#### ⚡ Quick Setup
+
+1. **Start MLEAProxy** - Configurations auto-generated at startup
+2. **Apply Configuration** - Use the generated curl command:
+   ```bash
+   curl -X POST --anyauth -u admin:admin \
+     -H "Content-Type:application/json" \
+     -d @marklogic-external-security-ldapjson.json \
+     http://localhost:8002/manage/v2/external-security
+   ```
+3. **Test Authentication** - Users can now authenticate via MarkLogic using MLEAProxy
+
+#### 🔧 Smart Configuration Logic
+
+| Listener Type | LDAP Base | LDAP Attribute | Use Case |
+|---------------|-----------|----------------|----------|
+| **JSON Server** (`jsonauthenticator`) | `ou=users,dc=marklogic,dc=local` | `sAMAccountName` | Standalone JSON authentication |
+| **Internal Mode** (`ldapmode=internal`) | `dc=marklogic,dc=local` | `uid` | In-memory LDAP server |
+| **Proxy Mode** (`ldapmode=single/roundrobin/etc.`) | `ou=users,dc=company,dc=com` | `uid` | Corporate LDAP integration |
+
+#### 📝 Customization
+
+**Default Generated Values:**
+- **Security Name**: `MLEAProxy-{listener-name}`
+- **Cache Timeout**: `300` seconds
+- **Bind Method**: `simple`
+- **Default User**: `default`
+- **Default Password**: `password`
+
+**To Customize**: Edit the generated JSON file before applying with curl.
+
+#### 🔍 Example Startup Output
+
+```log
+2025-10-16 14:30:15.123 INFO  --- Listening on: 0.0.0.0:20389 (Simple LDAP Server using JSON user store)
+2025-10-16 14:30:15.125 INFO  --- 📋 MarkLogic External Security Configuration Generated:
+2025-10-16 14:30:15.125 INFO  ---    📄 Configuration file: marklogic-external-security-ldapjson.json
+2025-10-16 14:30:15.125 INFO  ---    🔗 LDAP URI: ldap://localhost:20389
+2025-10-16 14:30:15.125 INFO  ---    📂 LDAP Base: ou=users,dc=marklogic,dc=local
+2025-10-16 14:30:15.125 INFO  ---    🏷️  LDAP Attribute: sAMAccountName
+2025-10-16 14:30:15.125 INFO  ---    ⚡ Apply with: curl -X POST --anyauth -u admin:admin -H "Content-Type:application/json" -d @marklogic-external-security-ldapjson.json http://localhost:8002/manage/v2/external-security
+```
+
+#### 🌐 MarkLogic REST API Reference
+
+**Full Documentation**: [MarkLogic Management REST API - External Security](https://docs.marklogic.com/REST/POST/manage/v2/external-security)
+
+**Additional Operations:**
+```bash
+# List existing external security configurations
+curl --anyauth -u admin:admin http://localhost:8002/manage/v2/external-security
+
+# Get specific configuration
+curl --anyauth -u admin:admin http://localhost:8002/manage/v2/external-security/MLEAProxy-ldapjson
+
+# Delete configuration
+curl -X DELETE --anyauth -u admin:admin http://localhost:8002/manage/v2/external-security/MLEAProxy-ldapjson
+```
+
+#### 🔄 Multiple Listeners Example
+
+**Configuration:**
+```properties
+listeners=proxy,jsonserver,secure
+
+# Each listener gets its own configuration file:
+# - marklogic-external-security-proxy.json
+# - marklogic-external-security-jsonserver.json  
+# - marklogic-external-security-secure.json
+```
+
+**Startup Output:**
+```log
+📋 MarkLogic External Security Configuration Generated:
+   📄 Configuration file: marklogic-external-security-proxy.json
+   🔗 LDAP URI: ldap://localhost:10389
+   ⚡ Apply with: curl -X POST --anyauth -u admin:admin -H "Content-Type:application/json" -d @marklogic-external-security-proxy.json http://localhost:8002/manage/v2/external-security
+
+📋 MarkLogic External Security Configuration Generated:
+   📄 Configuration file: marklogic-external-security-jsonserver.json
+   🔗 LDAP URI: ldap://localhost:20389
+   ⚡ Apply with: curl -X POST --anyauth -u admin:admin -H "Content-Type:application/json" -d @marklogic-external-security-jsonserver.json http://localhost:8002/manage/v2/external-security
+```
+
+---
+
 ## Security Features
 
 ### 1. LDAP Injection Protection
@@ -1261,8 +1462,8 @@ MLEAProxy includes built-in protection against LDAP injection attacks:
 # Malicious input: admin)(uid=*)
 # MLEAProxy escapes to: admin\29\28uid=\2a\29
 
-ldapsearch -H ldap://localhost:10389 \
-  -D "cn=admin)(uid=*),dc=example,dc=com" \
+ldapsearch -H ldap://localhost:60389 \
+  -D "cn=admin)(uid=*),dc=MarkLogic,dc=Local" \
   -w password
 
 # Attack prevented, returns "Invalid DN"

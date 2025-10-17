@@ -196,6 +196,9 @@ class Applicationlistener implements ApplicationRunner {
                 }
                 ds.startListening();
                 logger.info("Directory Server listening on: {}:{} ({})", addr, port, dsCfg.dsName());
+                
+                // Generate MarkLogic External Security configuration for in-memory LDAP server
+                generateMarkLogicExternalSecurityForInMemoryServer(d, addr.getHostAddress(), port, dsCfg.dsBaseDN());
 
             }
         }
@@ -280,6 +283,10 @@ class Applicationlistener implements ApplicationRunner {
                 }
 
                 logger.info("Listening on: {}:{} ({})", listenerCfg.listenerIpAddress(), listenerCfg.listenerPort(), listenerCfg.listenerDescription());
+                
+                // Generate MarkLogic External Security configuration
+                logger.debug("Generating MarkLogic External Security configuration for listener: {}", l);
+                generateMarkLogicExternalSecurity(l, listenerCfg);
             }
         }
     }
@@ -673,6 +680,404 @@ class Applicationlistener implements ApplicationRunner {
         }
 
         return sslUtil;
+    }
+
+    /**
+     * Generates MarkLogic External Security configuration files for LDAP listeners.
+     * Creates JSON configuration files that can be used with MarkLogic Management REST API
+     * to automatically configure external security for each LDAP proxy listener.
+     * 
+     * @param listenerName Name of the LDAP listener
+     * @param listenerCfg Configuration for the LDAP listener
+     */
+    private void generateMarkLogicExternalSecurity(String listenerName, LDAPListenersConfig listenerCfg) {
+        logger.debug("Starting MarkLogic External Security generation for listener: {}", listenerName);
+        try {
+            // Build LDAP URI
+            String protocol = listenerCfg.secureListener() ? "ldaps" : "ldap";
+            String ipAddress = listenerCfg.listenerIpAddress().equals("0.0.0.0") ? "localhost" : listenerCfg.listenerIpAddress();
+            String ldapUri = String.format("%s://%s:%d", 
+                protocol, 
+                ipAddress,
+                listenerCfg.listenerPort());
+
+            logger.debug("Generated LDAP URI: {}", ldapUri);
+
+            // Determine LDAP base DN based on listener type and configuration
+            String ldapBase = determineLdapBase(listenerCfg);
+            String ldapAttribute = determineLdapAttribute(listenerCfg);
+            
+            logger.debug("Determined LDAP Base: {}, Attribute: {}", ldapBase, ldapAttribute);
+            
+            // Create JSON configuration
+            String jsonConfig = createExternalSecurityJson(
+                listenerName, 
+                listenerCfg.listenerDescription(),
+                ldapUri,
+                ldapBase,
+                ldapAttribute
+            );
+
+            // Write configuration file
+            String fileName = String.format("marklogic-external-security-%s.json", listenerName);
+            java.nio.file.Path configPath = java.nio.file.Paths.get(fileName);
+            java.nio.file.Files.write(configPath, jsonConfig.getBytes());
+            
+            logger.debug("Written configuration file: {}", configPath.toAbsolutePath());
+            
+            // Generate curl command
+            String curlCommand = String.format(
+                "curl -X POST --anyauth -u admin:admin -H \"Content-Type:application/json\" " +
+                "-d @%s http://localhost:8002/manage/v2/external-security", 
+                fileName
+            );
+
+            // Generate instruction file
+            String instructionFileName = String.format("marklogic-external-security-%s-instructions.txt", listenerName);
+            createInstructionFile(instructionFileName, fileName, listenerName, 
+                listenerCfg.listenerDescription(), ldapUri, ldapBase, ldapAttribute, curlCommand);
+
+            logger.info("📋 MarkLogic External Security Configuration Generated:");
+            logger.info("   📄 Configuration file: {}", fileName);
+            logger.info("   📝 Instructions file: {}", instructionFileName);
+            logger.info("   🔗 LDAP URI: {}", ldapUri);
+            logger.info("   📂 LDAP Base: {}", ldapBase);
+            logger.info("   🏷️  LDAP Attribute: {}", ldapAttribute);
+            logger.info("   ⚡ Apply with: {}", curlCommand);
+            
+        } catch (Exception e) {
+            logger.error("Failed to generate MarkLogic External Security configuration for listener {}: {}", 
+                listenerName, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Determines the appropriate LDAP base DN based on listener configuration.
+     * 
+     * @param listenerCfg LDAP listener configuration
+     * @return LDAP base DN string
+     */
+    private String determineLdapBase(LDAPListenersConfig listenerCfg) {
+        String requestProcessor = listenerCfg.listenerRequestProcessor();
+        String ldapMode = listenerCfg.listenerLDAPMode();
+        
+        // For JSON request processor, use JSON-specific base
+        if ("jsonauthenticator".equals(requestProcessor)) {
+            return "ou=users,dc=marklogic,dc=local";
+        }
+        
+        // For internal mode (standalone), use default base
+        if ("internal".equals(ldapMode)) {
+            return "dc=marklogic,dc=local";
+        }
+        
+        // For proxy modes, use common corporate base (user should customize)
+        return "ou=users,dc=company,dc=com";
+    }
+
+    /**
+     * Determines the appropriate LDAP attribute for user lookup based on configuration.
+     * 
+     * @param listenerCfg LDAP listener configuration
+     * @return LDAP attribute name for user lookup
+     */
+    private String determineLdapAttribute(LDAPListenersConfig listenerCfg) {
+        String requestProcessor = listenerCfg.listenerRequestProcessor();
+        
+        // For JSON request processor, use sAMAccountName
+        if ("jsonauthenticator".equals(requestProcessor)) {
+            return "sAMAccountName";
+        }
+        
+        // For proxy modes, use uid (more common in LDAP)
+        return "uid";
+    }
+
+    /**
+     * Creates the JSON configuration for MarkLogic External Security.
+     * 
+     * @param listenerName Name of the listener
+     * @param description Description of the configuration
+     * @param ldapUri LDAP URI
+     * @param ldapBase LDAP base DN
+     * @param ldapAttribute LDAP attribute for user lookup
+     * @return JSON configuration string
+     */
+    private String createExternalSecurityJson(String listenerName, String description, 
+            String ldapUri, String ldapBase, String ldapAttribute) {
+        
+        // Use descriptive name if provided, otherwise use listener name
+        String securityName = String.format("MLEAProxy-%s", listenerName);
+        String securityDescription = description.isEmpty() ? 
+            String.format("External security for MLEAProxy LDAP listener '%s'", listenerName) : 
+            description;
+
+        return String.format("""
+            {
+              "external-security-name": "%s",
+              "description": "%s",
+              "authentication": "ldap",
+              "cache-timeout": "300",
+              "authorization": "ldap",
+              "ldap-server-uri": "%s",
+              "ldap-base": "%s",
+              "ldap-attribute": "%s",
+              "ldap-default-user": "default",
+              "ldap-password": "password",
+              "ldap-bind-method": "simple"
+            }""", 
+            securityName, 
+            securityDescription, 
+            ldapUri, 
+            ldapBase, 
+            ldapAttribute
+        );
+    }
+
+    /**
+     * Generates MarkLogic External Security configuration for an in-memory LDAP server.
+     * 
+     * @param serverName Name of the directory server
+     * @param ipAddress IP address of the server
+     * @param port Port number of the server
+     * @param baseDN Base DN of the server
+     */
+    private void generateMarkLogicExternalSecurityForInMemoryServer(String serverName, String ipAddress, int port, String baseDN) {
+        try {
+            logger.debug("Generating MarkLogic External Security configuration for in-memory server: {}", serverName);
+            
+            // Generate LDAP URI
+            String ldapUri = String.format("ldap://%s:%d", 
+                "localhost".equals(ipAddress) || "0.0.0.0".equals(ipAddress) ? "localhost" : ipAddress, 
+                port);
+            
+            // Use the base DN directly for in-memory servers
+            String ldapBase = baseDN;
+            
+            // For MarkLogic LDAP servers, use uid attribute, for others use sAMAccountName
+            String ldapAttribute = serverName.toLowerCase().contains("marklogic") ? "uid" : "sAMAccountName";
+            
+            logger.debug("Generated LDAP URI: {}", ldapUri);
+            logger.debug("Determined LDAP Base: {}, Attribute: {}", ldapBase, ldapAttribute);
+            
+            // Create configuration JSON
+            String jsonConfig = createExternalSecurityJson(
+                serverName,
+                String.format("In-memory LDAP server (%s)", serverName),
+                ldapUri,
+                ldapBase,
+                ldapAttribute
+            );
+            
+            // Write to file
+            String filename = String.format("marklogic-external-security-%s.json", serverName.toLowerCase());
+            String filepath = System.getProperty("user.dir") + "/" + filename;
+            
+            try (java.io.FileWriter writer = new java.io.FileWriter(filepath)) {
+                writer.write(jsonConfig);
+            }
+            
+            logger.debug("Written configuration file: {}", filepath);
+            
+            // Log success with visual formatting
+            String curlCommand = String.format("curl -X POST --anyauth -u admin:admin -H \"Content-Type:application/json\" -d @%s http://localhost:8002/manage/v2/external-security", filename);
+            
+            // Generate instruction file
+            String instructionFileName = String.format("marklogic-external-security-%s-instructions.txt", serverName.toLowerCase());
+            createInstructionFile(instructionFileName, filename, serverName,
+                String.format("In-memory LDAP server (%s)", serverName), ldapUri, ldapBase, ldapAttribute, curlCommand);
+
+            logger.info("📋 MarkLogic External Security Configuration Generated:");
+            logger.info("   📄 Configuration file: {}", filename);
+            logger.info("   📝 Instructions file: {}", instructionFileName);
+            logger.info("   🔗 LDAP URI: {}", ldapUri);
+            logger.info("   📂 LDAP Base: {}", ldapBase);
+            logger.info("   🏷️  LDAP Attribute: {}", ldapAttribute);
+            logger.info("   ⚡ Apply with: curl -X POST --anyauth -u admin:admin -H \"Content-Type:application/json\" -d @{} http://localhost:8002/manage/v2/external-security", filename);
+            
+        } catch (Exception e) {
+            logger.error("Failed to generate MarkLogic External Security configuration for in-memory server {}: {}", serverName, e.getMessage());
+            logger.debug("Stack trace:", e);
+        }
+    }
+
+    /**
+     * Creates an instruction file with detailed setup instructions for MarkLogic External Security.
+     *
+     * @param instructionFileName Name of the instruction file to create
+     * @param configFileName Name of the configuration JSON file
+     * @param listenerName Name of the listener/server
+     * @param description Description of the configuration
+     * @param ldapUri LDAP URI
+     * @param ldapBase LDAP base DN
+     * @param ldapAttribute LDAP attribute
+     * @param curlCommand The curl command to apply the configuration
+     */
+    private void createInstructionFile(String instructionFileName, String configFileName, 
+            String listenerName, String description, String ldapUri, String ldapBase, 
+            String ldapAttribute, String curlCommand) {
+        try {
+            String instructions = String.format("""
+                # MarkLogic External Security Configuration Instructions
+                # Generated for: %s
+                # Description: %s
+                # Created: %s
+                
+                ## Overview
+                This configuration creates an External Security object in MarkLogic that enables
+                LDAP authentication using the MLEAProxy service.
+                
+                ## Configuration Details
+                - **Configuration Name**: MLEAProxy-%s
+                - **Authentication Method**: LDAP
+                - **LDAP Server URI**: %s
+                - **LDAP Base DN**: %s
+                - **LDAP Attribute**: %s
+                - **Authorization**: LDAP (roles from LDAP groups)
+                - **Cache Timeout**: 300 seconds
+                
+                ## Files Generated
+                - **Configuration File**: %s
+                - **Instructions File**: %s (this file)
+                
+                ## Step-by-Step Setup Instructions
+                
+                ### Step 1: Verify MarkLogic Management Interface Access
+                Ensure you can access the MarkLogic Management API. Test with:
+                ```bash
+                curl -X GET --anyauth -u admin:admin http://localhost:8002/manage/v2/external-security
+                ```
+                
+                ### Step 2: Apply the External Security Configuration
+                Use the following curl command to create the external security configuration:
+                ```bash
+                %s
+                ```
+                
+                ### Step 3: Verify Configuration was Created
+                Check that the configuration was created successfully:
+                ```bash
+                curl -X GET --anyauth -u admin:admin http://localhost:8002/manage/v2/external-security/MLEAProxy-%s
+                ```
+                
+                ### Step 4: Assign External Security to App Server
+                1. Open MarkLogic Admin UI (http://localhost:8001)
+                2. Navigate to Groups > Default > App Servers > [Your App Server]
+                3. Set "external security" to "MLEAProxy-%s"
+                4. Click "ok" to save
+                
+                Alternatively, use the Management API:
+                ```bash
+                # Get current app server configuration
+                curl -X GET --anyauth -u admin:admin \\
+                  http://localhost:8002/manage/v2/servers/[server-name]/properties
+                
+                # Update app server with external security (modify the JSON response above)
+                curl -X PUT --anyauth -u admin:admin \\
+                  -H "Content-Type:application/json" \\
+                  -d @updated-server-config.json \\
+                  http://localhost:8002/manage/v2/servers/[server-name]/properties
+                ```
+                
+                ## Testing the Configuration
+                
+                ### Test LDAP Authentication
+                Once configured, test authentication with:
+                ```bash
+                # Replace with your MarkLogic app server URL and port
+                curl -X GET -u [ldap-username]:[ldap-password] \\
+                  http://localhost:8000/v1/config/security
+                ```
+                
+                ### Troubleshooting
+                
+                1. **Check MarkLogic Error Logs**:
+                   - Location: MarkLogic installation/Logs/
+                   - Look for authentication and LDAP-related errors
+                
+                2. **Verify LDAP Server Connectivity**:
+                   ```bash
+                   # Test LDAP connection from MarkLogic server
+                   ldapsearch -H %s -D "[bind-dn]" -w "[password]" -b "%s" "(uid=testuser)"
+                   ```
+                
+                3. **Check External Security Status**:
+                   ```bash
+                   curl -X GET --anyauth -u admin:admin \\
+                     http://localhost:8002/manage/v2/external-security/MLEAProxy-%s/properties
+                   ```
+                
+                ## Configuration JSON Content
+                The generated configuration file (%s) contains:
+                ```json
+                {
+                  "external-security-name": "MLEAProxy-%s",
+                  "description": "%s",
+                  "authentication": "ldap",
+                  "cache-timeout": "300",
+                  "authorization": "ldap",
+                  "ldap-server-uri": "%s",
+                  "ldap-base": "%s",
+                  "ldap-attribute": "%s",
+                  "ldap-default-user": "default",
+                  "ldap-password": "password",
+                  "ldap-bind-method": "simple"
+                }
+                ```
+                
+                ## Important Notes
+                
+                1. **Security Considerations**:
+                   - Change default credentials in production
+                   - Use LDAPS (SSL/TLS) for production environments
+                   - Implement proper LDAP bind user with minimal privileges
+                
+                2. **Performance**:
+                   - Cache timeout (300s) can be adjusted based on requirements
+                   - Monitor LDAP server performance under load
+                
+                3. **High Availability**:
+                   - Configure multiple LDAP servers in the URI for failover
+                   - Example: "ldap://server1:389 ldap://server2:389"
+                
+                ## Support
+                - MLEAProxy Documentation: Check README.md and docs/ directory
+                - MarkLogic Documentation: https://docs.marklogic.com/
+                - LDAP Troubleshooting: Check logs and connection parameters
+                
+                Generated by MLEAProxy v2.0
+                """, 
+                listenerName, 
+                description,
+                java.time.LocalDateTime.now().toString(),
+                listenerName,
+                ldapUri,
+                ldapBase,
+                ldapAttribute,
+                configFileName,
+                instructionFileName,
+                curlCommand,
+                listenerName,
+                listenerName,
+                ldapUri,
+                ldapBase,
+                listenerName,
+                configFileName,
+                listenerName,
+                description,
+                ldapUri,
+                ldapBase,
+                ldapAttribute
+            );
+            
+            java.nio.file.Path instructionPath = java.nio.file.Paths.get(instructionFileName);
+            java.nio.file.Files.write(instructionPath, instructions.getBytes());
+            
+            logger.debug("Created instruction file: {}", instructionPath.toAbsolutePath());
+            
+        } catch (Exception e) {
+            logger.error("Failed to create instruction file {}: {}", instructionFileName, e.getMessage(), e);
+        }
     }
 
 

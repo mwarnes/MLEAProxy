@@ -33,15 +33,14 @@
 
 ### 🎯 Key Features
 
-- **LDAP/LDAPS**: Proxy mode, load balancing, standalone JSON server, in-memory directory, injection protection
+- **LDAP/LDAPS**: Proxy mode, load balancing, standalone server, in-memory or JSON directory.
 - **OAuth 2.0**: JWT token generation, JWKS endpoint, RFC 8414 metadata, 3-tier role resolution, refresh tokens
 - **SAML 2.0**: Full IdP implementation, metadata endpoint, digital signatures, 3-tier role resolution
 - **Kerberos**: Embedded KDC, SPNEGO authentication, OAuth/SAML protocol bridges, LDAP integration (Phase 4)
 - **Modern Stack**: Java 21, Spring Boot 3.3.5, Jackson JSON processing, Apache Kerby 2.0.3
-- **Comprehensive Testing**: 107/107 tests passing (100% coverage)
 - **Extensive Documentation**: Separate protocol-specific guides
 
-### 🆕 What's New in 2025
+<!-- ### 🆕 What's New in 2025
 
 - **Kerberos Support (Phase 4)**: Complete Kerberos implementation with OAuth/SAML bridges
   - Embedded Kerberos KDC (Apache Kerby 2.0.3)
@@ -56,7 +55,7 @@
   2. JSON user repository roles (user-specific)
   3. Default configuration roles (fallback - lowest priority)
 - **Enhanced Testing**: Expanded test suite to 107 tests with comprehensive coverage
-- **Improved Documentation**: Reorganized into protocol-specific guides
+- **Improved Documentation**: Reorganized into protocol-specific guides -->
 
 ### ⚠️ Important Notice
 
@@ -92,7 +91,8 @@
 java -jar mleaproxy.jar
 
 # All services start automatically:
-# - LDAP server on ldap://localhost:10389
+# - LDAP Proxy server on ldap://localhost:10389
+# - LDAP Directory server on ldap://localhost:60389
 # - OAuth endpoints on http://localhost:8080/oauth/*
 # - SAML endpoints on http://localhost:8080/saml/*
 ```
@@ -100,11 +100,11 @@ java -jar mleaproxy.jar
 ### Quick Tests
 
 ```bash
-# Test LDAP
-ldapsearch -H ldap://localhost:10389 \
-  -D "cn=manager,ou=users,dc=marklogic,dc=local" \
+# Test LDAP (Direct Server - works without backend)
+ldapsearch -H ldap://localhost:60389 \
+  -D "cn=Directory Manager" \
   -w password \
-  -b "ou=users,dc=marklogic,dc=local"
+  -b "dc=MarkLogic,dc=Local"
 
 # Test OAuth
 curl -X POST http://localhost:8080/oauth/token \
@@ -163,7 +163,7 @@ mlproxy-dev
 |-----------|-------------|-------|
 | **Java Runtime** | OpenJDK 21+ | LTS version recommended |
 | **Memory** | 512MB+ | Depends on load |
-| **Network** | TCP ports | Defaults: 10389 (LDAP), 8080 (HTTP - SAML/OAuth) |
+| **Network** | TCP ports | Defaults: 10389,60389 (LDAP), 8080 (HTTP - SAML/OAuth) |
 | **Disk Space** | 100MB+ | For JAR and logs |
 
 ---
@@ -174,8 +174,8 @@ mlproxy-dev
 
 | Protocol | Endpoint | Method | Purpose | Port |
 |----------|----------|--------|---------|------|
-| **LDAP** | `ldap://localhost:10389` | LDAP | LDAP proxy/server | 10389 |
-| **LDAP** | `ldap://localhost:60389` | LDAP | In-memory directory server | 60389 |
+| **LDAP** | `ldap://localhost:10389` | LDAP | LDAP proxy (requires backend) | 10389 |
+| **LDAP** | `ldap://localhost:60389` | LDAP | Direct standalone server | 60389 |
 | **OAuth** | `/oauth/token` | POST | Generate JWT tokens | 8080 |
 | **OAuth** | `/oauth/token-from-kerberos` | POST | Kerberos → OAuth bridge | 8080 |
 | **OAuth** | `/oauth/refresh` | POST | Refresh access tokens | 8080 |
@@ -193,7 +193,8 @@ mlproxy-dev
 **LDAP Proxy Server**
 
 - Protocol: LDAP/LDAPS
-- Default Port: 10389 (configurable)
+- Proxy Port: 10389 (configurable)
+- Standalone Port: 10389 (configurable)
 - Features: Standalone server, proxy mode, load balancing, LDAPS support
 - Documentation: See [LDAP_GUIDE.md](./LDAP_GUIDE.md)
 
@@ -282,7 +283,7 @@ Complete documentation for each protocol is now organized in the `docs/user/` fo
 
 - All OAuth endpoints (token, JWKS, well-known config)
 - Configuration and user repository setup
-- 3-tier role resolution system (New in 2025)
+- 3-tier role resolution system 
 - Client integration examples (Node.js, Python, Java)
 - Security best practices
 - Complete API reference
@@ -293,8 +294,8 @@ Complete documentation for each protocol is now organized in the `docs/user/` fo
 
 - All SAML endpoints (auth, IdP metadata)
 - Configuration and certificate setup
-- 3-tier role resolution system (New in 2025)
-- Service Provider integration (Okta, Azure AD, SimpleSAMLphp)
+- 3-tier role resolution system  
+- Service Provider integration (Okta, Azure AD)
 - Security and certificate management
 - Complete API reference
 
@@ -318,7 +319,7 @@ Complete documentation for each protocol is now organized in the `docs/user/` fo
 
 ## 👥 User Repository
 
-### JSON User Repository (New in 2025)
+### JSON User Repository 
 
 MLEAProxy uses a modern JSON-based user repository for storing user credentials and roles.
 
@@ -367,7 +368,7 @@ MLEAProxy uses a modern JSON-based user repository for storing user credentials 
 - **LDAP Attributes**: Support for memberOf and other LDAP attributes
 - **Type Safety**: Strongly-typed Java objects
 
-### 3-Tier Role Resolution (New in 2025)
+### 3-Tier Role Resolution 
 
 Both OAuth and SAML use the same priority system for role assignment:
 
@@ -498,7 +499,7 @@ mvn clean test jacoco:report
 Tests run: 107, Failures: 0, Errors: 0, Skipped: 6
 
 Test Breakdown:
-- JsonUserRepositoryTest: 14 tests (New in 2025)
+- JsonUserRepositoryTest: 14 tests
 - LDAPRequestHandlerTest: 3 tests
 - OAuthTokenHandlerTest: 15 tests
 - OAuthTokenHandlerEdgeCaseTest: 15 tests

@@ -1,0 +1,13 @@
+{
+  "external-security-name": "MLEAProxy-ldapjson",
+  "description": "Simple LDAP Server using JSON user store",
+  "authentication": "ldap",
+  "cache-timeout": "300",
+  "authorization": "ldap",
+  "ldap-server-uri": "ldap://localhost:20389",
+  "ldap-base": "ou=users,dc=marklogic,dc=local",
+  "ldap-attribute": "sAMAccountName",
+  "ldap-default-user": "default",
+  "ldap-password": "password",
+  "ldap-bind-method": "simple"
+}

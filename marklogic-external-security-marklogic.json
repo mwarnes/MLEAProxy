@@ -1,0 +1,13 @@
+{
+  "external-security-name": "MLEAProxy-marklogic",
+  "description": "In-memory LDAP server (marklogic)",
+  "authentication": "ldap",
+  "cache-timeout": "300",
+  "authorization": "ldap",
+  "ldap-server-uri": "ldap://localhost:61389",
+  "ldap-base": "dc=MarkLogic,dc=Local",
+  "ldap-attribute": "uid",
+  "ldap-default-user": "default",
+  "ldap-password": "password",
+  "ldap-bind-method": "simple"
+}

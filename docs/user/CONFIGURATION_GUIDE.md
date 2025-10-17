@@ -8,13 +8,13 @@ MLEAProxy configuration has been reorganized into modular property files for bet
 
 ### Core Configuration Files
 
-| File | Purpose | Location |
-|------|---------|----------|
-| `application.properties` | Spring Boot settings, logging | `src/main/resources/` |
-| `ldap.properties` | LDAP proxy configuration | Project root |
-| `saml.properties` | SAML authentication configuration | Project root |
-| `oauth.properties` | OAuth token configuration | Project root |
-| `directory.properties` | In-memory directory servers (testing) | Project root |
+| File | Purpose | Default Location | Override Locations |
+|------|---------|------------------|-------------------|
+| `application.properties` | Spring Boot settings, logging | `src/main/resources/` | `/etc/`, `${HOME}/`, `./` |
+| `ldap.properties` | LDAP proxy configuration | Project root | `/etc/`, `${HOME}/`, `./` |
+| `saml.properties` | SAML authentication configuration | Project root | `/etc/`, `${HOME}/`, `./` |
+| `oauth.properties` | OAuth token configuration | Project root | `/etc/`, `${HOME}/`, `./` |
+| `directory.properties` | In-memory directory servers (testing) | Project root | `/etc/`, `${HOME}/`, `./` |
 
 ### Legacy Support
 
@@ -31,11 +31,15 @@ The application uses a **MERGE** strategy to load properties from multiple sourc
 3. `${HOME}/mleaproxy.properties` (user-specific)
 4. `./mleaproxy.properties` (current directory)
 5. `${mleaproxy.properties}` (system property path)
-6. `./ldap.properties`
-7. `./saml.properties`
-8. `./oauth.properties`
-9. `./directory.properties`
-10. **System properties** via `-D` flags (highest priority)
+6. `classpath:application.properties` (bundled Spring Boot config)
+7. `/etc/application.properties` (system-wide Spring Boot config)
+8. `${HOME}/application.properties` (user-specific Spring Boot config)
+9. `./application.properties` (current directory Spring Boot config)
+10. `./ldap.properties`
+11. `./saml.properties`
+12. `./oauth.properties`
+13. `./directory.properties`
+14. **System properties** via `-D` flags (highest priority)
 
 This means you can override any configuration property at runtime using command-line arguments. For example:
 
@@ -133,8 +137,9 @@ ds.marklogic.basedn=dc=MarkLogic,dc=Local
 
 ### application.properties
 
-Spring Boot and application-wide settings:
+Spring Boot and application-wide settings. This file can now be overridden using the same hierarchy as other configuration files:
 
+**Default (bundled in JAR):**
 ```properties
 # Logging
 logging.level.root=INFO
@@ -143,6 +148,39 @@ logging.file=mleaproxy.log
 # XML User Repository (optional)
 users.xml.path=/path/to/users.xml
 ```
+
+**Override Examples:**
+
+**Local override (./application.properties):**
+```properties
+# Override logging level for development
+logging.level.root=DEBUG
+logging.level.com.marklogic=TRACE
+
+# Custom log file location
+logging.file=/var/log/mleaproxy/application.log
+
+# Development-specific settings
+spring.profiles.active=development
+```
+
+**System-wide override (/etc/application.properties):**
+```properties
+# Production logging configuration
+logging.level.root=WARN
+logging.file=/var/log/mleaproxy/production.log
+logging.pattern.file=%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n
+
+# Production security settings
+server.ssl.enabled=true
+server.port=8443
+```
+
+**Key Settings:**
+- `logging.*` - Logging configuration (levels, file paths, patterns)
+- `server.*` - Spring Boot server settings (port, SSL, etc.)
+- `spring.*` - Spring Framework settings
+- `users.xml.path` - Custom XML user repository location
 
 ## Running the Application
 
@@ -155,6 +193,7 @@ java -jar target/mlesproxy-2.0.0.jar
 ```
 
 The application automatically loads:
+- `./application.properties` (Spring Boot overrides)
 - `./ldap.properties`
 - `./saml.properties`
 - `./oauth.properties`
@@ -229,6 +268,20 @@ saml.debug=true
 
 ### Example 2: Production Environment
 
+**application.properties:**
+```properties
+# Production logging
+logging.level.root=WARN
+logging.file=/var/log/mleaproxy/production.log
+logging.pattern.file=%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n
+
+# SSL configuration
+server.ssl.enabled=true
+server.port=8443
+server.ssl.key-store=/etc/mleaproxy/keystore.jks
+server.ssl.key-store-password=changeme
+```
+
 **ldap.properties:**
 ```properties
 ldap.debug=false
@@ -244,6 +297,20 @@ saml.debug=false
 saml.capath=/etc/mleaproxy/certs/certificate.pem
 saml.keypath=/etc/mleaproxy/certs/rsakey.pem
 saml.response.validity=300
+```
+
+### Example 3: Development with Custom Spring Boot Settings
+
+**application.properties:**
+```properties
+# Development logging
+logging.level.root=DEBUG
+logging.level.com.marklogic=TRACE
+logging.pattern.console=%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+
+# Development server settings
+server.port=8080
+management.endpoints.web.exposure.include=health,info,metrics
 ```
 
 ## Troubleshooting
@@ -308,6 +375,23 @@ java -Dldap.debug=true \
 ```bash
 java -Dldapserver.server1.host=ldap.example.com \
      -Dldapserver.server1.port=636 \
+     -jar target/mlesproxy-2.0.0.jar
+```
+
+**Override Spring Boot application settings:**
+```bash
+java -Dlogging.level.root=DEBUG \
+     -Dserver.port=8443 \
+     -Dlogging.file=/tmp/mleaproxy-debug.log \
+     -jar target/mlesproxy-2.0.0.jar
+```
+
+**Combined protocol and application overrides:**
+```bash
+java -Dldap.debug=true \
+     -Dsaml.debug=true \
+     -Dlogging.level.com.marklogic=TRACE \
+     -Dserver.port=9090 \
      -jar target/mlesproxy-2.0.0.jar
 ```
 
