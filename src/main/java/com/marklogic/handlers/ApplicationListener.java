@@ -74,6 +74,12 @@ class Applicationlistener implements ApplicationRunner {
 
     @Autowired
     private SamlBean saml;
+    
+    @Autowired(required = false)
+    private org.springframework.core.env.Environment environment;
+    
+    @Autowired(required = false)
+    private com.marklogic.repository.JsonUserRepository jsonUserRepository;
 
     /**
      * Main entry point for the application runner.
@@ -94,6 +100,7 @@ class Applicationlistener implements ApplicationRunner {
         startKerberosKDC(cfg);
         startLDAPListeners(cfg);
         initializeSAMLConfiguration(cfg);
+        displayStartupSummary(args, cfg);
     }
 
     /**
@@ -1077,6 +1084,219 @@ class Applicationlistener implements ApplicationRunner {
             
         } catch (Exception e) {
             logger.error("Failed to create instruction file {}: {}", instructionFileName, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Displays a comprehensive startup summary including all available endpoints and configured users
+     * 
+     * @param args Application arguments
+     * @param cfg Application configuration
+     */
+    private void displayStartupSummary(ApplicationArguments args, ApplicationConfig cfg) {
+        try {
+            logger.info("");
+            logger.info("═══════════════════════════════════════════════════════════════════════");
+            logger.info("                    MLEAProxy Startup Summary");
+            logger.info("═══════════════════════════════════════════════════════════════════════");
+            logger.info("");
+            
+            // Display server information
+            displayServerInfo();
+            
+            // Display OAuth endpoints
+            displayOAuthEndpoints();
+            
+            // Display SAML endpoints
+            displaySAMLEndpoints();
+            
+            // Display configured users
+            displayConfiguredUsers();
+            
+            logger.info("═══════════════════════════════════════════════════════════════════════");
+            logger.info("");
+        } catch (Exception e) {
+            logger.error("Error displaying startup summary: {}", e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Display basic server information
+     */
+    private void displayServerInfo() {
+        try {
+            String port = environment != null ? environment.getProperty("server.port", "8080") : "8080";
+            String contextPath = environment != null ? environment.getProperty("server.servlet.context-path", "") : "";
+            String baseUrl = "http://localhost:" + port + contextPath;
+            
+            logger.info("🌐 Server Information:");
+            logger.info("   Base URL: {}", baseUrl);
+            logger.info("   Port: {}", port);
+            if (!contextPath.isEmpty()) {
+                logger.info("   Context Path: {}", contextPath);
+            }
+            logger.info("");
+        } catch (Exception e) {
+            logger.debug("Error displaying server info: {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * Display OAuth2 endpoints
+     */
+    private void displayOAuthEndpoints() {
+        try {
+            String port = environment != null ? environment.getProperty("server.port", "8080") : "8080";
+            String contextPath = environment != null ? environment.getProperty("server.servlet.context-path", "") : "";
+            String baseUrl = "http://localhost:" + port + contextPath;
+            
+            logger.info("🔐 OAuth2 Endpoints:");
+            logger.info("   Token Endpoint:       {}/oauth/token", baseUrl);
+            logger.info("   JWKS Endpoint:        {}/oauth/jwks", baseUrl);
+            logger.info("   Discovery Endpoint:   {}/.well-known/config", baseUrl);
+            logger.info("   Alternative Discovery: {}/.well-known/openid-configuration", baseUrl);
+            logger.info("");
+            
+            // Display OAuth configuration if available
+            String clientId = environment != null ? environment.getProperty("oauth.client.id") : null;
+            String clientSecret = environment != null ? environment.getProperty("oauth.client.secret") : null;
+            if (clientId != null && !clientId.isEmpty()) {
+                logger.info("   OAuth Client Configuration:");
+                logger.info("      Client ID: {}", clientId);
+                logger.info("      Client Secret: {}", clientSecret != null && !clientSecret.isEmpty() ? "***configured***" : "not set");
+                
+                String scope = environment != null ? environment.getProperty("oauth.scope", "profile email") : "profile email";
+                logger.info("      Default Scope: {}", scope);
+                logger.info("");
+            }
+            
+            // Example curl command
+            logger.info("   Example Token Request:");
+            logger.info("      curl -X POST {}/oauth/token \\", baseUrl);
+            logger.info("           -H 'Content-Type: application/x-www-form-urlencoded' \\");
+            logger.info("           -d 'grant_type=password&username=admin&password=admin'");
+            logger.info("");
+            
+        } catch (Exception e) {
+            logger.debug("Error displaying OAuth endpoints: {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * Display SAML endpoints
+     */
+    private void displaySAMLEndpoints() {
+        try {
+            String port = environment != null ? environment.getProperty("server.port", "8080") : "8080";
+            String contextPath = environment != null ? environment.getProperty("server.servlet.context-path", "") : "";
+            String baseUrl = "http://localhost:" + port + contextPath;
+            
+            logger.info("🔒 SAML Endpoints:");
+            logger.info("   SSO/Auth Endpoint:    {}/saml/auth", baseUrl);
+            logger.info("   IDP Metadata:         {}/saml/idp-metadata", baseUrl);
+            logger.info("   CA Certificates:      {}/saml/cacerts", baseUrl);
+            logger.info("   Wrap Assertion:       {}/saml/wrapassertion", baseUrl);
+            
+            // Check if SAML is configured
+            if (saml != null && saml.getCfg() != null) {
+                logger.info("   SAML Status:          ✅ Configured");
+            } else {
+                logger.info("   SAML Status:          ⚠️  Not configured");
+            }
+            logger.info("");
+            
+            // Example SAML assertion request
+            logger.info("   Example SAML Auth Request:");
+            logger.info("      curl -X POST {}/saml/auth \\", baseUrl);
+            logger.info("           -H 'Content-Type: application/x-www-form-urlencoded' \\");
+            logger.info("           -d 'SAMLRequest=<base64-encoded-saml-request>'");
+            logger.info("");
+            
+        } catch (Exception e) {
+            logger.debug("Error displaying SAML endpoints: {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * Display configured users from JsonUserRepository
+     */
+    private void displayConfiguredUsers() {
+        try {
+            if (jsonUserRepository == null || !jsonUserRepository.isInitialized()) {
+                logger.info("👥 Configured Users:");
+                logger.info("   Status: User repository not initialized");
+                logger.info("");
+                return;
+            }
+            
+            // Get users file path
+            String usersFilePath = jsonUserRepository.getJsonFilePath();
+            if (usersFilePath == null) {
+                usersFilePath = environment != null ? environment.getProperty("users.xml.path", "users.json") : "users.json";
+            }
+            
+            int userCount = jsonUserRepository.getUserCount();
+            logger.info("👥 Configured Users (from {}):", usersFilePath);
+            logger.info("");
+            logger.info("   Total Users: {}", userCount);
+            logger.info("");
+            
+            logger.info("   ┌─────────────────────┬──────────────────┬──────────────────────────────────────────────┐");
+            logger.info("   │ Username            │ Password         │ Roles                                        │");
+            logger.info("   ├─────────────────────┼──────────────────┼──────────────────────────────────────────────┤");
+            
+            int displayedCount = 0;
+            // Get all users from the repository and display them
+            try {
+                java.util.Collection<com.marklogic.repository.JsonUserRepository.UserInfo> allUsers = jsonUserRepository.getAllUsers();
+                
+                // Sort users by username for consistent display
+                java.util.List<com.marklogic.repository.JsonUserRepository.UserInfo> sortedUsers = 
+                    new java.util.ArrayList<>(allUsers);
+                sortedUsers.sort((u1, u2) -> u1.getUsername().compareToIgnoreCase(u2.getUsername()));
+                
+                for (com.marklogic.repository.JsonUserRepository.UserInfo userInfo : sortedUsers) {
+                    String rolesStr = String.join(", ", userInfo.getRoles());
+                    String password = userInfo.getPassword();
+                    if (password != null && password.length() > 16) {
+                        password = password.substring(0, 13) + "...";
+                    }
+                    
+                    // Display user with full roles (no truncation)
+                    logger.info(String.format("   │ %-19s │ %-16s │ %-44s │", 
+                        userInfo.getUsername(), 
+                        password != null ? password : "not set", 
+                        rolesStr));
+                    displayedCount++;
+                }
+            } catch (Exception e) {
+                logger.debug("Error retrieving users: {}", e.getMessage(), e);
+            }
+            
+            if (displayedCount == 0) {
+                logger.info("   │ No users found                                                                   │");
+            }
+            
+            logger.info("   └─────────────────────┴──────────────────┴──────────────────────────────────────────────┘");
+            logger.info("");
+            
+            logger.info("   Note: All {} users from {} are shown above with actual passwords.", userCount, usersFilePath);
+            logger.info("         This is for educational/testing purposes only.");
+            logger.info("");
+            
+            // Show example login with actual first user
+            com.marklogic.repository.JsonUserRepository.UserInfo exampleUser = jsonUserRepository.findByUsername("admin");
+            if (exampleUser != null) {
+                logger.info("   Example Login:");
+                logger.info("      Username: {}", exampleUser.getUsername());
+                logger.info("      Password: {}", exampleUser.getPassword());
+            }
+            logger.info("");
+            
+        } catch (Exception e) {
+            logger.debug("Error displaying configured users: {}", e.getMessage(), e);
+            logger.info("👥 Configured Users: Unable to load user information");
+            logger.info("");
         }
     }
 

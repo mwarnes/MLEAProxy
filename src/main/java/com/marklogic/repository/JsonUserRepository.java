@@ -262,4 +262,13 @@ public class JsonUserRepository {
     public String getJsonFilePath() {
         return jsonFilePath;
     }
+    
+    /**
+     * Gets all users in the repository.
+     * 
+     * @return Collection of all UserInfo objects
+     */
+    public java.util.Collection<UserInfo> getAllUsers() {
+        return users.values();
+    }
 }
