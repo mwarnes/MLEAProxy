@@ -1,0 +1,31 @@
+{
+  "external-security-name": "OAUTH2-test",
+  "description": "OAuth2 test configuration",
+  "authentication": "oauth",
+  "cache-timeout": 300,
+  "authorization": "oauth",
+  "oauth-server": {
+    "oauth-vendor": "Other",
+    "oauth-flow-type": "Resource server",
+    "oauth-client-id": "marklogic",
+    "oauth-jwt-issuer-uri": "https://your-oauth-provider.com",
+    "oauth-token-type": "JSON Web Tokens",
+    "oauth-username-attribute": "preferred_username",
+    "oauth-role-attribute": "marklogic-roles",
+    "oauth-privilege-attribute": "",
+    "oauth-jwt-alg": "RS256",
+    "oauth-jwks-uri": "https://your-oauth-provider.com/jwks",
+    "oauth-jwt-secrets": {
+      "oauth-jwt-secret": [
+        {
+          "oauth-jwt-key-id": "DCYjkxqf7xLskUc_9tlaJ8-2QC4Vx-G1nPC1qPQro1Q",
+          "oauth-jwt-secret-value": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----"
+        },
+        {
+          "oauth-jwt-key-id": "GPbsBv5V6BvCQ0QPLeC_10hzdLSuc2FRow-L0j3JE5Y",
+          "oauth-jwt-secret-value": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----"
+        }
+      ]
+    }
+  }
+}
