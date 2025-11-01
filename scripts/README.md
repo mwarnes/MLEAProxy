@@ -11,9 +11,12 @@ This collection of scripts provides comprehensive tools for configuring OAuth2 a
 | Script | Purpose | Use Case |
 |--------|---------|----------|
 | **`configure-marklogic-oauth2.sh`** | Creates MarkLogic OAuth2 external security configuration from .well-known endpoints | Production setup, automated deployment |
-| **`test-oauth2-integration.sh`** | Comprehensive integration testing with MLEAProxy | Development, CI/CD testing |
-| **`validate-oauth2-config.sh`** | Validates existing OAuth2 configurations | Production monitoring, troubleshooting |
-| **`oauth2-utils.sh`** | Utility functions library | Support library for other scripts |
+| **`configure-appserver-security.sh`** | Configures MarkLogic app servers to use external security configurations | Apply OAuth2/SAML/LDAP to app servers |
+| **`validate-oauth2-config.sh`** | Validates existing OAuth2 configurations and tests authentication flows | Production monitoring, troubleshooting |
+| **`extract-jwks-keys.sh`** | Extracts JWT signing keys from JWKS endpoints and uploads to MarkLogic | JWT key management, security updates |
+| **`cleanup-obsolete-jwks-keys.sh`** | Identifies and removes obsolete JWT keys from MarkLogic configurations | Security maintenance, key rotation |
+| **`oauth2-examples.sh`** | Interactive examples and demonstrations of OAuth2 configuration workflows | Learning, documentation, training |
+| **`oauth2-utils.sh`** | Core utility functions library for OAuth2 operations | Support library for other scripts |
 
 ### 🎯 Key Features
 
@@ -151,62 +154,6 @@ cd /path/to/MLEAProxy && mvn spring-boot:run &
     --cache-timeout 600
 ```
 
-### 🧪 Integration Testing (`test-oauth2-integration.sh`)
-
-Comprehensive testing script specifically designed for MLEAProxy integration.
-
-#### Features
-
-- **Automatic MLEAProxy startup** (if needed)
-- **OAuth2 discovery endpoint testing**
-- **Token generation testing** (client credentials and password flows)
-- **MarkLogic configuration script testing**
-- **End-to-end authentication flow validation**
-
-#### Usage
-
-```bash
-# Run complete integration test
-./test-oauth2-integration.sh
-
-# The script will:
-# 1. Check if MLEAProxy is running (start if needed)
-# 2. Test OAuth2 endpoints
-# 3. Test token generation
-# 4. Run configuration script (with user confirmation)
-# 5. Test end-to-end flow
-# 6. Provide cleanup options
-```
-
-#### Interactive Flow
-
-```
-=== MLEAProxy OAuth2 Integration Test ===
-
-This script will test the complete OAuth2 integration flow:
-1. Start MLEAProxy OAuth2 server (if needed)
-2. Test OAuth2 discovery endpoints  
-3. Test token generation
-4. Run the MarkLogic configuration script
-5. Test end-to-end flow
-
-Continue with OAuth2 integration test? (Y/n): Y
-
-[INFO] Checking dependencies...
-[SUCCESS] All dependencies found
-
-[INFO] Checking MLEAProxy status...
-[SUCCESS] MLEAProxy is running and responding
-
-[TEST] Testing OAuth2 discovery endpoints...
-[INFO] Testing endpoint: .well-known/config
-[SUCCESS] OAuth2 configuration found at .well-known/config
-[INFO] Issuer: mleaproxy-oauth-server
-[INFO] Token Endpoint: http://localhost:8080/oauth/token
-[INFO] JWKS URI: http://localhost:8080/oauth/jwks
-
-# ... continues with comprehensive testing
-```
 
 ### 📊 Configuration Validation (`validate-oauth2-config.sh`)
 
@@ -292,9 +239,567 @@ Validates existing OAuth2 configurations and provides comprehensive analysis.
 • Test with real user accounts and applications
 ```
 
+### 🎯 App Server Security Configuration (`configure-appserver-security.sh`)
+
+Configures MarkLogic app servers to use external security configurations (OAuth, SAML, LDAP).
+
+#### Key Features
+
+- **Multi-Server Support**: Configure multiple app servers in a single command
+- **External Security Integration**: Works with any MarkLogic external security configuration
+- **Configuration Validation**: Verifies external security profiles exist before applying
+- **Status Display**: Shows current app server security settings
+- **Dry-Run Support**: Preview changes before applying
+
+#### Basic Usage
+
+```bash
+# Configure single app server
+./configure-appserver-security.sh \
+    --appserver App-Services \
+    --external-security MLEAProxy-OAuth
+
+# Configure multiple app servers
+./configure-appserver-security.sh \
+    --appserver "App-Services,Documents,Manage" \
+    --external-security Production-OAuth \
+    --marklogic-host ml-prod.company.com
+```
+
+#### Advanced Examples
+
+**Production Deployment with Verification:**
+```bash
+# Show current configuration first
+./configure-appserver-security.sh \
+    --appserver App-Services \
+    --show-config \
+    --marklogic-host production.marklogic.com
+
+# Apply configuration with dry-run
+./configure-appserver-security.sh \
+    --appserver "App-Services,Documents" \
+    --external-security Company-OAuth2 \
+    --marklogic-host production.marklogic.com \
+    --marklogic-user ml-admin \
+    --marklogic-pass "$ML_ADMIN_PASS" \
+    --dry-run
+
+# Apply actual configuration
+./configure-appserver-security.sh \
+    --appserver "App-Services,Documents" \
+    --external-security Company-OAuth2 \
+    --marklogic-host production.marklogic.com \
+    --marklogic-user ml-admin \
+    --marklogic-pass "$ML_ADMIN_PASS" \
+    --verbose
+```
+
+**HTTPS with Custom Ports:**
+```bash
+./configure-appserver-security.sh \
+    --appserver "Custom-App-8080,API-Server-9000" \
+    --external-security Azure-SAML-Config \
+    --marklogic-host https://secure-ml.company.com:8443 \
+    --insecure \
+    --verbose
+```
+
+### 🔑 JWKS Key Management (`extract-jwks-keys.sh`)
+
+Extracts JWT signing keys from JWKS endpoints and manages them in MarkLogic external security configurations.
+
+#### Key Features
+
+- **Automatic Key Discovery**: Fetches keys from JWKS endpoints
+- **PEM Conversion**: Converts JWK format to PEM for MarkLogic compatibility
+- **Batch Upload**: Uploads multiple keys to MarkLogic in one operation
+- **Key Validation**: Verifies key format and compatibility
+- **Multiple Key Types**: Supports RSA, EC, and other key types
+
+#### Basic Usage
+
+```bash
+# Extract and display keys
+./extract-jwks-keys.sh https://auth.company.com/.well-known/jwks.json
+
+# Extract and upload to MarkLogic
+./extract-jwks-keys.sh \
+    https://keycloak.company.com/auth/realms/production/protocol/openid_connect/certs \
+    --upload-to-marklogic \
+    --external-security-name Production-OAuth \
+    --marklogic-host ml-prod.company.com
+```
+
+#### Advanced Examples
+
+**Multi-Environment Key Management:**
+```bash
+# Development environment
+./extract-jwks-keys.sh \
+    http://localhost:8080/oauth/jwks \
+    --upload-to-marklogic \
+    --external-security-name MLEAProxy-Dev \
+    --marklogic-host localhost \
+    --marklogic-user admin \
+    --marklogic-pass admin
+
+# Staging environment
+./extract-jwks-keys.sh \
+    https://auth-staging.company.com/.well-known/jwks.json \
+    --upload-to-marklogic \
+    --external-security-name Company-OAuth-Staging \
+    --marklogic-host ml-staging.company.com \
+    --marklogic-user "$STAGING_USER" \
+    --marklogic-pass "$STAGING_PASS" \
+    --verbose
+
+# Production environment
+./extract-jwks-keys.sh \
+    https://auth.company.com/.well-known/jwks.json \
+    --upload-to-marklogic \
+    --external-security-name Company-OAuth-Production \
+    --marklogic-host https://ml-prod.company.com:8443 \
+    --marklogic-user "$PROD_USER" \
+    --marklogic-pass "$PROD_PASS" \
+    --insecure \
+    --verbose
+```
+
+**Automated Key Rotation Pipeline:**
+```bash
+#!/bin/bash
+# key-rotation.sh - Automated key rotation script
+
+ENVIRONMENTS=("dev" "staging" "production")
+JWKS_ENDPOINTS=(
+    "http://localhost:8080/oauth/jwks"
+    "https://auth-staging.company.com/.well-known/jwks.json"
+    "https://auth.company.com/.well-known/jwks.json"
+)
+ML_HOSTS=(
+    "localhost"
+    "ml-staging.company.com"
+    "https://ml-prod.company.com:8443"
+)
+
+for i in "${!ENVIRONMENTS[@]}"; do
+    env="${ENVIRONMENTS[$i]}"
+    jwks="${JWKS_ENDPOINTS[$i]}"
+    host="${ML_HOSTS[$i]}"
+    
+    echo "Updating keys for $env environment..."
+    
+    ./extract-jwks-keys.sh "$jwks" \
+        --upload-to-marklogic \
+        --external-security-name "Company-OAuth-${env^}" \
+        --marklogic-host "$host" \
+        --marklogic-user "${env^^}_USER" \
+        --marklogic-pass "${env^^}_PASS" \
+        --verbose
+done
+```
+
+### 🧹 JWKS Key Cleanup (`cleanup-obsolete-jwks-keys.sh`)
+
+Identifies and removes obsolete JWT keys from MarkLogic external security configurations.
+
+#### Key Features
+
+- **Key Comparison**: Compares MarkLogic keys with current JWKS endpoint
+- **Obsolete Detection**: Identifies keys no longer present in JWKS
+- **Safe Removal**: Interactive confirmation before deletion
+- **Backup Support**: Optional backup of removed keys
+- **Audit Trail**: Detailed logging of cleanup operations
+
+#### Basic Usage
+
+```bash
+# Analyze obsolete keys (read-only)
+./cleanup-obsolete-jwks-keys.sh \
+    https://auth.company.com/.well-known/jwks.json \
+    --external-security-name Production-OAuth \
+    --marklogic-host ml-prod.company.com
+
+# Remove obsolete keys (with confirmation)
+./cleanup-obsolete-jwks-keys.sh \
+    https://auth.company.com/.well-known/jwks.json \
+    --delete-keys \
+    --external-security-name Production-OAuth \
+    --marklogic-host ml-prod.company.com
+```
+
+#### Advanced Examples
+
+**Automated Cleanup with Safeguards:**
+```bash
+# Production cleanup with backup
+./cleanup-obsolete-jwks-keys.sh \
+    https://auth.company.com/.well-known/jwks.json \
+    --delete-keys \
+    --external-security-name Company-OAuth-Production \
+    --marklogic-host https://ml-prod.company.com:8443 \
+    --marklogic-user "$PROD_USER" \
+    --marklogic-pass "$PROD_PASS" \
+    --backup-directory "/backup/jwks-keys/$(date +%Y%m%d)" \
+    --force \
+    --verbose
+
+# Batch cleanup across environments
+for env in dev staging production; do
+    echo "Cleaning up $env environment..."
+    
+    ./cleanup-obsolete-jwks-keys.sh \
+        "https://auth-${env}.company.com/.well-known/jwks.json" \
+        --delete-keys \
+        --external-security-name "Company-OAuth-${env^}" \
+        --marklogic-host "ml-${env}.company.com" \
+        --marklogic-user "${env^^}_USER" \
+        --marklogic-pass "${env^^}_PASS" \
+        --backup-directory "/backup/jwks-cleanup-$(date +%Y%m%d)" \
+        --verbose
+done
+```
+
+**Scheduled Maintenance Script:**
+```bash
+#!/bin/bash
+# scheduled-jwks-cleanup.sh - Run via cron
+
+LOG_FILE="/var/log/jwks-cleanup-$(date +%Y%m%d).log"
+BACKUP_DIR="/backup/jwks/$(date +%Y%m%d-%H%M%S)"
+
+{
+    echo "=== JWKS Cleanup Starting at $(date) ==="
+    
+    # Production cleanup
+    ./cleanup-obsolete-jwks-keys.sh \
+        https://auth.company.com/.well-known/jwks.json \
+        --delete-keys \
+        --external-security-name Production-OAuth \
+        --marklogic-host ml-prod.company.com \
+        --marklogic-user "$PROD_ML_USER" \
+        --marklogic-pass "$PROD_ML_PASS" \
+        --backup-directory "$BACKUP_DIR" \
+        --force \
+        --verbose
+    
+    echo "=== JWKS Cleanup Completed at $(date) ==="
+} >> "$LOG_FILE" 2>&1
+```
+
+### 📚 Interactive Examples (`oauth2-examples.sh`)
+
+Provides interactive demonstrations and examples of OAuth2 configuration workflows.
+
+#### Key Features
+
+- **Interactive Learning**: Step-by-step guided examples
+- **Multiple Scenarios**: Development, staging, and production examples
+- **Copy-Paste Ready**: All examples are executable commands
+- **Best Practices**: Demonstrates recommended configuration patterns
+- **Troubleshooting**: Common issues and solutions
+
+#### Usage
+
+```bash
+# Run interactive examples
+./oauth2-examples.sh
+
+# Display specific example
+./oauth2-examples.sh --example 1
+
+# Show all examples without interaction
+./oauth2-examples.sh --all --non-interactive
+```
+
+#### Example Scenarios Included
+
+1. **MLEAProxy Development Setup**
+2. **Keycloak Integration**
+3. **Azure AD Configuration**
+4. **Configuration Validation**
+5. **CI/CD Pipeline Integration**
+
+### 🔧 Utility Functions (`oauth2-utils.sh`)
+
+Core utility library providing OAuth2 functions for other scripts.
+
+#### Key Functions
+
+- **Token Operations**: `oauth2_get_token_*`, `oauth2_jwt_decode_*`
+- **MarkLogic Integration**: `oauth2_test_token_against_marklogic`
+- **Configuration Validation**: `oauth2_validate_*`
+- **Logging**: `log_info`, `log_error`, `log_success`
+- **HTTP Operations**: Specialized curl functions with proper error handling
+
+#### Usage in Scripts
+
+```bash
+#!/bin/bash
+# Example script using oauth2-utils.sh
+
+# Source the utilities
+source "$(dirname "$0")/oauth2-utils.sh"
+
+# Get a token using client credentials
+token=$(oauth2_get_token_client_credentials \
+    "https://auth.company.com/oauth/token" \
+    "my-client-id" \
+    "my-client-secret" \
+    "openid profile")
+
+# Test token against MarkLogic
+if oauth2_test_token_against_marklogic "$token" "http://localhost:8000" "Documents"; then
+    log_success "Token authentication successful"
+else
+    log_error "Token authentication failed"
+fi
+
+# Decode JWT payload
+username=$(oauth2_jwt_get_claim "$token" "preferred_username")
+log_info "Authenticated user: $username"
+```
+
 ---
 
-## 🔧 Advanced Configuration
+## � Complete Workflow Examples
+
+### Scenario 1: New Environment Setup
+
+Complete OAuth2 setup for a new MarkLogic environment:
+
+```bash
+#!/bin/bash
+# complete-oauth2-setup.sh
+
+OAUTH_SERVER="https://auth.company.com"
+WELL_KNOWN_URL="$OAUTH_SERVER/.well-known/openid_configuration"
+MARKLOGIC_HOST="https://ml-prod.company.com:8443"
+CONFIG_NAME="Company-OAuth2-Production"
+
+echo "🔧 Setting up OAuth2 for new environment..."
+
+# Step 1: Create OAuth2 external security configuration
+echo "Step 1: Creating external security configuration..."
+./configure-marklogic-oauth2.sh \
+    --well-known-url "$WELL_KNOWN_URL" \
+    --config-name "$CONFIG_NAME" \
+    --marklogic-host "$MARKLOGIC_HOST" \
+    --client-id marklogic-production \
+    --username-attribute preferred_username \
+    --role-attribute groups \
+    --fetch-jwks-keys \
+    --verbose
+
+# Step 2: Extract and upload JWKS keys
+echo "Step 2: Managing JWT signing keys..."
+./extract-jwks-keys.sh \
+    "$OAUTH_SERVER/.well-known/jwks.json" \
+    --upload-to-marklogic \
+    --external-security-name "$CONFIG_NAME" \
+    --marklogic-host "$MARKLOGIC_HOST" \
+    --verbose
+
+# Step 3: Configure app servers
+echo "Step 3: Configuring app servers..."
+./configure-appserver-security.sh \
+    --appserver "App-Services,Documents,Manage" \
+    --external-security "$CONFIG_NAME" \
+    --marklogic-host "$MARKLOGIC_HOST" \
+    --verbose
+
+# Step 4: Validate complete setup
+echo "Step 4: Validating configuration..."
+./validate-oauth2-config.sh \
+    --oauth-server-url "$OAUTH_SERVER" \
+    --config-name "$CONFIG_NAME" \
+    --marklogic-host "$MARKLOGIC_HOST" \
+    --performance \
+    --detailed
+
+echo "✅ OAuth2 setup complete!"
+```
+
+### Scenario 2: Key Rotation Maintenance
+
+Monthly key rotation and cleanup:
+
+```bash
+#!/bin/bash
+# monthly-key-rotation.sh
+
+ENVIRONMENTS=("staging" "production")
+BASE_OAUTH_URL="https://auth.company.com"
+BASE_ML_HOST="ml-prod.company.com"
+
+for env in "${ENVIRONMENTS[@]}"; do
+    echo "🔄 Processing $env environment key rotation..."
+    
+    OAUTH_URL="$BASE_OAUTH_URL"
+    ML_HOST="$BASE_ML_HOST"
+    CONFIG_NAME="Company-OAuth2-${env^}"
+    
+    if [ "$env" = "staging" ]; then
+        OAUTH_URL="https://auth-staging.company.com"
+        ML_HOST="ml-staging.company.com"
+    fi
+    
+    # Step 1: Backup current keys
+    echo "  📋 Creating backup..."
+    mkdir -p "/backup/jwks-rotation-$(date +%Y%m%d)/$env"
+    
+    # Step 2: Extract new keys
+    echo "  🔑 Extracting new keys..."
+    ./extract-jwks-keys.sh \
+        "$OAUTH_URL/.well-known/jwks.json" \
+        --upload-to-marklogic \
+        --external-security-name "$CONFIG_NAME" \
+        --marklogic-host "$ML_HOST" \
+        --verbose
+    
+    # Step 3: Clean up obsolete keys
+    echo "  🧹 Cleaning up obsolete keys..."
+    ./cleanup-obsolete-jwks-keys.sh \
+        "$OAUTH_URL/.well-known/jwks.json" \
+        --delete-keys \
+        --external-security-name "$CONFIG_NAME" \
+        --marklogic-host "$ML_HOST" \
+        --backup-directory "/backup/jwks-rotation-$(date +%Y%m%d)/$env" \
+        --force \
+        --verbose
+    
+    # Step 4: Validate after rotation
+    echo "  ✅ Validating configuration..."
+    ./validate-oauth2-config.sh \
+        --oauth-server-url "$OAUTH_URL" \
+        --config-name "$CONFIG_NAME" \
+        --marklogic-host "$ML_HOST" \
+        --verbose
+    
+    echo "✅ Key rotation complete for $env"
+done
+```
+
+### Scenario 3: Multi-Tenant Setup
+
+Configure OAuth2 for multiple tenants:
+
+```bash
+#!/bin/bash
+# multi-tenant-oauth2-setup.sh
+
+TENANTS=("acme-corp" "widget-inc" "global-tech")
+MARKLOGIC_HOST="https://shared-ml.company.com:8443"
+
+for tenant in "${TENANTS[@]}"; do
+    echo "🏢 Configuring OAuth2 for tenant: $tenant"
+    
+    TENANT_OAUTH_URL="https://${tenant}-auth.company.com"
+    CONFIG_NAME="${tenant}-OAuth2"
+    APP_SERVER="${tenant}-app-server"
+    CLIENT_ID="${tenant}-marklogic"
+    
+    # Create tenant-specific external security
+    ./configure-marklogic-oauth2.sh \
+        --well-known-url "$TENANT_OAUTH_URL/.well-known/openid_configuration" \
+        --config-name "$CONFIG_NAME" \
+        --marklogic-host "$MARKLOGIC_HOST" \
+        --client-id "$CLIENT_ID" \
+        --username-attribute preferred_username \
+        --role-attribute "${tenant}_roles" \
+        --cache-timeout 300 \
+        --fetch-jwks-keys \
+        --verbose
+    
+    # Configure tenant app server
+    ./configure-appserver-security.sh \
+        --appserver "$APP_SERVER" \
+        --external-security "$CONFIG_NAME" \
+        --marklogic-host "$MARKLOGIC_HOST" \
+        --verbose
+    
+    # Validate tenant setup
+    ./validate-oauth2-config.sh \
+        --oauth-server-url "$TENANT_OAUTH_URL" \
+        --config-name "$CONFIG_NAME" \
+        --marklogic-host "$MARKLOGIC_HOST" \
+        --verbose
+    
+    echo "✅ Tenant $tenant configured successfully"
+done
+```
+
+### Scenario 4: Development to Production Migration
+
+Migrate OAuth2 configuration from dev to production:
+
+```bash
+#!/bin/bash
+# dev-to-prod-migration.sh
+
+# Source environment
+DEV_OAUTH_URL="http://localhost:8080"
+DEV_ML_HOST="localhost"
+DEV_CONFIG="MLEAProxy-Dev"
+
+# Target environment  
+PROD_OAUTH_URL="https://auth.company.com"
+PROD_ML_HOST="https://ml-prod.company.com:8443"
+PROD_CONFIG="Company-OAuth2-Production"
+
+echo "🚀 Migrating OAuth2 configuration from dev to production..."
+
+# Step 1: Validate development setup
+echo "Step 1: Validating development configuration..."
+./validate-oauth2-config.sh \
+    --oauth-server-url "$DEV_OAUTH_URL" \
+    --config-name "$DEV_CONFIG" \
+    --marklogic-host "$DEV_ML_HOST" \
+    --verbose
+
+if [ $? -ne 0 ]; then
+    echo "❌ Development validation failed. Fix issues before migration."
+    exit 1
+fi
+
+# Step 2: Create production configuration
+echo "Step 2: Creating production external security configuration..."
+./configure-marklogic-oauth2.sh \
+    --well-known-url "$PROD_OAUTH_URL/.well-known/openid_configuration" \
+    --config-name "$PROD_CONFIG" \
+    --marklogic-host "$PROD_ML_HOST" \
+    --client-id marklogic-production \
+    --username-attribute preferred_username \
+    --role-attribute groups \
+    --cache-timeout 600 \
+    --fetch-jwks-keys \
+    --verbose
+
+# Step 3: Configure production app servers
+echo "Step 3: Configuring production app servers..."
+./configure-appserver-security.sh \
+    --appserver "App-Services,Documents" \
+    --external-security "$PROD_CONFIG" \
+    --marklogic-host "$PROD_ML_HOST" \
+    --verbose
+
+# Step 4: Validate production setup
+echo "Step 4: Validating production configuration..."
+./validate-oauth2-config.sh \
+    --oauth-server-url "$PROD_OAUTH_URL" \
+    --config-name "$PROD_CONFIG" \
+    --marklogic-host "$PROD_ML_HOST" \
+    --performance \
+    --detailed \
+    --verbose
+
+echo "✅ Migration to production complete!"
+```
+
+---
+
+## �🔧 Advanced Configuration
 
 ### Environment Variables
 
@@ -377,142 +882,6 @@ curl -X POST --anyauth -u admin:admin \
     }
   }' \
   "http://marklogic-host:8002/manage/v2/external-security/Custom-OAuth/jwt-secrets"
-```
-
----
-
-## 🛠️ Integration with CI/CD
-
-### GitLab CI Example
-
-```yaml
-# .gitlab-ci.yml
-test-oauth2-integration:
-  stage: test
-  image: ubuntu:latest
-  services:
-    - name: marklogic/marklogic-server:latest
-      alias: marklogic
-  before_script:
-    - apt-get update && apt-get install -y curl jq maven openjdk-11-jdk
-  script:
-    - cd MLEAProxy && mvn spring-boot:run &
-    - sleep 30  # Wait for MLEAProxy startup
-    - ./scripts/test-oauth2-integration.sh
-  after_script:
-    - pkill java  # Stop MLEAProxy
-  only:
-    - main
-    - develop
-```
-
-### GitHub Actions Example
-
-```yaml
-# .github/workflows/oauth2-integration.yml
-name: OAuth2 Integration Test
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    
-    services:
-      marklogic:
-        image: marklogic/marklogic-server:latest
-        ports:
-          - 8000:8000
-          - 8002:8002
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up JDK 11
-      uses: actions/setup-java@v3
-      with:
-        java-version: '11'
-        distribution: 'temurin'
-    
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y curl jq bc
-    
-    - name: Start MLEAProxy
-      run: |
-        cd MLEAProxy
-        mvn spring-boot:run &
-        sleep 30
-    
-    - name: Run OAuth2 Integration Tests
-      run: |
-        ./scripts/test-oauth2-integration.sh
-    
-    - name: Validate Configuration
-      run: |
-        ./scripts/validate-oauth2-config.sh \
-          --oauth-server-url http://localhost:8080 \
-          --config-name MLEAProxy-CI-Test \
-          --marklogic-host marklogic \
-          --performance
-```
-
-### Jenkins Pipeline Example
-
-```groovy
-// Jenkinsfile
-pipeline {
-    agent any
-    
-    stages {
-        stage('Setup') {
-            steps {
-                sh 'docker run -d --name marklogic -p 8000:8000 -p 8002:8002 marklogic/marklogic-server:latest'
-                sh 'sleep 60'  // Wait for MarkLogic startup
-            }
-        }
-        
-        stage('Start MLEAProxy') {
-            steps {
-                dir('MLEAProxy') {
-                    sh 'mvn spring-boot:run &'
-                    sh 'sleep 30'
-                }
-            }
-        }
-        
-        stage('Integration Tests') {
-            steps {
-                sh './scripts/test-oauth2-integration.sh'
-            }
-        }
-        
-        stage('Validation') {
-            steps {
-                sh '''
-                ./scripts/validate-oauth2-config.sh \
-                    --oauth-server-url http://localhost:8080 \
-                    --config-name Jenkins-Test \
-                    --marklogic-host localhost \
-                    --performance \
-                    --detailed
-                '''
-            }
-        }
-    }
-    
-    post {
-        always {
-            sh 'docker stop marklogic && docker rm marklogic'
-            sh 'pkill -f spring-boot:run || true'
-        }
-    }
-}
 ```
 
 ---
@@ -615,11 +984,11 @@ oauth2_jwt_decode_payload "invalid.jwt.token"
 Scripts generate detailed logs for troubleshooting:
 
 ```bash
-# Redirect output to log file
-./test-oauth2-integration.sh > oauth2-test.log 2>&1
+# Redirect validation output to log file
+./scripts/validate-oauth2-config.sh --verbose > oauth2-validation.log 2>&1
 
-# Monitor logs in real-time
-tail -f oauth2-test.log
+# Monitor validation logs in real-time
+tail -f oauth2-validation.log
 
 # Search for specific issues
 grep -i "error\|fail" oauth2-test.log
@@ -760,8 +1129,8 @@ We welcome improvements for:
 Before submitting changes:
 
 ```bash
-# Run full test suite
-./test-oauth2-integration.sh
+# Validate configuration
+./scripts/validate-oauth2-config.sh --verbose
 
 # Validate with different configurations
 ./validate-oauth2-config.sh --oauth-server-url URL --config-name TEST

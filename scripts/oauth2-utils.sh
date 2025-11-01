@@ -18,10 +18,10 @@
 # ================================================================
 
 # Prevent multiple includes
-if [ "${OAUTH2_UTILS_LOADED:-}" = "true" ]; then
-    return 0
-fi
-export OAUTH2_UTILS_LOADED=true
+# if [ "${OAUTH2_UTILS_LOADED:-}" = "true" ]; then
+#     return 0
+# fi
+# export OAUTH2_UTILS_LOADED=true
 
 # ================================================================
 # CONSTANTS AND CONFIGURATION
@@ -139,6 +139,7 @@ oauth2_http_get() {
     local url="$1"
     local timeout="${2:-$DEFAULT_TIMEOUT}"
     local headers="${3:-}"
+    local extra_flags="${4:-}"
     
     oauth2_validate_url "$url" || return 1
     
@@ -148,6 +149,10 @@ oauth2_http_get() {
     
     if [ -n "$headers" ]; then
         curl_cmd="$curl_cmd $headers"
+    fi
+    
+    if [ -n "$extra_flags" ]; then
+        curl_cmd="$curl_cmd $extra_flags"
     fi
     
     local response
@@ -165,6 +170,7 @@ oauth2_http_post_form() {
     local form_data="$2"
     local timeout="${3:-$DEFAULT_TIMEOUT}"
     local headers="${4:--H \"Content-Type: application/x-www-form-urlencoded\"}"
+    local extra_flags="${5:-}"
     
     oauth2_validate_url "$url" || return 1
     
@@ -172,13 +178,24 @@ oauth2_http_post_form() {
     oauth2_log_debug "Form data: $form_data"
     
     local response
-    response=$(curl -s -f --connect-timeout "$timeout" --max-time "$timeout" \
-        $headers \
-        -d "$form_data" \
-        "$url" 2>/dev/null) || {
-        oauth2_log_error "HTTP POST failed: $url"
-        return 1
-    }
+    if [ -n "$extra_flags" ]; then
+        response=$(curl -s -f --connect-timeout "$timeout" --max-time "$timeout" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            $extra_flags \
+            -d "$form_data" \
+            "$url" 2>/dev/null) || {
+            oauth2_log_error "HTTP POST failed: $url"
+            return 1
+        }
+    else
+        response=$(curl -s -f --connect-timeout "$timeout" --max-time "$timeout" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "$form_data" \
+            "$url" 2>/dev/null) || {
+            oauth2_log_error "HTTP POST failed: $url"
+            return 1
+        }
+    fi
     
     echo "$response"
 }
@@ -354,11 +371,12 @@ oauth2_get_endpoint() {
 # Fetch JWKS from JWKS URI
 oauth2_fetch_jwks() {
     local jwks_uri="$1"
+    local extra_flags="${2:-}"
     
     oauth2_log_debug "Fetching JWKS from: $jwks_uri"
     
     local jwks
-    jwks=$(oauth2_http_get "$jwks_uri") || return 1
+    jwks=$(oauth2_http_get "$jwks_uri" "$DEFAULT_TIMEOUT" "" "$extra_flags") || return 1
     
     oauth2_validate_json "$jwks" || return 1
     
@@ -385,6 +403,7 @@ oauth2_get_token_client_credentials() {
     local client_id="$2"
     local client_secret="$3"
     local scope="${4:-}"
+    local extra_flags="${5:-}"
     
     oauth2_log_debug "Requesting token using client credentials flow"
     
@@ -395,7 +414,7 @@ oauth2_get_token_client_credentials() {
     fi
     
     local response
-    response=$(oauth2_http_post_form "$token_endpoint" "$form_data") || return 1
+    response=$(oauth2_http_post_form "$token_endpoint" "$form_data" "$DEFAULT_TIMEOUT" "-H \"Content-Type: application/x-www-form-urlencoded\"" "$extra_flags") || return 1
     
     oauth2_validate_json "$response" || return 1
     
@@ -420,6 +439,7 @@ oauth2_get_token_password() {
     local client_id="$4"
     local client_secret="${5:-}"
     local scope="${6:-}"
+    local extra_flags="${7:-}"
     
     oauth2_log_debug "Requesting token using password flow for user: $username"
     
@@ -433,17 +453,85 @@ oauth2_get_token_password() {
         form_data="$form_data&scope=$scope"
     fi
     
-    local response
-    response=$(oauth2_http_post_form "$token_endpoint" "$form_data") || return 1
+    # Use curl directly to get both response and status code for better error handling
+    local response status_code
+    local temp_response
+    temp_response=$(curl -s -w "\n%{http_code}" --connect-timeout "$DEFAULT_TIMEOUT" --max-time "$DEFAULT_TIMEOUT" \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        $extra_flags \
+        -d "$form_data" \
+        "$token_endpoint" 2>/dev/null)
     
-    oauth2_validate_json "$response" || return 1
+    if [ $? -ne 0 ]; then
+        oauth2_log_error "Failed to connect to token endpoint: $token_endpoint"
+        return 1
+    fi
+    
+    # Split response and status code
+    response=$(echo "$temp_response" | sed '$d')
+    status_code=$(echo "$temp_response" | tail -n 1)
+    
+    oauth2_log_debug "🔍 Password flow response - Status: $status_code"
+    oauth2_log_debug "🔍 Password flow response body: $(echo "$response" | head -c 200)..."
+    
+    # Check status code
+    case "$status_code" in
+        200)
+            oauth2_log_debug "Password flow successful - extracting token"
+            ;;
+        400)
+            oauth2_log_error "❌ Password flow failed - Bad Request (400)"
+            local error_desc error_reason
+            error_reason=$(echo "$response" | jq -r '.error // "unknown_error"' 2>/dev/null)
+            error_desc=$(echo "$response" | jq -r '.error_description // "No description provided"' 2>/dev/null)
+            oauth2_log_error "   Error: $error_reason"
+            oauth2_log_error "   Description: $error_desc"
+            
+            case "$error_reason" in
+                "invalid_grant"|"invalid_user_credentials")
+                    oauth2_log_error "   → Username '$username' does not exist or password is incorrect"
+                    ;;
+                "invalid_client")
+                    oauth2_log_error "   → Client ID '$client_id' is not configured or client secret is wrong"
+                    ;;
+                "unsupported_grant_type")
+                    oauth2_log_error "   → Password flow is disabled for this client"
+                    ;;
+                "invalid_scope")
+                    oauth2_log_error "   → Requested scope '$scope' is not available"
+                    ;;
+            esac
+            return 1
+            ;;
+        401)
+            oauth2_log_error "❌ Password flow failed - Unauthorized (401)"
+            oauth2_log_error "   → Check username '$username' and password"
+            return 1
+            ;;
+        403)
+            oauth2_log_error "❌ Password flow failed - Forbidden (403)"
+            oauth2_log_error "   → User '$username' may be disabled or password flow not allowed"
+            return 1
+            ;;
+        *)
+            oauth2_log_error "❌ Password flow failed - HTTP $status_code"
+            oauth2_log_error "   Response: $response"
+            return 1
+            ;;
+    esac
+    
+    # Validate JSON response
+    if ! oauth2_validate_json "$response"; then
+        oauth2_log_error "Invalid JSON response from token endpoint"
+        return 1
+    fi
     
     # Extract access token
     local access_token
     access_token=$(echo "$response" | jq -r '.access_token // empty')
     
     if [ -z "$access_token" ]; then
-        oauth2_log_error "No access token in response"
+        oauth2_log_error "No access token in successful response"
         oauth2_log_error "Response: $response"
         return 1
     fi
@@ -500,22 +588,70 @@ oauth2_test_token_against_marklogic() {
     local marklogic_host="$2"  
     local marklogic_port="${3:-8000}"
     local endpoint="${4:-/v1/documents}"
+    local custom_url="${5:-}"
     
-    local api_url="http://$marklogic_host:$marklogic_port$endpoint"
+    local api_url
+    local protocol
+    
+    # If custom URL is provided, use it directly
+    if [ -n "$custom_url" ]; then
+        api_url="$custom_url"
+        # Extract protocol from custom URL for SSL handling
+        if [[ "$custom_url" =~ ^https:// ]]; then
+            protocol="https"
+        else
+            protocol="http"
+        fi
+    else
+        # Use proper protocol from parsed host or default to http
+        protocol="${MARKLOGIC_PROTOCOL:-http}"
+        api_url="$protocol://$marklogic_host:$marklogic_port$endpoint"
+    fi
+    
+    # Get appropriate curl flags for HTTPS
+    local curl_flags=""
+    if [ "$protocol" = "https" ] || [ "${MARKLOGIC_IS_HTTPS:-false}" = "true" ]; then
+        curl_flags="--insecure"
+    fi
     
     oauth2_log_debug "Testing token against MarkLogic API: $api_url"
     
+    # Debug: Show the curl command that will be executed
+    oauth2_log_info "🔍 DEBUG: Curl command being sent to MarkLogic:"
+    oauth2_log_info "curl -s -w \"%{http_code}\" \\"
+    if [ -n "$curl_flags" ]; then
+        oauth2_log_info "  $curl_flags \\"
+    fi
+    oauth2_log_info "  -H \"Authorization: Bearer ${token:0:20}...\" \\"
+    oauth2_log_info "  \"$api_url\""
+    
     local response status_code
     response=$(curl -s -w "%{http_code}" \
+        $curl_flags \
         -H "Authorization: Bearer $token" \
         "$api_url" 2>/dev/null)
     
     status_code="${response: -3}"
     response_body="${response%???}"
     
+    # Debug: Show response details
+    oauth2_log_info "🔍 DEBUG: MarkLogic response:"
+    oauth2_log_info "  Status Code: $status_code"
+    if [ -n "$response_body" ] && [ ${#response_body} -lt 500 ]; then
+        oauth2_log_info "  Response Body: $response_body"
+    elif [ -n "$response_body" ]; then
+        oauth2_log_info "  Response Body (first 200 chars): ${response_body:0:200}..."
+    else
+        oauth2_log_info "  Response Body: (empty)"
+    fi
+    
     case "$status_code" in
         200)
             oauth2_log_success "Token validated successfully by MarkLogic"
+            return 0
+            ;;
+        302)
+            oauth2_log_success "Token accepted by MarkLogic (HTTP 302 redirect - OAuth working)"
             return 0
             ;;
         401)

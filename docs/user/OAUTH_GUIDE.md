@@ -346,8 +346,21 @@ MLEAProxy uses a JSON-based user repository for storing user credentials and rol
 Specify custom user repository location:
 
 ```properties
-# In application.properties or via system property
-json.user.repository.path=/path/to/custom/users.json
+# In application.properties
+users.json.path=/path/to/custom/users.json
+```
+
+**Command Line Override:**
+
+```bash
+# Override users.json path at startup (recommended - shorter parameter)
+java -jar mleaproxy.jar --users=/path/to/custom/users.json
+
+# Alternative syntax (also supported)
+java -jar mleaproxy.jar --users-json=/path/to/custom/users.json
+
+# Or use relative path
+java -jar mleaproxy.jar --users=src/main/resources/users.json
 ```
 
 ---

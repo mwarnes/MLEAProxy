@@ -25,6 +25,9 @@
 #   # Configure with MLEAProxy (development/testing)
 #   ./configure-marklogic-oauth2.sh --well-known-url http://localhost:8080/oauth/.well-known/config --marklogic-host localhost --config-name MLEAProxy-OAuth
 #
+#   # Configure with MLEAProxy and fetch JWKS keys
+#   ./configure-marklogic-oauth2.sh --well-known-url http://localhost:8080/oauth/.well-known/config --marklogic-host localhost --config-name MLEAProxy-OAuth --fetch-jwks-keys
+#
 #   # Configure with Keycloak
 #   ./configure-marklogic-oauth2.sh --well-known-url https://keycloak.example.com/auth/realms/marklogic/.well-known/openid_configuration --marklogic-host marklogic.example.com --config-name Keycloak-OAuth
 #
@@ -52,15 +55,60 @@ ROLE_ATTRIBUTE="marklogic-roles"
 PRIVILEGE_ATTRIBUTE=""
 CACHE_TIMEOUT="300"
 CLIENT_ID="marklogic"
-FETCH_JWKS="true"
-TEST_CONFIG="true"
-MLEAPROXY_URL="http://localhost:8080"
+FETCH_JWKS="false"
 VERBOSE="false"
 DRY_RUN="false"
+INSECURE="false"
+
+# URL parsing variables (set by parse_marklogic_host function)
+MARKLOGIC_PROTOCOL=""
+MARKLOGIC_HOST_ONLY=""
+MARKLOGIC_PORT_FROM_URL=""
+MARKLOGIC_IS_HTTPS="false"
 
 # ================================================================
 # UTILITY FUNCTIONS
 # ================================================================
+
+# Parse MarkLogic host URL and extract components
+parse_marklogic_host() {
+    local host_url="$1"
+    
+    # If no protocol specified, assume http
+    if [[ ! "$host_url" =~ ^https?:// ]]; then
+        host_url="http://$host_url"
+    fi
+    
+    # Extract protocol, host, and port
+    local protocol host port
+    protocol=$(echo "$host_url" | sed 's#://.*##')
+    host=$(echo "$host_url" | sed 's#.*://##' | cut -d: -f1 | cut -d/ -f1)
+    port=$(echo "$host_url" | sed 's#.*://##' | cut -d: -f2 | cut -d/ -f1)
+    
+    # If port is same as host, no port was specified
+    if [ "$port" = "$host" ]; then
+        port=""
+    fi
+    
+    # Export parsed components
+    export MARKLOGIC_PROTOCOL="$protocol"
+    export MARKLOGIC_HOST_ONLY="$host"
+    export MARKLOGIC_PORT_FROM_URL="$port"
+    export MARKLOGIC_IS_HTTPS="false"
+    
+    if [ "$protocol" = "https" ]; then
+        export MARKLOGIC_IS_HTTPS="true"
+    fi
+    
+    # Build display URL for user output
+    if [ -n "$port" ]; then
+        export display_host_url="$protocol://$host:$port"
+    else
+        export display_host_url="$protocol://$host"
+    fi
+    
+    log_verbose "Parsed MarkLogic URL: protocol=$protocol, host=$host, port=$port, is_https=$MARKLOGIC_IS_HTTPS"
+}
 
 # Colors for output
 RED='\033[0;31m'
@@ -71,24 +119,45 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    echo -e "${BLUE}[INFO]${NC} $1" >&2
 }
 
 log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    echo -e "${GREEN}[SUCCESS]${NC} $1" >&2
 }
 
 log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    echo -e "${YELLOW}[WARNING]${NC} $1" >&2
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    echo -e "${RED}[ERROR]${NC} $1" >&2
+}
+
+# Get curl flags based on configuration
+get_curl_flags() {
+    local flags=""
+    if [ "$INSECURE" = "true" ]; then
+        flags="$flags -k"
+    fi
+    echo "$flags"
+}
+
+# Get curl flags for MarkLogic requests (includes HTTPS handling)
+get_marklogic_curl_flags() {
+    local flags=""
+    if [ "$INSECURE" = "true" ]; then
+        flags="$flags -k"
+    elif [ "$MARKLOGIC_IS_HTTPS" = "true" ]; then
+        # Automatically add -k flag for HTTPS MarkLogic hosts
+        flags="$flags -k"
+    fi
+    echo "$flags"
 }
 
 log_verbose() {
     if [ "$VERBOSE" = "true" ]; then
-        echo -e "${CYAN}[DEBUG]${NC} $1"
+        echo -e "${CYAN}[DEBUG]${NC} $1" >&2
     fi
 }
 
@@ -100,7 +169,7 @@ Creates MarkLogic OAuth2 external security configuration from OAuth2 Authorizati
 
 OPTIONS:
     --well-known-url URL          OAuth2 .well-known discovery endpoint URL (required)
-    --marklogic-host HOST         MarkLogic host (default: localhost)
+    --marklogic-host URL          MarkLogic host URL (default: http://localhost)
     --marklogic-port PORT         MarkLogic manage port (default: 8002)
     --marklogic-user USER         MarkLogic admin user (default: admin)
     --marklogic-pass PASS         MarkLogic admin password (default: admin)
@@ -111,9 +180,8 @@ OPTIONS:
     --privilege-attribute ATTR    JWT claim for privileges (optional)
     --cache-timeout SECONDS       Token cache timeout (default: 300)
     --client-id ID                OAuth client ID (default: marklogic)
-    --no-jwks                     Skip JWKS key fetching
-    --no-test                     Skip configuration testing
-    --mleaproxy-url URL           MLEAProxy URL for testing (default: http://localhost:8080)
+    --fetch-jwks-keys             Fetch and configure JWKS keys (default: disabled)
+    --insecure                    Ignore SSL certificate verification errors
     --verbose                     Enable verbose logging
     --dry-run                     Show what would be done without executing
     --help                        Show this help message
@@ -122,6 +190,10 @@ EXAMPLES:
     # MLEAProxy (development/testing)
     $0 --well-known-url http://localhost:8080/oauth/.well-known/config \\
        --config-name MLEAProxy-OAuth
+
+    # MLEAProxy with JWKS key fetching
+    $0 --well-known-url http://localhost:8080/oauth/.well-known/config \\
+       --config-name MLEAProxy-OAuth --fetch-jwks-keys
 
     # Keycloak
     $0 --well-known-url https://keycloak.example.com/auth/realms/marklogic/.well-known/openid_configuration \\
@@ -135,7 +207,6 @@ ENVIRONMENT VARIABLES:
     MARKLOGIC_HOST               Override default MarkLogic host
     MARKLOGIC_USER               Override default MarkLogic user
     MARKLOGIC_PASS               Override default MarkLogic password
-    MLEAPROXY_URL               Override default MLEAProxy URL for testing
 
 EOF
 }
@@ -167,6 +238,45 @@ check_dependencies() {
     log_success "All dependencies found"
 }
 
+# Test MarkLogic connectivity
+test_marklogic_connection() {
+    log_info "Testing MarkLogic connectivity..."
+    
+    # Use parsed URL components or fallback to original values
+    local protocol="${MARKLOGIC_PROTOCOL:-http}"
+    local host="${MARKLOGIC_HOST_ONLY:-$MARKLOGIC_HOST}"
+    local port="${MARKLOGIC_PORT_FROM_URL:-$MARKLOGIC_PORT}"
+    local test_url="$protocol://$host:$port"
+    
+    local response status_code
+    
+    local curl_flags
+    curl_flags=$(get_marklogic_curl_flags)
+    response=$(curl -s -w "%{http_code}" -m 10 --connect-timeout 5 $curl_flags "$test_url" 2>/dev/null)
+    status_code="${response: -3}"
+    
+    case "$status_code" in
+        200|401|403)
+            log_success "MarkLogic is accessible at $test_url"
+            return 0
+            ;;
+        000)
+            log_error "Cannot connect to MarkLogic at $test_url"
+            log_error "Common solutions:"
+            log_error "  1. Start MarkLogic: sudo /etc/init.d/MarkLogic start"
+            log_error "  2. Check if running: sudo service MarkLogic status"
+            log_error "  3. Verify port $MARKLOGIC_PORT is correct (usually 8001 or 8002)"
+            log_error "  4. Check firewall settings"
+            return 1
+            ;;
+        *)
+            log_warning "Unexpected response from MarkLogic (HTTP $status_code)"
+            log_info "Continuing anyway - may be a version-specific response"
+            return 0
+            ;;
+    esac
+}
+
 # ================================================================
 # OAUTH2 DISCOVERY FUNCTIONS
 # ================================================================
@@ -177,15 +287,36 @@ fetch_oauth_config() {
     
     log_info "Fetching OAuth2 configuration from: $well_known_url"
     
-    local response
-    response=$(curl -s -f "$well_known_url" 2>/dev/null) || {
+    # Use curl with output redirection to avoid any stdout contamination
+    local temp_file response
+    temp_file=$(mktemp)
+    
+    # Redirect both stdout and stderr, then check if curl succeeded
+    local curl_flags
+    curl_flags=$(get_curl_flags)
+    if curl -s -f $curl_flags "$well_known_url" -o "$temp_file" >/dev/null 2>&1; then
+        response=$(cat "$temp_file")
+        rm -f "$temp_file"
+    else
+        rm -f "$temp_file"
         log_error "Failed to fetch OAuth2 configuration from $well_known_url"
         return 1
-    }
+    fi
+    
+    # Clean the response to remove any extra characters or whitespace
+    response=$(echo "$response" | tr -d '\r' | sed 's/[[:space:]]*$//')
+    
+    # Debug: show what we extracted
+    log_verbose "Fetched JSON response length: ${#response}"
+    log_verbose "First 200 chars: '${response:0:200}'"
+    log_verbose "Last 50 chars: '${response: -50}'"
     
     # Validate JSON response
-    if ! echo "$response" | jq empty 2>/dev/null; then
-        log_error "Invalid JSON response from OAuth2 discovery endpoint"
+    if [ -z "$response" ] || ! echo "$response" | jq empty 2>/dev/null; then
+        log_error "Invalid or missing JSON response from OAuth2 discovery endpoint"
+        log_error "Full response: '$response'"
+        log_error "Response hex dump:"
+        echo -n "$response" | hexdump -C | head -5
         return 1
     fi
     
@@ -198,6 +329,10 @@ parse_oauth_config() {
     local config_json="$1"
     
     log_info "Parsing OAuth2 configuration..."
+    
+    # Debug: show what we received for parsing
+    log_verbose "Config JSON to parse (length ${#config_json}):"
+    log_verbose "First 200 chars: '${config_json:0:200}'"
     
     # Extract required fields
     ISSUER=$(echo "$config_json" | jq -r '.issuer // .iss // "unknown-issuer"')
@@ -234,7 +369,9 @@ fetch_jwks_keys() {
     log_info "Fetching JWKS keys from: $jwks_uri"
     
     local jwks_response
-    jwks_response=$(curl -s -f "$jwks_uri" 2>/dev/null) || {
+    local curl_flags
+    curl_flags=$(get_curl_flags)
+    jwks_response=$(curl -s -f $curl_flags "$jwks_uri" 2>/dev/null) || {
         log_error "Failed to fetch JWKS from $jwks_uri"
         return 1
     }
@@ -320,18 +457,54 @@ EOF
 # Apply configuration to MarkLogic
 apply_marklogic_config() {
     local config_json="$1"
-    local marklogic_url="http://$MARKLOGIC_HOST:$MARKLOGIC_PORT/manage/v2/external-security"
+    
+    # Use parsed URL components or fallback to original values
+    local protocol="${MARKLOGIC_PROTOCOL:-http}"
+    local host="${MARKLOGIC_HOST_ONLY:-$MARKLOGIC_HOST}"
+    local port="${MARKLOGIC_PORT_FROM_URL:-$MARKLOGIC_PORT}"
+    local marklogic_url="$protocol://$host:$port/manage/v2/external-security"
     
     log_info "Applying configuration to MarkLogic at: $marklogic_url"
     
     if [ "$DRY_RUN" = "true" ]; then
-        log_info "DRY RUN - Configuration that would be applied:"
-        echo "$config_json" | jq .
+        log_info "DRY RUN - Curl command that would be executed:"
+        echo
+        local marklogic_curl_flags
+        marklogic_curl_flags=$(get_marklogic_curl_flags)
+        cat << EOF
+curl -X POST$([ -n "$marklogic_curl_flags" ] && echo " $marklogic_curl_flags") \\
+  --anyauth -u "$MARKLOGIC_USER:$MARKLOGIC_PASS" \\
+  -H "Content-Type: application/json" \\
+  -d '@-' \\
+  "$marklogic_url" << 'JSON_PAYLOAD'
+$(echo "$config_json" | jq .)
+JSON_PAYLOAD
+EOF
+        echo
         return 0
     fi
     
+    # First test if MarkLogic is accessible
+    log_verbose "Testing MarkLogic connectivity..."
+    local connectivity_test
+    local marklogic_curl_flags
+    marklogic_curl_flags=$(get_marklogic_curl_flags)
+    connectivity_test=$(curl -s -w "%{http_code}" -m 10 --anyauth -u "$MARKLOGIC_USER:$MARKLOGIC_PASS" \
+        $marklogic_curl_flags "$protocol://$host:$port" 2>/dev/null)
+    local test_status="${connectivity_test: -3}"
+    
+    if [ "$test_status" = "000" ]; then
+        log_error "Cannot connect to MarkLogic at $host:$port"
+        log_error "Please verify:"
+        log_error "  1. MarkLogic is running"
+        log_error "  2. Admin console is accessible at $protocol://$host:$port"
+        log_error "  3. Host and port are correct"
+        return 1
+    fi
+    
     local response status_code
-    response=$(curl -s -w "%{http_code}" --anyauth -u "$MARKLOGIC_USER:$MARKLOGIC_PASS" \
+    response=$(curl -s -w "%{http_code}" -m 30 --anyauth -u "$MARKLOGIC_USER:$MARKLOGIC_PASS" \
+        $marklogic_curl_flags \
         -H "Content-Type: application/json" \
         -d "$config_json" \
         "$marklogic_url" 2>/dev/null)
@@ -347,13 +520,23 @@ apply_marklogic_config() {
             log_success "External security configuration created successfully"
             return 0
             ;;
+        000)
+            log_error "Connection failed to MarkLogic management API"
+            log_error "URL: $marklogic_url"
+            log_error "Please check MarkLogic is running and management API is accessible"
+            return 1
+            ;;
         400)
             log_error "Bad request - check configuration parameters"
-            echo "$response_body" | jq . 2>/dev/null || echo "$response_body"
+            echo "$response_body" | jq . 2>/dev/null || echo "$response_body" >&2
             return 1
             ;;
         401)
-            log_error "Unauthorized - check MarkLogic credentials"
+            log_error "Unauthorized - check MarkLogic credentials (user: $MARKLOGIC_USER)"
+            return 1
+            ;;
+        403)
+            log_error "Forbidden - user $MARKLOGIC_USER lacks permissions for external security configuration"
             return 1
             ;;
         409)
@@ -363,7 +546,7 @@ apply_marklogic_config() {
             ;;
         *)
             log_error "Failed to create configuration (HTTP $status_code)"
-            echo "$response_body" | jq . 2>/dev/null || echo "$response_body"
+            echo "$response_body" | jq . 2>/dev/null || echo "$response_body" >&2
             return 1
             ;;
     esac
@@ -372,17 +555,38 @@ apply_marklogic_config() {
 # Update existing MarkLogic configuration
 update_marklogic_config() {
     local config_json="$1"
-    local marklogic_url="http://$MARKLOGIC_HOST:$MARKLOGIC_PORT/manage/v2/external-security/$CONFIG_NAME"
+    
+    # Use parsed URL components or fallback to original values
+    local protocol="${MARKLOGIC_PROTOCOL:-http}"
+    local host="${MARKLOGIC_HOST_ONLY:-$MARKLOGIC_HOST}"
+    local port="${MARKLOGIC_PORT_FROM_URL:-$MARKLOGIC_PORT}"
+    local marklogic_url="$protocol://$host:$port/manage/v2/external-security/$CONFIG_NAME"
     
     log_info "Updating existing MarkLogic configuration..."
     
     if [ "$DRY_RUN" = "true" ]; then
-        log_info "DRY RUN - Configuration that would be updated"
+        log_info "DRY RUN - Curl command that would be executed for update:"
+        echo
+        local marklogic_curl_flags
+        marklogic_curl_flags=$(get_marklogic_curl_flags)
+        cat << EOF
+curl -X PUT$([ -n "$marklogic_curl_flags" ] && echo " $marklogic_curl_flags") \\
+  --anyauth -u "$MARKLOGIC_USER:$MARKLOGIC_PASS" \\
+  -H "Content-Type: application/json" \\
+  -d '@-' \\
+  "$marklogic_url" << 'JSON_PAYLOAD'
+$(echo "$config_json" | jq .)
+JSON_PAYLOAD
+EOF
+        echo
         return 0
     fi
     
     local response status_code
+    local curl_flags
+    curl_flags=$(get_marklogic_curl_flags)
     response=$(curl -s -w "%{http_code}" --anyauth -u "$MARKLOGIC_USER:$MARKLOGIC_PASS" \
+        $curl_flags \
         -H "Content-Type: application/json" \
         -X PUT \
         -d "$config_json" \
@@ -424,94 +628,33 @@ add_jwt_secrets() {
     # Full JWKS to PEM conversion and secret installation requires additional tools
     log_warning "Manual JWT secret configuration may be required"
     log_info "Use the following endpoint to add JWT secrets manually:"
-    log_info "POST http://$MARKLOGIC_HOST:$MARKLOGIC_PORT/manage/v2/external-security/$CONFIG_NAME/jwt-secrets"
+    
+    # Use parsed URL components or fallback to original values
+    local protocol="${MARKLOGIC_PROTOCOL:-http}"
+    local host="${MARKLOGIC_HOST_ONLY:-$MARKLOGIC_HOST}"
+    local port="${MARKLOGIC_PORT_FROM_URL:-$MARKLOGIC_PORT}"
+    log_info "POST $protocol://$host:$port/manage/v2/external-security/$CONFIG_NAME/jwt-secrets"
     log_info "JWKS data available for manual conversion: $(echo "$jwks_json" | jq -c '.keys | length') keys found"
 }
 
-# ================================================================
-# TESTING FUNCTIONS
-# ================================================================
 
-# Test OAuth token generation with MLEAProxy
-test_mleaproxy_token_generation() {
-    if [ "$TEST_CONFIG" != "true" ]; then
-        log_info "Skipping configuration testing"
-        return 0
-    fi
-    
-    log_info "Testing OAuth token generation with MLEAProxy..."
-    
-    local token_url="$MLEAPROXY_URL/oauth/token"
-    local response access_token
-    
-    # Test client credentials flow
-    response=$(curl -s -X POST "$token_url" \
-        -H "Content-Type: application/x-www-form-urlencoded" \
-        -d "grant_type=client_credentials&client_id=test-client&client_secret=test-secret&scope=read:documents" 2>/dev/null) || {
-        log_warning "Failed to generate test token from MLEAProxy"
-        return 1
-    }
-    
-    access_token=$(echo "$response" | jq -r '.access_token // ""')
-    
-    if [ "$access_token" = "" ] || [ "$access_token" = "null" ]; then
-        log_warning "No access token received from MLEAProxy"
-        log_verbose "Response: $response"
-        return 1
-    fi
-    
-    log_success "Successfully generated test token from MLEAProxy"
-    log_verbose "Access token: ${access_token:0:50}..."
-    
-    # Test token validation
-    test_token_validation "$access_token"
-}
-
-# Test token validation against MarkLogic
-test_token_validation() {
-    local access_token="$1"
-    
-    log_info "Testing token validation against MarkLogic..."
-    
-    if [ "$DRY_RUN" = "true" ]; then
-        log_info "DRY RUN - Token validation would be tested"
-        return 0
-    fi
-    
-    # Test a simple MarkLogic API call with the token
-    local ml_api_url="http://$MARKLOGIC_HOST:8000/v1/documents"
-    local response status_code
-    
-    response=$(curl -s -w "%{http_code}" \
-        -H "Authorization: Bearer $access_token" \
-        "$ml_api_url" 2>/dev/null) || {
-        log_warning "Failed to test token against MarkLogic API"
-        return 1
-    }
-    
-    status_code="${response: -3}"
-    
-    case "$status_code" in
-        200|401|403)
-            # 200: Success, 401/403: Auth configured (may need valid user/roles)
-            log_success "Token validation test completed (HTTP $status_code)"
-            log_info "OAuth configuration appears to be working"
-            ;;
-        *)
-            log_warning "Unexpected response from MarkLogic API (HTTP $status_code)"
-            ;;
-    esac
-}
 
 # Validate the created configuration
 validate_configuration() {
     log_info "Validating MarkLogic OAuth2 configuration..."
     
-    local config_url="http://$MARKLOGIC_HOST:$MARKLOGIC_PORT/manage/v2/external-security/$CONFIG_NAME"
+    # Use parsed URL components or fallback to original values
+    local protocol="${MARKLOGIC_PROTOCOL:-http}"
+    local host="${MARKLOGIC_HOST_ONLY:-$MARKLOGIC_HOST}"
+    local port="${MARKLOGIC_PORT_FROM_URL:-$MARKLOGIC_PORT}"
+    local config_url="$protocol://$host:$port/manage/v2/external-security/$CONFIG_NAME"
+    
     local response status_code
+    local curl_flags
+    curl_flags=$(get_marklogic_curl_flags)
     
     response=$(curl -s -w "%{http_code}" --anyauth -u "$MARKLOGIC_USER:$MARKLOGIC_PASS" \
-        "$config_url" 2>/dev/null)
+        $curl_flags "$config_url" 2>/dev/null)
     
     status_code="${response: -3}"
     response_body="${response%???}"
@@ -589,17 +732,13 @@ parse_arguments() {
                 CLIENT_ID="$2"
                 shift 2
                 ;;
-            --no-jwks)
-                FETCH_JWKS="false"
+            --fetch-jwks-keys)
+                FETCH_JWKS="true"
                 shift
                 ;;
-            --no-test)
-                TEST_CONFIG="false"
+            --insecure)
+                INSECURE="true"
                 shift
-                ;;
-            --mleaproxy-url)
-                MLEAPROXY_URL="$2"
-                shift 2
                 ;;
             --verbose)
                 VERBOSE="true"
@@ -621,11 +760,10 @@ parse_arguments() {
         esac
     done
     
-    # Override with environment variables if set
-    MARKLOGIC_HOST="${MARKLOGIC_HOST:-${MARKLOGIC_HOST}}"
-    MARKLOGIC_USER="${MARKLOGIC_USER:-${MARKLOGIC_USER}}"
-    MARKLOGIC_PASS="${MARKLOGIC_PASS:-${MARKLOGIC_PASS}}"
-    MLEAPROXY_URL="${MLEAPROXY_URL:-${MLEAPROXY_URL}}"
+    # Override with environment variables if set (these may already be set, so preserve them)
+    MARKLOGIC_HOST="${MARKLOGIC_HOST:-localhost}"
+    MARKLOGIC_USER="${MARKLOGIC_USER:-admin}"
+    MARKLOGIC_PASS="${MARKLOGIC_PASS:-admin}"
 }
 
 # Main execution function
@@ -644,9 +782,22 @@ main() {
     
     validate_url "$WELL_KNOWN_URL" || exit 1
     
+    # Parse MarkLogic host early to show proper URL in logs
+    parse_marklogic_host "$MARKLOGIC_HOST"
+    local display_host_url="$MARKLOGIC_PROTOCOL://$MARKLOGIC_HOST_ONLY"
+    if [ -n "$MARKLOGIC_PORT_FROM_URL" ]; then
+        display_host_url="$display_host_url:$MARKLOGIC_PORT_FROM_URL"
+    fi
+    
     # Check dependencies
     check_dependencies
     echo
+    
+    # Test MarkLogic connectivity (skip in dry-run mode)
+    if [ "$DRY_RUN" != "true" ]; then
+        test_marklogic_connection || exit 1
+        echo
+    fi
     
     # Fetch and parse OAuth2 configuration
     local oauth_config
@@ -679,18 +830,12 @@ main() {
         echo
     fi
     
-    # Test configuration
-    if [ "$TEST_CONFIG" = "true" ]; then
-        test_mleaproxy_token_generation
-        echo
-    fi
-    
     # Summary
     log_success "=== Configuration Complete ==="
     log_info "External Security Name: $CONFIG_NAME"
     log_info "OAuth Issuer: $ISSUER"
     log_info "JWKS URI: ${JWKS_URI:-Not configured}"
-    log_info "MarkLogic Host: $MARKLOGIC_HOST:$MARKLOGIC_PORT"
+    log_info "MarkLogic Host: $display_host_url"
     
     if [ "$DRY_RUN" = "true" ]; then
         log_warning "This was a DRY RUN - no changes were made"
@@ -699,7 +844,30 @@ main() {
     echo
     log_info "Next steps:"
     log_info "1. Configure app servers to use external security: $CONFIG_NAME"
-    log_info "2. Test authentication with your OAuth2 provider"
+    echo
+    log_info "   To configure app servers, run:"
+    if [ "$MARKLOGIC_HOST_ONLY" != "localhost" ]; then
+        log_info "   ./scripts/configure-appserver-security.sh --appserver <SERVER_NAME> --external-security $CONFIG_NAME --marklogic-host $display_host_url"
+    else
+        log_info "   ./scripts/configure-appserver-security.sh --appserver <SERVER_NAME> --external-security $CONFIG_NAME"
+    fi
+    echo
+    log_info "   Examples:"
+    if [ "$MARKLOGIC_HOST_ONLY" != "localhost" ]; then
+        log_info "   ./scripts/configure-appserver-security.sh --appserver App-Services --external-security $CONFIG_NAME --marklogic-host $display_host_url"
+        log_info "   ./scripts/configure-appserver-security.sh --appserver Manage --external-security $CONFIG_NAME --marklogic-host $display_host_url --dry-run"
+    else
+        log_info "   ./scripts/configure-appserver-security.sh --appserver App-Services --external-security $CONFIG_NAME"
+        log_info "   ./scripts/configure-appserver-security.sh --appserver Manage --external-security $CONFIG_NAME --dry-run"
+    fi
+    echo
+    log_info "2. Test the OAuth2 configuration:"
+    if [ "$MARKLOGIC_HOST_ONLY" != "localhost" ]; then
+        log_info "   ./scripts/validate-oauth2-config.sh --well-known-url $WELL_KNOWN_URL --config-name $CONFIG_NAME --marklogic-host $display_host_url"
+    else
+        log_info "   ./scripts/validate-oauth2-config.sh --well-known-url $WELL_KNOWN_URL --config-name $CONFIG_NAME"
+    fi
+    echo
     log_info "3. Verify role mapping and user permissions"
     
     if [ "$FETCH_JWKS" = "true" ] && [ "$jwks_json" != "" ]; then

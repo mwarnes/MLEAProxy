@@ -1,0 +1,48 @@
+{
+  "users": [
+    {
+      "username": "manager",
+      "password": "password",
+      "dn": "cn=manager",
+      "roles": []
+    },
+    {
+      "username": "admin",
+      "password": "password",
+      "dn": "cn=admin",
+      "roles": ["admin"],
+      "rfc6238code": "IVKFK3B4OI4VQMDGENEVURT5GRYFIWTM"
+    },
+    {
+      "username": "user1",
+      "password": "password",
+      "dn": "cn=user1",
+      "roles": ["appreader", "appwriter", "appadmin"],
+      "rfc6238code": "IVKFK3B4OI4VQMDGENEVURT5GRYFIWTM"
+    },
+    {
+      "username": "user2",
+      "password": "password",
+      "dn": "cn=user2",
+      "roles": ["appreader", "appwriter"]
+    },
+    {
+      "username": "user3",
+      "password": "password",
+      "dn": "cn=user3",
+      "roles": ["appreader"]
+    },
+    {
+      "username": "user4",
+      "password": "password",
+      "dn": "cn=user4",
+      "roles": []
+    },
+    {
+      "username": "testuser",
+      "password": "password",
+      "dn": "cn=testuser",
+      "roles": []
+    }
+  ]
+}

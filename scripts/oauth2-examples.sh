@@ -98,21 +98,24 @@ cat << 'EOF'
 EOF
 echo
 
-# Example 4: Complete Integration Test
-echo "📝 Example 4: Complete Integration Test"
-echo "--------------------------------------"
+# Example 4: Validate Configuration
+echo "📝 Example 4: Validate Configuration"
+echo "-----------------------------------"
 echo
 cat << 'EOF'
-# Run complete MLEAProxy integration test
-./scripts/test-oauth2-integration.sh
+# Validate existing OAuth2 configuration
+./scripts/validate-oauth2-config.sh \
+  --well-known-url "http://localhost:8080/oauth/.well-known/config" \
+  --config-name "MLEAProxy-OAuth" \
+  --marklogic-host "localhost" \
+  --verbose
 
-# This will:
-# 1. Check/start MLEAProxy OAuth server
-# 2. Test OAuth2 discovery endpoints
-# 3. Test token generation flows
-# 4. Run configuration script
-# 5. Test end-to-end authentication
-# 6. Provide cleanup options
+# This will test:
+# 1. OAuth2 server connectivity
+# 2. Discovery endpoint validation
+# 3. Token generation flows  
+# 4. MarkLogic configuration verification
+# 5. End-to-end authentication validation
 EOF
 echo
 
@@ -130,10 +133,7 @@ cd MLEAProxy && mvn spring-boot:run &
 # 2. Wait for services to start
 sleep 60
 
-# 3. Run integration tests
-./scripts/test-oauth2-integration.sh
-
-# 4. Validate configuration
+# 3. Validate OAuth2 configuration
 ./scripts/validate-oauth2-config.sh \
     --oauth-server-url http://localhost:8080 \
     --config-name CI-Test \
