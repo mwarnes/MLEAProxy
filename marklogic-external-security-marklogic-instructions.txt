@@ -1,7 +1,7 @@
 # MarkLogic External Security Configuration Instructions
 # Generated for: marklogic
 # Description: In-memory LDAP server (marklogic)
-# Created: 2025-10-31T12:01:48.422246
+# Created: 2025-11-01T13:18:17.571493
 
 ## Overview
 This configuration creates an External Security object in MarkLogic that enables

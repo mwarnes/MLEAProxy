@@ -591,6 +591,221 @@ Technical implementation details, build notes, and development history:
 
 ---
 
+## 🔧 Configuration Override Reference
+
+### System Property Overrides
+
+MLEAProxy supports extensive configuration through system properties using `-D` flags. All configuration parameters can be overridden at runtime without modifying property files.
+
+#### Configuration Loading Priority
+
+Properties are loaded in this order (later sources override earlier ones):
+
+1. `classpath:mleaproxy.properties` (bundled in JAR - lowest priority)
+2. `/etc/mleaproxy.properties` (system-wide)
+3. `${HOME}/mleaproxy.properties` (user-specific)
+4. `./mleaproxy.properties` (current directory)
+5. `./ldap.properties`, `./saml.properties`, `./oauth.properties`, `./directory.properties`
+6. **System properties** via `-D` flags (highest priority)
+
+#### Spring Boot Application Properties
+
+```bash
+# Server configuration
+-Dserver.port=8443                                    # Web server port (default: 8080)
+-Dserver.ssl.enabled=true                            # Enable SSL/HTTPS
+-Dserver.ssl.key-store=/path/to/keystore.jks         # SSL keystore location
+-Dserver.ssl.key-store-password=changeme             # SSL keystore password
+
+# Logging configuration
+-Dlogging.level.root=DEBUG                           # Root log level (INFO|DEBUG|WARN|ERROR)
+-Dlogging.level.com.marklogic=TRACE                  # Package-specific logging
+-Dlogging.file=/var/log/mleaproxy/application.log    # Log file location
+-Dlogging.pattern.console="%d{HH:mm:ss} %-5level %logger{36} - %msg%n"
+
+# Users JSON repository
+-Dusers.json.path=/path/to/users.json                # Custom users JSON file location
+```
+
+#### OAuth Configuration Properties
+
+```bash
+# OAuth server configuration
+-Doauth.server.base.url=http://my-server:8080        # OAuth server base URL
+-Doauth.token.validity=7200                          # Token validity in seconds (default: 3600)
+-Doauth.keypath=/path/to/privkey.pem                 # RSA private key path
+-Doauth.default.roles=user,reader                    # Default roles for unknown users
+
+# OAuth advanced settings
+-Doauth.issuer=http://my-server:8080                 # JWT issuer claim
+-Doauth.audience=marklogic                           # JWT audience claim
+-Doauth.client.id=my-client                          # OAuth client ID
+-Doauth.client.secret=my-secret                      # OAuth client secret
+```
+
+#### SAML Configuration Properties
+
+```bash
+# SAML debug and certificates
+-Dsaml.debug=true                                    # Enable SAML debug logging
+-Dsaml.capath=/path/to/certificate.pem              # SAML certificate path
+-Dsaml.keypath=/path/to/rsakey.pem                   # SAML private key path
+-Dsaml.response.validity=600                         # Response validity in seconds (default: 300)
+-Dsaml.default.roles=user,reader                     # Default roles for unknown users
+
+# SAML IdP configuration
+-Dsaml.idp.entity.id=http://my-server:8080/saml/idp # IdP entity ID
+-Dsaml.idp.sso.url=http://my-server:8080/saml/auth  # SSO endpoint URL
+```
+
+#### LDAP Proxy Configuration Properties
+
+```bash
+# LDAP debug logging
+-Dldap.debug=true                                    # Enable detailed LDAP logging
+
+# LDAP listeners to start
+-Dldaplisteners=proxy,secure                         # Comma-separated listener names
+
+# LDAP listener configuration (replace 'proxy' with your listener name)
+-Dldaplistener.proxy.ipaddress=0.0.0.0              # Listener IP address
+-Dldaplistener.proxy.port=20389                     # Listener port
+-Dldaplistener.proxy.secure=true                    # Enable SSL/TLS
+-Dldaplistener.proxy.debuglevel=DEBUG               # Listener debug level
+-Dldaplistener.proxy.ldapset=set1                   # Backend server set
+-Dldaplistener.proxy.ldapmode=single                # Mode: single|failover|roundrobin
+-Dldaplistener.proxy.requestProcessor=ldapproxy     # Request processor name
+-Dldaplistener.proxy.description="LDAP Proxy"       # Listener description
+
+# LDAP listener SSL configuration
+-Dldaplistener.proxy.keystore=/path/to/keystore.jks # SSL keystore
+-Dldaplistener.proxy.keystorepasswd=changeme        # Keystore password
+-Dldaplistener.proxy.truststore=/path/to/trust.jks  # SSL truststore
+-Dldaplistener.proxy.truststorepasswd=changeme      # Truststore password
+```
+
+#### Backend LDAP Server Configuration
+
+```bash
+# LDAP server configuration (replace 'server1' with your server name)
+-Dldapserver.server1.host=ldap.company.com          # LDAP server hostname
+-Dldapserver.server1.port=636                       # LDAP server port
+-Dldapserver.server1.authtype=simple                # Authentication type
+
+# LDAP server sets for load balancing/failover
+-Dldapset.set1.servers=server1,server2              # Comma-separated server list
+-Dldapset.set1.mode=roundrobin                      # Mode: single|failover|roundrobin
+-Dldapset.set1.secure=true                          # Use SSL/TLS to backend
+-Dldapset.set1.keytype=PEM                          # Certificate type (PEM|JKS|PFX)
+
+# SSL/TLS configuration for backend connections
+-Dldapset.set1.keypath=/path/to/client-key.pem      # Client private key
+-Dldapset.set1.certpath=/path/to/client-cert.pem    # Client certificate
+-Dldapset.set1.capath=/path/to/ca-cert.pem          # CA certificate
+-Dldapset.set1.keystore=/path/to/keystore.jks       # Client keystore
+-Dldapset.set1.keystorepasswd=changeme              # Keystore password
+-Dldapset.set1.truststore=/path/to/truststore.jks   # Trust store
+-Dldapset.set1.truststorepasswd=changeme            # Trust store password
+```
+
+#### Request Processor Configuration
+
+```bash
+# Request processor settings (replace 'ldapproxy' with your processor name)
+-DrequestProcessor.ldapproxy.authclass=com.marklogic.processors.ProxyRequestProcessor
+-DrequestProcessor.ldapproxy.debuglevel=DEBUG       # Processor debug level
+-DrequestProcessor.ldapproxy.parm1=value1           # Custom parameter 1
+-DrequestProcessor.ldapproxy.parm2=value2           # Custom parameter 2
+# ... supports up to parm20
+```
+
+#### In-Memory Directory Server Configuration
+
+```bash
+# Directory servers to start (for testing)
+-DdirectoryServers=marklogic,test                    # Comma-separated server list
+
+# Directory server configuration (replace 'marklogic' with your server name)
+-Dds.marklogic.name=MarkLogic1                      # Server display name
+-Dds.marklogic.ipaddress=0.0.0.0                    # Server IP address
+-Dds.marklogic.port=61389                           # Server port
+-Dds.marklogic.basedn=dc=MarkLogic,dc=Local         # Base DN
+-Dds.marklogic.admindn=cn=Directory Manager         # Admin DN
+-Dds.marklogic.adminpw=password                     # Admin password
+-Dds.marklogic.ldifpath=/path/to/users.ldif         # LDIF file path (optional)
+```
+
+#### Kerberos Configuration Properties
+
+```bash
+# Kerberos KDC configuration
+-Dkerberos.enabled=true                              # Enable Kerberos KDC
+-Dkerberos.realm=MARKLOGIC.LOCAL                     # Kerberos realm
+-Dkerberos.kdc.host=localhost                        # KDC hostname
+-Dkerberos.kdc.port=60088                            # KDC port
+-Dkerberos.admin.port=60749                          # Admin port
+-Dkerberos.debug=true                                # Enable Kerberos debug
+
+# Principal management
+-Dkerberos.principals.import-from-ldap=true          # Import from LDAP
+-Dkerberos.principals.ldap-base-dn=dc=MarkLogic,dc=Local # LDAP base DN
+-Dkerberos.service-principals=HTTP/localhost,ldap/localhost # Service principals
+-Dkerberos.work-dir=./kerberos                       # Working directory
+```
+
+### Common Override Examples
+
+#### Development Environment
+
+```bash
+# Start MLEAProxy with development settings
+java -Dlogging.level.root=DEBUG \
+     -Dldap.debug=true \
+     -Dsaml.debug=true \
+     -Dserver.port=8090 \
+     -Dldaplistener.proxy.port=20389 \
+     -jar target/mlesproxy-2.0.0.jar
+```
+
+#### Production Environment
+
+```bash
+# Start MLEAProxy with production settings
+java -Dlogging.level.root=WARN \
+     -Dlogging.file=/var/log/mleaproxy/production.log \
+     -Dserver.port=8443 \
+     -Dserver.ssl.enabled=true \
+     -Dserver.ssl.key-store=/etc/mleaproxy/keystore.jks \
+     -Dserver.ssl.key-store-password=changeme \
+     -Doauth.server.base.url=https://auth.company.com:8443 \
+     -Dldapserver.server1.host=ldap.company.com \
+     -Dldapserver.server1.port=636 \
+     -jar target/mlesproxy-2.0.0.jar
+```
+
+#### Quick Backend LDAP Override
+
+```bash
+# Override backend LDAP server without editing files
+java -Dldapserver.server1.host=new-ldap.company.com \
+     -Dldapserver.server1.port=636 \
+     -Dldapset.set1.secure=true \
+     -jar target/mlesproxy-2.0.0.jar
+```
+
+#### Container/Docker Environment
+
+```bash
+# Using environment variables (Docker/Kubernetes)
+docker run -e "JAVA_OPTS=-Dserver.port=8080 \
+                          -Doauth.server.base.url=http://oauth.company.com:8080 \
+                          -Dldapserver.server1.host=ldap.company.com \
+                          -Dldapserver.server1.port=636" \
+           mleaproxy:latest
+```
+
+---
+
 ## 🤝 Support
 
 ### Issues and Questions
