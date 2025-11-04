@@ -220,9 +220,17 @@ public class OAuthTokenHandler {
                                    username, String.join(",", roles));
                     } else {
                         // Priority 2: Use roles from JSON if no roles in request
-                        roles = userInfo.getRoles();
-                        logger.info("Using roles from JSON for user '{}': {}", 
-                                   username, String.join(",", roles));
+                        List<String> userRoles = userInfo.getRoles();
+                        if (!userRoles.isEmpty()) {
+                            roles = userRoles;
+                            logger.info("Priority 2: Using roles from JSON for user '{}': {}", 
+                                       username, String.join(",", roles));
+                        } else {
+                            // User has empty roles in JSON, use default roles
+                            roles = parseRoles(defaultRoles);
+                            logger.info("Priority 3: User '{}' found in JSON but has no roles assigned, using default roles: {}", 
+                                       username, defaultRoles);
+                        }
                     }
                 } else {
                     // User not found in JSON repository

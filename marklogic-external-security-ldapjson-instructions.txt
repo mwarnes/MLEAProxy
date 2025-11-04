@@ -1,7 +1,7 @@
 # MarkLogic External Security Configuration Instructions
 # Generated for: ldapjson
 # Description: Simple LDAP Server using JSON user store
-# Created: 2025-11-01T13:18:17.584896
+# Created: 2025-11-04T12:15:47.478934
 
 ## Overview
 This configuration creates an External Security object in MarkLogic that enables
