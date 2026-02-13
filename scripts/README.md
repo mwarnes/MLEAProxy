@@ -15,6 +15,7 @@ This directory contains convenience scripts for starting MLEAProxy in different 
 | **start-all.sh** | Start all protocols (LDAP + OAuth + SAML + Kerberos) |
 | **stop.sh** | Stop MLEAProxy (find and kill Java process) |
 | **status.sh** | Check MLEAProxy status |
+| **check-version.sh** | Check local version against latest GitHub release |
 
 **Note**: All startup scripts display comprehensive server information including endpoints, credentials, available users, and testing commands upon successful launch.
 
@@ -265,6 +266,71 @@ Checks MLEAProxy status.
 - Configuration in use
 - Active endpoints
 - Log file location
+
+---
+
+### check-version.sh
+
+Checks local MLEAProxy version against the latest GitHub release.
+
+**Checks**:
+
+- Local project version (from pom.xml)
+- Local JAR file details (size, date, manifest)
+- Latest GitHub release version
+- Git repository status
+- Build status
+
+**Output Includes**:
+
+- Version comparison with update instructions
+- Git branch and commit info
+- Remote synchronization status
+- Build recommendations if JAR is missing
+
+**Usage:**
+
+```bash
+./scripts/check-version.sh
+```
+
+**Sample Output:**
+
+```text
+📦 Local Project Version:
+  Version: 2.0.0
+  Source: pom.xml
+
+📁 Local JAR File:
+  Path: release/mlesproxy-2.0.0.jar
+  Size: 63M
+  Manifest Version: 2.0.0
+
+🌐 Checking GitHub for latest release...
+  Latest Release: 2.0.1
+  Published: 2025-10-15
+  URL: https://github.com/mwarnes/MLEAProxy/releases/tag/v2.0.1
+
+⚠️  A newer version is available!
+  Local Version:  2.0.0
+  Latest Version: 2.0.1
+
+To update:
+  1. Pull latest changes: git pull origin master
+  2. Rebuild: ./build.sh clean package
+  3. Or download release: https://github.com/mwarnes/MLEAProxy/releases/tag/v2.0.1
+
+📍 Current Branch: master
+📝 Latest Commit: e242225 - docs: add comprehensive .gitignore and cleanup guide
+🔄 Remote Status: Up to date
+```
+
+**Use Cases:**
+
+- Verify you have the latest version before deploying
+- Check if updates are available
+- Confirm successful build after git pull
+- Validate JAR file before distributing
 
 ---
 
