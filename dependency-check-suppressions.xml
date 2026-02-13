@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+    <!--
+        OWASP Dependency Check Suppressions for MLEAProxy
+
+        This is a TESTING AND DIAGNOSTIC tool only - not for production use.
+        Some vulnerabilities are acceptable for a development/testing tool.
+
+        Suppress only well-documented false positives or vulnerabilities that:
+        1. Do not apply to testing/diagnostic use cases
+        2. Are in test-only dependencies
+        3. Are verified false positives with the library vendor
+
+        Review and update this file periodically as new CVEs are discovered.
+    -->
+
+    <!-- Example suppression (remove if not needed):
+    <suppress>
+        <notes><![CDATA[
+        False positive: CVE does not affect this usage pattern in a testing tool
+        ]]></notes>
+        <packageUrl regex="true">^pkg:maven/org\.example/library@.*$</packageUrl>
+        <cve>CVE-XXXX-XXXXX</cve>
+    </suppress>
+    -->
+
+</suppressions>

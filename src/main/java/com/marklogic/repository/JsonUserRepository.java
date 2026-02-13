@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -121,14 +122,15 @@ public class JsonUserRepository {
     /**
      * Internal wrapper class for JSON deserialization.
      */
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private static class UsersWrapper {
         @JsonProperty("users")
         private List<UserInfo> users;
-        
+
         public List<UserInfo> getUsers() {
             return users;
         }
-        
+
         public void setUsers(List<UserInfo> users) {
             this.users = users;
         }

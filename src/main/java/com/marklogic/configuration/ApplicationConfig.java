@@ -44,5 +44,16 @@ public interface ApplicationConfig extends Config {
     @DefaultValue("300")
     int SamlResponseDuration();
 
+    /**
+     * Controls SSL certificate verification for LDAP backend connections.
+     * Default is false (uses TrustAllTrustManager) which is appropriate for testing.
+     * Set to true to enable proper certificate validation.
+     *
+     * @return true to verify SSL certificates, false to trust all (default for testing)
+     */
+    @Key("ssl.verify.certificates")
+    @DefaultValue("false")
+    boolean sslVerifyCertificates();
+
 }
 

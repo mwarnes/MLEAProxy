@@ -30,8 +30,9 @@ This folder contains technical implementation details, build notes, migration su
 - **[JJWT_MIGRATION_PLAN.md](./JJWT_MIGRATION_PLAN.md)** - Plan for migrating to JJWT 0.12.x
 - **[JJWT_MIGRATION_COMPLETE.md](./JJWT_MIGRATION_COMPLETE.md)** - JJWT migration completion summary
 
-### Code Quality & Fixes
+### Code Quality & Refactoring
 
+- **[PHASE_1_4_REFACTORING_COMPLETE.md](./PHASE_1_4_REFACTORING_COMPLETE.md)** - ✨ **NEW** Comprehensive refactoring summary (Phases 1-4: Security hardening, dependency updates, service-oriented architecture)
 - **[CODE_REVIEW_2025.md](./CODE_REVIEW_2025.md)** - 2025 code review findings and recommendations
 - **[CODE_FIXES_SUMMARY_2025.md](./CODE_FIXES_SUMMARY_2025.md)** - Summary of code fixes applied in 2025
 - **[TEST_SUITE_SUMMARY.md](./TEST_SUITE_SUMMARY.md)** - Test suite overview and coverage
@@ -96,4 +97,4 @@ This folder contains technical implementation details, build notes, migration su
 
 ---
 
-**Last Updated**: October 8, 2025
+**Last Updated**: February 13, 2026

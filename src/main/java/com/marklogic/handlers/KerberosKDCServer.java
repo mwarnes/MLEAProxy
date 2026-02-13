@@ -16,23 +16,29 @@ import java.util.List;
 
 /**
  * Embedded Kerberos KDC (Key Distribution Center) Server using Apache Kerby.
- * 
- * This class manages an in-memory Kerberos KDC for testing and development purposes.
- * It provides the same user-friendly approach as the UnboundID in-memory LDAP server.
- * 
+ *
+ * <p><strong>⚠️ WARNING: TESTING AND DIAGNOSTIC TOOL ONLY - DO NOT USE IN PRODUCTION</strong></p>
+ *
+ * <p>This class uses hardcoded passwords ("password") for all Kerberos principals for ease of testing.
+ * This is intentional and acceptable for a diagnostic tool but would be a critical security
+ * vulnerability in production. See lines 164, 191-196, 339, 343-348 for hardcoded credentials.</p>
+ *
+ * <p>This class manages an in-memory Kerberos KDC for testing and development purposes.
+ * It provides the same user-friendly approach as the UnboundID in-memory LDAP server.</p>
+ *
  * Features:
  * - Automatic principal creation from LDAP users
  * - Auto-generated krb5.conf for clients
  * - Service principal keytab generation
  * - Localhost-optimized (no DNS requirements)
- * 
+ *
  * Usage:
  * <pre>
  * KerberosConfig config = ConfigFactory.create(KerberosConfig.class);
  * KerberosKDCServer kdc = new KerberosKDCServer(config);
  * kdc.start();
  * </pre>
- * 
+ *
  * @see org.apache.kerby.kerberos.kerb.server.SimpleKdcServer
  * @since 2.0.0
  */

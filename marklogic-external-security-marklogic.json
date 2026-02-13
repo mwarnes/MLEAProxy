@@ -1,13 +1,16 @@
 {
-  "external-security-name": "MLEAProxy-marklogic",
-  "description": "In-memory LDAP server (marklogic)",
+  "external-security-name": "marklogic",
+  "description": "External Security configuration for in-memory LDAP server marklogic",
   "authentication": "ldap",
-  "cache-timeout": "300",
+  "cache-timeout": 300,
   "authorization": "ldap",
   "ldap-server-uri": "ldap://localhost:61389",
   "ldap-base": "dc=MarkLogic,dc=Local",
   "ldap-attribute": "uid",
-  "ldap-default-user": "default",
-  "ldap-password": "password",
+  "ldap-default-user": "",
+  "ldap-password": "",
   "ldap-bind-method": "simple"
 }
+# Created: 2026-02-13
+# This configuration enables MarkLogic to authenticate users against the LDAP server.
+# Use the MarkLogic Management REST API to import this configuration.

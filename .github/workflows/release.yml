@@ -1,4 +1,5 @@
-# This workflow builds the project and uploads the JAR to GitHub Releases when a new release is published.
+# This workflow builds the project, runs tests, checks for vulnerabilities,
+# and uploads the JAR to GitHub Releases when a new release is published.
 # It ensures the downloadable JAR is always available at the latest release URL referenced in the README.
 
 name: Release JAR
@@ -19,18 +20,36 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+          cache: 'maven'
 
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
+      - name: Run tests
+        run: mvn clean test
+
+      - name: Check for security vulnerabilities
+        run: mvn dependency-check:check
+        continue-on-error: true  # Don't fail release for non-critical CVEs in testing tool
+
+      - name: Build release artifact
+        run: mvn package -DskipTests  # Tests already run above
+
+      - name: Generate checksums
+        run: |
+          cd target
+          sha256sum mlesproxy-*.jar > mlesproxy.jar.sha256
+          cd ..
 
       - name: Copy JAR to release directory
         run: |
           mkdir -p release
           cp target/mlesproxy-*.jar release/mleaproxy.jar
+          cp target/mlesproxy-*.jar.sha256 release/mleaproxy.jar.sha256
 
-      - name: Upload JAR to GitHub Release
+      - name: Upload artifacts to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release/mleaproxy.jar
+          files: |
+            release/mleaproxy.jar
+            release/mleaproxy.jar.sha256
+            target/site/jacoco/index.html
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

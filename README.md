@@ -27,11 +27,40 @@
 
 ---
 
+## ⚠️ IMPORTANT: Testing & Diagnostic Tool Only
+
+**MLEAProxy is designed EXCLUSIVELY for testing, diagnostics, and development environments.**
+
+**🚨 DO NOT USE IN PRODUCTION 🚨**
+
+This application intentionally includes the following for ease of testing:
+- **Hardcoded credentials** ("password" for test users, "654321" for keystores)
+- **Plaintext password storage** (no bcrypt/hashing)
+- **TrustAllTrustManager** (disables SSL certificate validation)
+- **Simplified injection prevention** (not production-grade)
+- **Test data in code** (Kerberos principals, LDAP users)
+
+These are **acceptable and intentional** for a testing tool but would be **critical security vulnerabilities** in production.
+
+### If Adapting for Production Use:
+
+You would need to:
+1. Implement password hashing (bcrypt, PBKDF2, or Argon2)
+2. Remove all hardcoded credentials, use environment variables/secrets management
+3. Enable proper SSL certificate validation (replace TrustAllTrustManager)
+4. Implement production-grade input validation (XXE protection, LDAP injection prevention)
+5. Add rate limiting, CSRF protection, and security headers
+6. Conduct a full security audit
+
+**Use this tool at your own risk. No warranty is provided.**
+
+---
+
 ## ✨ Overview
 
 **MLEAProxy** is a comprehensive authentication proxy and development server that supports multiple authentication protocols. Originally designed for MarkLogic Server external authentication diagnostics, it has evolved into a full-featured authentication platform supporting LDAP, OAuth 2.0, and SAML 2.0.
 
-### 🎯 Key Features
+###  🎯 Key Features
 
 - **LDAP/LDAPS**: Proxy mode, load balancing, standalone server, in-memory or JSON directory.
 - **OAuth 2.0**: JWT token generation, JWKS endpoint, RFC 8414 metadata, 3-tier role resolution, refresh tokens

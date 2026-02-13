@@ -48,4 +48,4 @@ This folder contains all user-facing documentation for MLEAProxy, including conf
 
 ---
 
-**Last Updated**: October 8, 2025
+**Last Updated**: February 13, 2026

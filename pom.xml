@@ -103,15 +103,12 @@
         <dependency>
             <groupId>com.unboundid</groupId>
             <artifactId>unboundid-ldapsdk</artifactId>
-            <version>7.0.3</version>
+            <version>7.0.4</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/io.undertow/undertow-core -->
-        <dependency>
-            <groupId>io.undertow</groupId>
-            <artifactId>undertow-core</artifactId>
-            <version>2.3.20.Final</version>
-        </dependency>
+        <!-- Undertow version managed by Spring Boot parent (compatible with 3.3.5) -->
+        <!-- Removed explicit undertow-core version to avoid binary incompatibility with Spring Boot's embedded Undertow -->
+        <!-- Spring Boot 3.3.5 manages undertow-core version automatically -->
 
         <dependency>
             <groupId>org.aeonbits.owner</groupId>
@@ -128,7 +125,7 @@
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20240303</version>
+            <version>20251224</version>
         </dependency>
 
         <dependency>
@@ -140,13 +137,13 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>33.3.1-jre</version>
+            <version>33.5.0-jre</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>3.18.0</version>
+            <version>3.20.0</version>
         </dependency>
 
         <dependency>
@@ -170,53 +167,53 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
-            <version>1.82</version>
+            <version>1.83</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk18on</artifactId>
-            <version>1.82</version>
+            <version>1.83</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcutil-jdk18on</artifactId>
-            <version>1.82</version>
+            <version>1.83</version>
         </dependency>
         <!-- OpenSAML 4.x - Java 21 Compatible with proper Shibboleth repository -->
         <dependency>
             <groupId>org.opensaml</groupId>
             <artifactId>opensaml-core</artifactId>
-            <version>4.3.0</version>
+            <version>4.3.2</version>
         </dependency>
         <dependency>
             <groupId>org.opensaml</groupId>
             <artifactId>opensaml-saml-api</artifactId>
-            <version>4.3.0</version>
+            <version>4.3.2</version>
         </dependency>
         <dependency>
             <groupId>org.opensaml</groupId>
             <artifactId>opensaml-saml-impl</artifactId>
-            <version>4.3.0</version>
+            <version>4.3.2</version>
         </dependency>
         <dependency>
             <groupId>org.opensaml</groupId>
             <artifactId>opensaml-xmlsec-api</artifactId>
-            <version>4.3.0</version>
+            <version>4.3.2</version>
         </dependency>
         <dependency>
             <groupId>org.opensaml</groupId>
             <artifactId>opensaml-xmlsec-impl</artifactId>
-            <version>4.3.0</version>
+            <version>4.3.2</version>
         </dependency>
         <dependency>
             <groupId>org.opensaml</groupId>
             <artifactId>opensaml-security-api</artifactId>
-            <version>4.3.0</version>
+            <version>4.3.2</version>
         </dependency>
         <dependency>
             <groupId>org.opensaml</groupId>
             <artifactId>opensaml-security-impl</artifactId>
-            <version>4.3.0</version>
+            <version>4.3.2</version>
         </dependency>
         
         <!-- OAuth2/OIDC Support for Future Development -->
@@ -237,18 +234,18 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.12.6</version>
+            <version>0.13.0</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>0.12.6</version>
+            <version>0.13.0</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>0.12.6</version>
+            <version>0.13.0</version>
             <scope>runtime</scope>
         </dependency>
         
@@ -347,12 +344,93 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
-                    <argLine>
+                    <!-- ${argLine} is populated by JaCoCo prepare-agent, keep it first -->
+                    <argLine>@{argLine}
                         --add-opens java.base/java.lang=ALL-UNNAMED
                         --add-opens java.base/sun.misc=ALL-UNNAMED
                         -Djdk.module.illegalAccess.silent=true
                     </argLine>
                 </configuration>
+            </plugin>
+
+            <!-- OWASP Dependency Check - Security vulnerability scanning -->
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>12.2.0</version>
+                <configuration>
+                    <!-- Fail build if CVSS score >= 7 (High severity) -->
+                    <failBuildOnCVSS>7</failBuildOnCVSS>
+                    <!-- Suppress known false positives for testing tool -->
+                    <suppressionFiles>
+                        <suppressionFile>${project.basedir}/dependency-check-suppressions.xml</suppressionFile>
+                    </suppressionFiles>
+                    <formats>
+                        <format>HTML</format>
+                        <format>JSON</format>
+                    </formats>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Maven Enforcer - Enforce build requirements -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>enforce-maven</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>[3.6.0,)</version>
+                                    <message>Maven 3.6.0 or higher is required</message>
+                                </requireMavenVersion>
+                                <requireJavaVersion>
+                                    <version>[21,)</version>
+                                    <message>Java 21 or higher is required</message>
+                                </requireJavaVersion>
+                                <!-- dependencyConvergence disabled - too strict for testing tool with multiple third-party libs -->
+                                <!-- Maven's "nearest wins" strategy will use our explicit newer versions -->
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- JaCoCo - Code coverage analysis -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                    <!-- Coverage check disabled for testing tool - current coverage ~27% -->
+                    <!-- Report generated at target/site/jacoco/index.html for visibility -->
+                    <!-- To enforce coverage, run: mvn jacoco:check with custom thresholds -->
+                </executions>
             </plugin>
         </plugins>
     </build>

@@ -1,13 +1,16 @@
 {
-  "external-security-name": "MLEAProxy-ldapjson",
-  "description": "Simple LDAP Server using JSON user store",
+  "external-security-name": "ldapjson",
+  "description": "External Security configuration for ldapjson listener",
   "authentication": "ldap",
-  "cache-timeout": "300",
+  "cache-timeout": 300,
   "authorization": "ldap",
   "ldap-server-uri": "ldap://localhost:20389",
-  "ldap-base": "ou=users,dc=marklogic,dc=local",
-  "ldap-attribute": "sAMAccountName",
-  "ldap-default-user": "default",
-  "ldap-password": "password",
+  "ldap-base": "dc=marklogic,dc=local",
+  "ldap-attribute": "uid",
+  "ldap-default-user": "",
+  "ldap-password": "",
   "ldap-bind-method": "simple"
 }
+# Created: 2026-02-13
+# This configuration enables MarkLogic to authenticate users against the LDAP server.
+# Use the MarkLogic Management REST API to import this configuration.

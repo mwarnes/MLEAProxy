@@ -56,9 +56,11 @@ public final class LDAPRequestHandler
     private static final int MAX_DN_LENGTH = 1024; // Max DN length
     private static final int MAX_FILTER_LENGTH = 2048; // Max filter length
     
-    // Rate limiting (simple implementation)
-    private static volatile long lastRequestTime = 0;
-    private static volatile int requestCount = 0;
+    // Rate limiting (thread-safe implementation)
+    private static final java.util.concurrent.atomic.AtomicLong lastRequestTime =
+        new java.util.concurrent.atomic.AtomicLong(0);
+    private static final java.util.concurrent.atomic.AtomicInteger requestCount =
+        new java.util.concurrent.atomic.AtomicInteger(0);
     private static final int MAX_REQUESTS_PER_SECOND = 100;
 
     // The connection to the LDAP server to which requests will be forwarded.
@@ -71,6 +73,9 @@ public final class LDAPRequestHandler
     private final ServerSet serverSet;
 
     private final String requestProcessor;
+
+    // Cached processor instance (initialized once, reused for performance)
+    private IRequestProcessor cachedProcessor;
 
     /**
      * Validates and sanitizes LDAP request parameters for security
@@ -144,24 +149,29 @@ public final class LDAPRequestHandler
     }
     
     /**
-     * Simple rate limiting check
+     * Thread-safe rate limiting check using atomic operations.
+     * Limits requests to MAX_REQUESTS_PER_SECOND per second globally across all instances.
      */
     private boolean isRateLimited() {
         long currentTime = System.currentTimeMillis();
-        
-        // Reset counter every second
-        if (currentTime - lastRequestTime > 1000) {
-            lastRequestTime = currentTime;
-            requestCount = 0;
+        long lastTime = lastRequestTime.get();
+
+        // Reset counter every second (atomic compare-and-set to prevent race conditions)
+        if (currentTime - lastTime > 1000) {
+            // Only one thread will successfully set the new time
+            if (lastRequestTime.compareAndSet(lastTime, currentTime)) {
+                requestCount.set(0);
+            }
         }
-        
-        requestCount++;
-        
-        if (requestCount > MAX_REQUESTS_PER_SECOND) {
-            logger.warn("Rate limit exceeded: {} requests in the last second", requestCount);
+
+        // Atomically increment and get the new count
+        int currentCount = requestCount.incrementAndGet();
+
+        if (currentCount > MAX_REQUESTS_PER_SECOND) {
+            logger.warn("Rate limit exceeded: {} requests in the last second", currentCount);
             return true;
         }
-        
+
         return false;
     }
 
@@ -169,7 +179,7 @@ public final class LDAPRequestHandler
      * Creates a new instance of this proxy request handler that will use the
      * provided {@link ServerSet} to connect to an LDAP server.
      */
-    LDAPRequestHandler(ServerSet serverSet, String auth) throws Exception {
+    public LDAPRequestHandler(ServerSet serverSet, String auth) throws Exception {
 
         Validator.ensureNotNull(serverSet);
         this.serverSet = serverSet;
@@ -470,7 +480,12 @@ public final class LDAPRequestHandler
     }
 
     private IRequestProcessor getProcessor() {
-        logger.debug("Processor serverSet : {}", serverSet);
+        // Return cached processor if already initialized
+        if (cachedProcessor != null) {
+            return cachedProcessor;
+        }
+
+        logger.debug("Initializing processor for serverSet: {}", serverSet);
 
         if (requestProcessor == null || requestProcessor.trim().isEmpty()) {
             logger.error("Request processor name is null or empty");
@@ -478,33 +493,56 @@ public final class LDAPRequestHandler
         }
 
         // Get Processor Class and Config Class names
-        logger.debug("Processor Config : {}", requestProcessor);
+        logger.debug("Processor Config: {}", requestProcessor);
         Map<String, Object> appVars = new HashMap<>();
         appVars.put("requestProcessor", requestProcessor);
         ProcessorConfig processorCfg = ConfigFactory.create(ProcessorConfig.class, appVars);
 
         // Create and initialize Processor
-        logger.debug("Processor Class: {}", processorCfg.requestProcessorClass());
-        IRequestProcessor processor = null;
+        String processorClassName = processorCfg.requestProcessorClass();
+        logger.debug("Processor Class: {}", processorClassName);
+
         try {
-            if (processorCfg.requestProcessorClass() == null || processorCfg.requestProcessorClass().trim().isEmpty()) {
+            if (processorClassName == null || processorClassName.trim().isEmpty()) {
                 logger.error("Processor class name is null or empty");
                 return null;
             }
-            
-            @SuppressWarnings("unchecked")
-            Class<IRequestProcessor> clazzAuth = (Class<IRequestProcessor>) Class.forName(processorCfg.requestProcessorClass());
-            processor = clazzAuth.getDeclaredConstructor().newInstance();
+
+            // Load the class
+            Class<?> clazz = Class.forName(processorClassName);
+
+            // Validate that it implements IRequestProcessor interface
+            if (!IRequestProcessor.class.isAssignableFrom(clazz)) {
+                logger.error("Class {} does not implement IRequestProcessor interface", processorClassName);
+                return null;
+            }
+
+            // Safe cast now that we've validated the type
+            Class<? extends IRequestProcessor> processorClass = clazz.asSubclass(IRequestProcessor.class);
+
+            // Create instance and initialize
+            IRequestProcessor processor = processorClass.getDeclaredConstructor().newInstance();
             processor.initialize(processorCfg);
+
+            // Cache for future use
+            cachedProcessor = processor;
+            logger.info("Processor {} successfully initialized and cached", processorClassName);
+
+            return processor;
+
         } catch (ClassNotFoundException e) {
-            logger.error("Processor class not found: {}", processorCfg.requestProcessorClass(), e);
-        } catch (InstantiationException | IllegalAccessException e) {
-            logger.error("Cannot instantiate processor class: {}", processorCfg.requestProcessorClass(), e);
+            logger.error("Processor class not found: {}", processorClassName, e);
+        } catch (NoSuchMethodException e) {
+            logger.error("Processor class {} does not have a no-argument constructor", processorClassName, e);
+        } catch (InstantiationException e) {
+            logger.error("Cannot instantiate processor class {} (is it abstract?)", processorClassName, e);
+        } catch (IllegalAccessException e) {
+            logger.error("Cannot access constructor of processor class {}", processorClassName, e);
         } catch (Exception e) {
-            logger.error("Error creating processor: {}", e.getMessage(), e);
+            logger.error("Error creating processor {}: {}", processorClassName, e.getMessage(), e);
         }
 
-        return processor;
+        return null;
     }
 
 }

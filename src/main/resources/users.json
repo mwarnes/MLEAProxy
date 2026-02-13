@@ -1,4 +1,6 @@
 {
+  "_WARNING": "TESTING TOOL ONLY - DO NOT USE IN PRODUCTION",
+  "_INFO": "This file contains test users with intentional hardcoded plaintext passwords for ease of testing. This is acceptable for a diagnostic tool but would be a critical security vulnerability in production. All users have password: 'password'",
   "users": [
     {
       "username": "manager",
