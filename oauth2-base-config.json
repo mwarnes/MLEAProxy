@@ -1,0 +1,19 @@
+{
+  "external-security-name": "OAUTH2-test",
+  "description": "OAuth2 test configuration",
+  "authentication": "oauth",
+  "cache-timeout": 300,
+  "authorization": "oauth",
+  "oauth-server": {
+    "oauth-vendor": "Other",
+    "oauth-flow-type": "Resource server",
+    "oauth-client-id": "marklogic",
+    "oauth-jwt-issuer-uri": "https://your-oauth-provider.com",
+    "oauth-token-type": "JSON Web Tokens",
+    "oauth-username-attribute": "preferred_username",
+    "oauth-role-attribute": "marklogic-roles",
+    "oauth-privilege-attribute": "",
+    "oauth-jwt-alg": "RS256",
+    "oauth-jwks-uri": "https://your-oauth-provider.com/jwks"
+  }
+}

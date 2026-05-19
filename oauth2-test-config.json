@@ -1,0 +1,57 @@
+{
+  "external-security-name": "OAUTH2-test",
+  "description": "OAuth2 test configuration",
+  "authentication": "oauth",
+  "cache-timeout": 300,
+  "authorization": "oauth",
+  "ldap-server": {
+    "ldap-server-uri": "",
+    "ldap-base": "",
+    "ldap-attribute": "",
+    "ldap-default-user": "",
+    "ldap-password": "",
+    "ldap-bind-method": "simple",
+    "ldap-memberof-attribute": "",
+    "ldap-member-attribute": "",
+    "ldap-start-tls": false,
+    "ldap-certificate": "",
+    "ldap-private-key": "",
+    "ldap-nested-lookup": true,
+    "ldap-remove-domain": true,
+    "ldap-negative-cache-timeout": 10
+  },
+  "saml-server": {
+    "saml-entity-id": "",
+    "saml-privilege-attribute-name": "",
+    "http-options": null,
+    "saml-destination": "",
+    "saml-issuer": "",
+    "saml-idp-certificate-authority": "",
+    "saml-sp-certificate": "",
+    "saml-sp-private-key": "",
+    "saml-assertion-host": "",
+    "saml-authn-signature": "sha256"
+  },
+  "oauth-server": {
+    "oauth-vendor": "Other",
+    "oauth-flow-type": "Resource server",
+    "oauth-client-id": "marklogic",
+    "oauth-jwt-issuer-uri": "",
+    "oauth-token-type": "JSON Web Tokens",
+    "oauth-username-attribute": "preferred_username",
+    "oauth-role-attribute": "marklogic-roles",
+    "oauth-privilege-attribute": "",
+    "oauth-jwt-alg": "RS256",
+    "oauth-jwks-uri": "",
+    "oauth-jwt-secrets": {
+      "oauth-jwt-secret": [
+        {
+          "oauth-jwt-key-id": "DCYjkxqf7xLskUc_9tlaJ8-2QC4Vx-G1nPC1qPQro1Q"
+        },
+        {
+          "oauth-jwt-key-id": "GPbsBv5V6BvCQ0QPLeC_10hzdLSuc2FRow-L0j3JE5Y"
+        }
+      ]
+    }
+  }
+}
