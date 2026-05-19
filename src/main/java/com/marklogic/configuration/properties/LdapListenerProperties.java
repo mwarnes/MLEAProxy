@@ -15,7 +15,7 @@ public class LdapListenerProperties {
     private String ldapMode = "internal";
     private List<String> ldapSets = new ArrayList<>();
     private String requestProcessor;
-    private String requestHandler;
+    private String requestHandler = "com.marklogic.handlers.LDAPRequestHandler";
     private String description;
     
     // Keystore-based SSL
