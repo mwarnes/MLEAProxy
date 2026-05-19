@@ -36,7 +36,7 @@ public class JsonRequestProcessor implements IRequestProcessor {
         
         // Get the JSON user data file path from configuration (using parm1)
         String userDataPath = this.cfg.getParm1();
-        if (userDataPath.isEmpty()) {
+        if (userDataPath == null || userDataPath.isEmpty()) {
             logger.info("JSON file path missing using default JSON configuration instead.");
             // Load from classpath
             loadJsonUserDataFromClasspath();
