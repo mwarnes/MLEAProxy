@@ -1,0 +1,72 @@
+POST http://localhost:8080/saml/encode
+
+<saml:Assertion xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns="urn:oasis:names:tc:SAML:2.0:assertion" ID="ID_dee1843a-165d-4dc1-97ec-47f5aa3a0efe" IssueInstant="2021-06-15T09:13:47.481Z" Version="2.0">
+	<saml:Issuer>http://saml.warnesnet.com:8080/auth/realms/MarkLogic</saml:Issuer>
+	<dsig:Signature xmlns:dsig="http://www.w3.org/2000/09/xmldsig#">
+		<dsig:SignedInfo>
+			<dsig:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+			<dsig:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+			<dsig:Reference URI="#ID_dee1843a-165d-4dc1-97ec-47f5aa3a0efe">
+				<dsig:Transforms>
+					<dsig:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+					<dsig:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+				</dsig:Transforms>
+				<dsig:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+				<dsig:DigestValue>oE04WwbJ2QxhOZYTOwikrx1QPtYqu0XZWPlxAmQe+QE=</dsig:DigestValue>
+			</dsig:Reference>
+		</dsig:SignedInfo>
+		<dsig:SignatureValue>dXu5ijCSo3RNKxrKCWCc5IscSR27gJ8j4fjXTKtHsbe1iEs6ftTYgzsvquQh9xFTlUXdVHgijLdttjv2m4QTDkpgqsCDjdVzepLloxvkybQeMIptEge56Cp60uUtpwor3G08xUD665f0jBZh/GA3GKhB/iF4y9Q1ldA5w4gmR507kjWrkX1TKAvCgAvHjrHVf5ajYY7NQTJNiArbFwruYm+bEQ3JkMiy1br+igQLvAR4htHcUr3+lwys5D1Xlw9k1BfJWaaXGegn5vQGx31hiKtq6XcyVBsjf9jO8AcX8R3T+fAoN5yeIoVHGlybZXx8GW+Sfo46K7zYKfcNGthrAQ==</dsig:SignatureValue>
+		<dsig:KeyInfo>
+			<dsig:KeyName>il6ce-pUWq0cC6bPKibNYEwNNxINtqApFrE9c78orK8</dsig:KeyName>
+			<dsig:X509Data>
+				<dsig:X509Certificate>MIICoTCCAYkCBgF2iegIzjANBgkqhkiG9w0BAQsFADAUMRIwEAYDVQQDDAlNYXJrTG9naWMwHhcNMjAxMjIyMTAwMjMzWhcNMzAxMjIyMTAwNDEzWjAUMRIwEAYDVQQDDAlNYXJrTG9naWMwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCOVs2VhulxQYcQKrSD9YJDiIJZm4xumOgJGoH7WICR+ZBagR+gMFHyc2umn7V40p1d+friHqnH++yypCpXHeDiImiQwPVn682cLUfDVqwcJb0kENPbZYSCbAYC/MQHDjvKI/oY3WmVFwqDwzLFgJu70A4dzxHz3moWot4h/s+9gnNi7tj4yO/cD5e3vtKJmqOSV8D6LkThOH6sfrv+7TwiPzrhiJ4+TeasRdDsXICHmIv0cR5OhKSz0utDBzvfu9t3DCBFwqkNGPBUsF5s3VfvzMOQSS0I52s6yYCeHOB4dPjWl8DQ0cauL0TAp+ezg4m0dH4AkR2MhCbAhnX9nYkrAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAHd86euvxceehzsh9nnERjckaCmXEtLjLk1zFqbHFfGyvc7tgk2gWurtzXikdeX/QA5YiQWyZqCeATkF+M+pQsyStOLFShhpgqNrmCCyyjDhC7hYkaY8aLPdRXTlGMiWvVm4EGJJkFPSrJ6MXHPqXtT9snaf8QVl/qY9PaNssyso/JRIHyjMr6L331Yuar48flc68qqBAjAEjjsEe3iVtKxC0oSpOPJ40TEhgvaI6TZ+xWz0ss8KV7/IKsEClt0M+b76IMpyQZTAAlmvNewp3nnEpuXgEHxU3zr+lALUGVhKkMCQSusnNiqdRlfJ4TDh8dGgxe9vgR+3noISnBFmKxw=</dsig:X509Certificate>
+			</dsig:X509Data>
+			<dsig:KeyValue>
+				<dsig:RSAKeyValue>
+					<dsig:Modulus>jlbNlYbpcUGHECq0g/WCQ4iCWZuMbpjoCRqB+1iAkfmQWoEfoDBR8nNrpp+1eNKdXfn64h6px/vssqQqVx3g4iJokMD1Z+vNnC1Hw1asHCW9JBDT22WEgmwGAvzEBw47yiP6GN1plRcKg8MyxYCbu9AOHc8R895qFqLeIf7PvYJzYu7Y+Mjv3A+Xt77SiZqjklfA+i5E4Th+rH67/u08Ij864YiePk3mrEXQ7FyAh5iL9HEeToSks9LrQwc737vbdwwgRcKpDRjwVLBebN1X78zDkEktCOdrOsmAnhzgeHT41pfA0NHGri9EwKfns4OJtHR+AJEdjIQmwIZ1/Z2JKw==</dsig:Modulus>
+					<dsig:Exponent>AQAB</dsig:Exponent>
+				</dsig:RSAKeyValue>
+			</dsig:KeyValue>
+		</dsig:KeyInfo>
+	</dsig:Signature>
+	<saml:Subject>
+		<saml:NameID Format="urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified">martin</saml:NameID>
+		<saml:SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer">
+			<saml:SubjectConfirmationData NotOnOrAfter="2021-06-15T09:18:45.481Z" Recipient="http://mwca.localdomain:8002/"/>
+		</saml:SubjectConfirmation>
+	</saml:Subject>
+	<saml:Conditions NotBefore="2021-06-15T09:13:45.481Z" NotOnOrAfter="2021-06-15T09:14:45.481Z">
+		<saml:AudienceRestriction>
+			<saml:Audience>http://saml.warnesnet.com:8080/auth/realms/MarkLogic</saml:Audience>
+		</saml:AudienceRestriction>
+	</saml:Conditions>
+	<saml:AuthnStatement AuthnInstant="2021-06-15T09:13:47.499Z" SessionIndex="65bc5fbb-27b6-4a9d-95ce-38354fbeb2bc::21df2452-a39d-4184-9e79-7711ba294d99" SessionNotOnOrAfter="2021-06-15T19:13:47.499Z">
+		<saml:AuthnContext>
+			<saml:AuthnContextClassRef>urn:oasis:names:tc:SAML:2.0:ac:classes:unspecified</saml:AuthnContextClassRef>
+		</saml:AuthnContext>
+	</saml:AuthnStatement>
+	<saml:AttributeStatement>
+		<saml:Attribute Name="memberOf" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri">
+			<saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">/admin</saml:AttributeValue>
+			<saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">/MarkLogic Administrators</saml:AttributeValue>
+		</saml:Attribute>
+		<saml:Attribute Name="Role" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:basic">
+			<saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">manage-account</saml:AttributeValue>
+		</saml:Attribute>
+		<saml:Attribute Name="Role" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:basic">
+			<saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">MarkLogic Administrators</saml:AttributeValue>
+		</saml:Attribute>
+		<saml:Attribute Name="Role" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:basic">
+			<saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">manage-account-links</saml:AttributeValue>
+		</saml:Attribute>
+		<saml:Attribute Name="Role" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:basic">
+			<saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">admin</saml:AttributeValue>
+		</saml:Attribute>
+		<saml:Attribute Name="Role" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:basic">
+			<saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">view-profile</saml:AttributeValue>
+		</saml:Attribute>
+		<saml:Attribute Name="Role" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:basic">
+			<saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">MarkLogic User</saml:AttributeValue>
+		</saml:Attribute>
+	</saml:AttributeStatement>
+</saml:Assertion>

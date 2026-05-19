@@ -1,0 +1,62 @@
+ldap.debug=false
+
+## Directory Servers
+directoryServers=marklogic
+
+ds.marklogic.name=MarkLogic1
+ds.marklogic.ipaddress=0.0.0.0
+ds.marklogic.port=60389
+ds.marklogic.basedn=dc=MarkLogic,dc=Local
+ds.marklogic.admindn=cn=Directory Manager
+ds.marklogic.adminpw=password
+
+## Listeners
+listeners=custom1
+
+## Listener
+#listener.ldapxml.ipaddress=0.0.0.0
+#listener.ldapxml.port=30389
+#listener.ldapxml.debuglevel=DEBUG
+#listener.ldapxml.ldapmode=internal
+#listener.ldapxml.requestProcessor=xmlauthenticator
+#listener.ldapxml.description=Simple LDAP Server using a read-only XML User store
+## processor
+#requestProcessor.xmlauthenticator.authclass=com.marklogic.processors.XMLRequestProcessor
+#requestProcessor.xmlauthenticator.debuglevel=DEBUG
+#requestProcessor.xmlauthenticator.parm1=/Users/mwarnes/IdeaProjects/MLEAProxy/src/main/resources/users.xml
+
+## Listener
+listener.proxy.ipaddress=0.0.0.0
+listener.proxy.port=30389
+listener.proxy.debuglevel=INFO
+listener.proxy.secure=false
+listener.proxy.ldapset=set1
+listener.proxy.ldapmode=single
+listener.proxy.requestProcessor=proxy1
+listener.proxy.description=LDAP proxy with attribute mapping
+## processor
+requestProcessor.proxy1.authclass=com.marklogic.processors.ProxyRequestProcessor
+requestProcessor.proxy1.debuglevel=DEBUG
+requestProcessor.proxy1.parm1=memberOf:businessCategory
+## LDAP Server set
+ldapset.set1.servers=server1
+## LDAP Server
+ldapserver.server1.host=localhost
+ldapserver.server1.port=60389
+
+## Listener
+listener.custom1.ipaddress=0.0.0.0
+listener.custom1.port=30389
+listener.custom1.debuglevel=DEBUG
+listener.custom1.requestProcessor=bind1
+listener.custom1.description=LDAP Server with custom Bind and Search results
+## processor
+requestProcessor.bind1.authclass=com.marklogic.processors.BindSearchCustomResultProcessor
+requestProcessor.bind1.debuglevel=DEBUG
+requestProcessor.bind1.parm1=0
+requestProcessor.bind1.parm2=0
+requestProcessor.bind1.parm3=uid=mluser1,ou=users,dc=marklogic,dc=local
+requestProcessor.bind1.parm4=memberOf:cn=admins,ou=groups,dc=marklogic,dc=local
+requestProcessor.bind1.parm5=memberOf:cn=operators,ou=groups,dc=marklogic,dc=local
+requestProcessor.bind1.parm6=memberOf:cn=general,ou=groups,dc=marklogic,dc=local
+

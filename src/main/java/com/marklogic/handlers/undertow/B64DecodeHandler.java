@@ -1,0 +1,43 @@
+package com.marklogic.handlers.undertow;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
+import com.marklogic.Utils;
+import com.marklogic.beans.SamlBean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+public class B64DecodeHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(B64DecodeHandler.class);
+
+    @Autowired
+    private SamlBean saml;
+
+    @RequestMapping(
+            value = "/saml/decode",
+            method = RequestMethod.POST,
+            produces = "application/xml"
+    )
+    @ResponseBody
+    public String decode(@RequestBody String body) {
+        LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+
+        context.getLogger(B64DecodeHandler.class).setLevel(saml.getConfig().isSamlDebug() ? Level.DEBUG : Level.INFO);
+
+        return new String(Utils.b64d(body), java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    @GetMapping(
+            value = "/decode",
+            produces = "text/plain"
+    )
+    @ResponseBody
+    public String decodeGet(@RequestParam("data") String data) {
+        return new String(Utils.b64d(data), java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+}

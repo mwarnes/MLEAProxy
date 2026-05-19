@@ -1,0 +1,81 @@
+### OAuth 2.0 Token Endpoint Tests
+
+### 1. Password Grant with Single Role
+POST http://localhost:8080/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&client_id=test-client&client_secret=test-secret&username=martin&password=password123&roles=marklogic-admin
+
+###
+
+### 2. Password Grant with Multiple Roles
+POST http://localhost:8080/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&client_id=test-client&client_secret=test-secret&username=user1&password=password&roles=appreader,appwriter,appadmin
+
+###
+
+### 3. Password Grant with Scope
+POST http://localhost:8080/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&client_id=ml-app&client_secret=secret123&username=admin&password=admin123&scope=read write&roles=admin,developer
+
+###
+
+### 4. Client Credentials Grant (No User)
+POST http://localhost:8080/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&client_id=service-client&client_secret=service-secret&roles=service,api-access
+
+###
+
+### 5. Password Grant - No Roles
+POST http://localhost:8080/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&client_id=basic-client&client_secret=basic-secret&username=testuser&password=testpass
+
+###
+
+### 6. Error: Missing grant_type
+POST http://localhost:8080/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id=test-client&client_secret=test-secret&username=martin&password=password123
+
+###
+
+### 7. Error: Missing client_id
+POST http://localhost:8080/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&client_secret=test-secret&username=martin&password=password123
+
+###
+
+### 8. Error: Unsupported grant type
+POST http://localhost:8080/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&client_id=test-client&client_secret=test-secret
+
+###
+
+### 9. Error: Missing username for password grant
+POST http://localhost:8080/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&client_id=test-client&client_secret=test-secret&password=password123
+
+###
+
+### 10. MarkLogic User Roles (from users.xml)
+POST http://localhost:8080/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&client_id=ml-client&client_secret=ml-secret&username=user1&password=password&roles=cn=appreader,cn=appwriter,cn=appadmin
+
+###
