@@ -2,6 +2,8 @@ package com.marklogic.handlers.undertow;
 
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
@@ -23,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
@@ -69,6 +72,9 @@ public class OAuthTokenHandler {
     @Autowired(required = false)
     private JsonUserRepository jsonUserRepository;
     
+    @Autowired
+    private Environment environment;
+    
     // Configurable token expiration time in seconds (default: 1 hour)
     @Value("${oauth.token.expiration.seconds:3600}")
     private long tokenExpirationSeconds;
@@ -97,9 +103,12 @@ public class OAuthTokenHandler {
     // Flag to track if handler is properly initialized
     private volatile boolean initialized = false;
     
-    // Base URL for OAuth endpoints (configurable)
-    @Value("${oauth.server.base.url:http://localhost:8080}")
+    // Base URL for OAuth endpoints - computed at startup
     private String baseUrl;
+    
+    // Explicitly configured base URL (optional override)
+    @Value("${oauth.server.base.url:}")
+    private String configuredBaseUrl;
     
     /**
      * Initialize the OAuth handler after Spring context is ready.
@@ -107,6 +116,9 @@ public class OAuthTokenHandler {
      */
     @PostConstruct
     public void init() {
+        // Initialize base URL
+        initializeBaseUrl();
+        
         try {
             logger.info("Initializing OAuth Token Handler with key path: {}", keyPath);
             Resource resource = resourceLoader.getResource(keyPath);
@@ -124,6 +136,7 @@ public class OAuthTokenHandler {
                 this.keyId = generateKeyId();
                 this.initialized = true;
                 logger.info("OAuth Token Handler initialized successfully with RSA signing key (kid: {})", keyId);
+                logger.info("OAuth Base URL: {}", baseUrl);
             }
         } catch (Exception e) {
             logger.error("Failed to initialize OAuth Token Handler", e);
@@ -132,6 +145,57 @@ public class OAuthTokenHandler {
             this.keyId = null;
             this.initialized = false;
         }
+    }
+    
+    /**
+     * Initialize the base URL for OAuth endpoints.
+     * Priority:
+     * 1. Explicitly configured oauth.server.base.url
+     * 2. Auto-detect from server hostname, port, and SSL settings
+     */
+    private void initializeBaseUrl() {
+        // Check for explicitly configured base URL
+        if (configuredBaseUrl != null && !configuredBaseUrl.isEmpty()) {
+            this.baseUrl = configuredBaseUrl;
+            logger.info("Using configured OAuth base URL: {}", baseUrl);
+            return;
+        }
+        
+        // Auto-detect from server settings
+        String port = environment.getProperty("server.port", "8080");
+        String contextPath = environment.getProperty("server.servlet.context-path", "");
+        boolean sslEnabled = Boolean.parseBoolean(environment.getProperty("server.ssl.enabled", "false"));
+        String protocol = sslEnabled ? "https" : "http";
+        String hostname = getServerHostname();
+        
+        this.baseUrl = protocol + "://" + hostname + ":" + port + contextPath;
+        logger.info("Auto-detected OAuth base URL: {}", baseUrl);
+    }
+    
+    /**
+     * Gets the server's hostname, preferring the canonical hostname (FQDN).
+     */
+    private String getServerHostname() {
+        try {
+            // Try to get the fully qualified domain name
+            String canonicalHostname = InetAddress.getLocalHost().getCanonicalHostName();
+            if (canonicalHostname != null && !canonicalHostname.isEmpty() 
+                    && !canonicalHostname.equals("localhost")
+                    && !canonicalHostname.startsWith("127.")) {
+                return canonicalHostname;
+            }
+            
+            // Fall back to simple hostname
+            String hostname = InetAddress.getLocalHost().getHostName();
+            if (hostname != null && !hostname.isEmpty()) {
+                return hostname;
+            }
+        } catch (UnknownHostException e) {
+            logger.debug("Could not determine server hostname: {}", e.getMessage());
+        }
+        
+        // Final fallback
+        return "localhost";
     }
 
     @PostMapping(value = "/oauth/token", produces = "application/json")

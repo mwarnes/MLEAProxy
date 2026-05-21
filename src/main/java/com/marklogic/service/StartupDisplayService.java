@@ -8,6 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 /**
  * Service for displaying startup information and endpoint summaries.
  * Shows configured users, OAuth endpoints, SAML endpoints, and example curl commands.
@@ -37,6 +40,61 @@ public class StartupDisplayService {
     }
 
     /**
+     * Gets the base URL for endpoints.
+     * Priority:
+     * 1. oauth.server.base.url property (if explicitly configured)
+     * 2. Auto-detect from server hostname, port, and SSL settings
+     */
+    private String getBaseUrl() {
+        if (environment == null) {
+            return "http://localhost:8080";
+        }
+        
+        // Check for explicitly configured base URL first (override)
+        String configuredBaseUrl = environment.getProperty("oauth.server.base.url");
+        if (configuredBaseUrl != null && !configuredBaseUrl.isEmpty()) {
+            return configuredBaseUrl;
+        }
+        
+        // Auto-detect from server settings
+        String port = environment.getProperty("local.server.port", "8080");
+        String contextPath = environment.getProperty("server.servlet.context-path", "");
+        boolean sslEnabled = Boolean.parseBoolean(environment.getProperty("server.ssl.enabled", "false"));
+        String protocol = sslEnabled ? "https" : "http";
+        
+        // Get the server's hostname
+        String hostname = getServerHostname();
+        
+        return protocol + "://" + hostname + ":" + port + contextPath;
+    }
+    
+    /**
+     * Gets the server's hostname, preferring the canonical hostname (FQDN).
+     */
+    private String getServerHostname() {
+        try {
+            // Try to get the fully qualified domain name
+            String canonicalHostname = InetAddress.getLocalHost().getCanonicalHostName();
+            if (canonicalHostname != null && !canonicalHostname.isEmpty() 
+                    && !canonicalHostname.equals("localhost")
+                    && !canonicalHostname.startsWith("127.")) {
+                return canonicalHostname;
+            }
+            
+            // Fall back to simple hostname
+            String hostname = InetAddress.getLocalHost().getHostName();
+            if (hostname != null && !hostname.isEmpty()) {
+                return hostname;
+            }
+        } catch (UnknownHostException e) {
+            logger.debug("Could not determine server hostname: {}", e.getMessage());
+        }
+        
+        // Final fallback
+        return "localhost";
+    }
+
+    /**
      * Displays server port and base URL information.
      */
     private void displayServerInfo() {
@@ -46,8 +104,7 @@ public class StartupDisplayService {
         }
 
         String port = environment.getProperty("local.server.port", "8080");
-        String contextPath = environment.getProperty("server.servlet.context-path", "");
-        String baseUrl = "http://localhost:" + port + contextPath;
+        String baseUrl = getBaseUrl();
 
         logger.info("================================================================================");
         logger.info("MLEAProxy Server Started");
@@ -65,9 +122,9 @@ public class StartupDisplayService {
             return;
         }
 
-        String port = environment.getProperty("local.server.port", "8080");
-        String contextPath = environment.getProperty("server.servlet.context-path", "");
-        String baseUrl = "http://localhost:" + port + contextPath;
+        String baseUrl = getBaseUrl();
+        boolean isHttps = baseUrl.startsWith("https://");
+        String curlFlag = isHttps ? "-sk" : "-s";
 
         logger.info("");
         logger.info("OAuth 2.0 Endpoints:");
@@ -77,9 +134,12 @@ public class StartupDisplayService {
         logger.info("OpenID Configuration:     {}/oauth/.well-known/config", baseUrl);
         logger.info("");
         logger.info("Example Token Request:");
-        logger.info("curl -X POST {}/oauth/token \\", baseUrl);
-        logger.info("  -H \"Content-Type: application/x-www-form-urlencoded\" \\");
-        logger.info("  -d \"grant_type=password&username=admin&password=password&client_id=test-client\"");
+        logger.info("curl {} -X POST {}/oauth/token \\", curlFlag, baseUrl);
+        logger.info("  -d \"grant_type=password\" \\");
+        logger.info("  -d \"username=admin\" \\");
+        logger.info("  -d \"password=password\" \\");
+        logger.info("  -d \"client_id=marklogic\" \\");
+        logger.info("  -d \"client_secret=secret\"");
         logger.info("================================================================================");
     }
 
@@ -91,9 +151,7 @@ public class StartupDisplayService {
             return;
         }
 
-        String port = environment.getProperty("local.server.port", "8080");
-        String contextPath = environment.getProperty("server.servlet.context-path", "");
-        String baseUrl = "http://localhost:" + port + contextPath;
+        String baseUrl = getBaseUrl();
 
         logger.info("");
         logger.info("SAML 2.0 Endpoints:");

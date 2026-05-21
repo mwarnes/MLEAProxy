@@ -4,7 +4,7 @@
 
 Both JWKS extraction scripts have been updated to work with your Keycloak endpoint:
 
-**Endpoint**: `https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs`
+**Endpoint**: `https://rocky.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs`
 
 ## Changes Made
 
@@ -32,12 +32,12 @@ Your Keycloak realm currently has **2 RSA keys**:
 
 ### Simple Format (Key ID and Key Data on separate lines)
 ```bash
-./scripts/extract-jwks-keys.sh https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
+./scripts/extract-jwks-keys.sh https://rocky.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
 ```
 
 ### Detailed Format (Full information)
 ```bash
-./extract-jwks-keys.sh https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
+./extract-jwks-keys.sh https://rocky.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
 ```
 
 ## Notes

@@ -1,0 +1,9 @@
+com/marklogic/handlers/LDAPRequestHandlerTest.class
+com/marklogic/repository/XmlUserRepositoryTest.class
+com/marklogic/handlers/undertow/OAuthTokenHandlerTest.class
+com/marklogic/handlers/undertow/SAMLAuthHandlerTest.class
+com/marklogic/handlers/undertow/SAMLAuthHandlerEdgeCaseTest.class
+com/marklogic/handlers/undertow/OAuthTokenHandlerEdgeCaseTest.class
+com/marklogic/repository/JsonUserRepositoryTest.class
+com/marklogic/MLEAProxyIntegrationTest.class
+com/marklogic/MLEAProxyTests.class

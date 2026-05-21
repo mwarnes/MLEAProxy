@@ -61,7 +61,7 @@ Successfully implemented a complete pipeline for extracting JWKS (JSON Web Key S
 ```
 
 ### MarkLogic Integration
-- **API Endpoint**: `http://oauth.warnesnet.com:9002/manage/v2/external-security/OAUTH2-Keycloak/oauth-server`
+- **API Endpoint**: `http://rocky.warnesnet.com:9002/manage/v2/external-security/OAUTH2-Keycloak/oauth-server`
 - **Payload Format**: JSON with `oauth-jwt-secret` array containing key ID and PEM-formatted public key
 - **Authentication**: Basic auth (currently hardcoded for development)
 
@@ -84,7 +84,7 @@ sequence = [
 ## Testing Results ✅
 
 ### Successful Keycloak Integration
-- **Endpoint**: `https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs`
+- **Endpoint**: `https://rocky.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs`
 - **Keys Extracted**: 2 RSA keys (2048-bit each)
 - **PEM Validation**: ✅ Verified with OpenSSL
 - **JSON Payload**: ✅ Properly formatted for MarkLogic
@@ -107,17 +107,17 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8I5S+2YnzUeYsV0K0b8A...
 
 ### Basic JWKS Extraction
 ```bash
-./scripts/extract-jwks-keys.sh https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
+./scripts/extract-jwks-keys.sh https://rocky.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
 ```
 
 ### With MarkLogic Upload
 ```bash
-./scripts/extract-jwks-keys.sh https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs --upload-to-marklogic
+./scripts/extract-jwks-keys.sh https://rocky.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs --upload-to-marklogic
 ```
 
 ### Detailed Analysis
 ```bash
-./extract-jwks-keys.sh https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
+./extract-jwks-keys.sh https://rocky.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
 ```
 
 ## Known Issues & Solutions

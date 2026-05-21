@@ -1,0 +1,67 @@
+{
+  "groups": [
+    {
+      "name": "mleaproxy",
+      "type": "com.marklogic.configuration.properties.MleaProxyProperties",
+      "sourceType": "com.marklogic.configuration.properties.MleaProxyProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "mleaproxy.directory-servers",
+      "type": "java.util.Map<java.lang.String,com.marklogic.configuration.properties.DirectoryServerProperties>",
+      "sourceType": "com.marklogic.configuration.properties.MleaProxyProperties"
+    },
+    {
+      "name": "mleaproxy.kerberos",
+      "type": "com.marklogic.configuration.properties.KerberosProperties",
+      "sourceType": "com.marklogic.configuration.properties.MleaProxyProperties"
+    },
+    {
+      "name": "mleaproxy.ldap-debug",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.marklogic.configuration.properties.MleaProxyProperties"
+    },
+    {
+      "name": "mleaproxy.ldap-listeners",
+      "type": "java.util.Map<java.lang.String,com.marklogic.configuration.properties.LdapListenerProperties>",
+      "sourceType": "com.marklogic.configuration.properties.MleaProxyProperties"
+    },
+    {
+      "name": "mleaproxy.ldap-servers",
+      "type": "java.util.Map<java.lang.String,com.marklogic.configuration.properties.LdapServerProperties>",
+      "sourceType": "com.marklogic.configuration.properties.MleaProxyProperties"
+    },
+    {
+      "name": "mleaproxy.ldap-sets",
+      "type": "java.util.Map<java.lang.String,com.marklogic.configuration.properties.ServerSetProperties>",
+      "sourceType": "com.marklogic.configuration.properties.MleaProxyProperties"
+    },
+    {
+      "name": "mleaproxy.request-processors",
+      "type": "java.util.Map<java.lang.String,com.marklogic.configuration.properties.RequestProcessorProperties>",
+      "sourceType": "com.marklogic.configuration.properties.MleaProxyProperties"
+    },
+    {
+      "name": "mleaproxy.saml-debug",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.marklogic.configuration.properties.MleaProxyProperties"
+    },
+    {
+      "name": "mleaproxy.saml-listeners",
+      "type": "java.util.Map<java.lang.String,com.marklogic.configuration.properties.SamlListenerProperties>",
+      "sourceType": "com.marklogic.configuration.properties.MleaProxyProperties"
+    },
+    {
+      "name": "mleaproxy.saml-response-validity",
+      "type": "java.lang.Integer",
+      "sourceType": "com.marklogic.configuration.properties.MleaProxyProperties"
+    },
+    {
+      "name": "mleaproxy.ssl-verify-certificates",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.marklogic.configuration.properties.MleaProxyProperties"
+    }
+  ],
+  "hints": []
+}

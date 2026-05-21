@@ -56,7 +56,7 @@ If `python3` or `openssl` are not available, the script falls back to outputting
 ## Usage
 
 ```bash
-./scripts/extract-jwks-keys.sh https://oauth.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
+./scripts/extract-jwks-keys.sh https://rocky.warnesnet.com:8443/realms/progress-marklogic/protocol/openid-connect/certs
 ```
 
 ## Verification

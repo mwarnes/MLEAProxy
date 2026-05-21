@@ -1,0 +1,9 @@
+/Users/martin/Documents/Projects/MLEAProxy/src/test/java/com/marklogic/MLEAProxyIntegrationTest.java
+/Users/martin/Documents/Projects/MLEAProxy/src/test/java/com/marklogic/MLEAProxyTests.java
+/Users/martin/Documents/Projects/MLEAProxy/src/test/java/com/marklogic/handlers/LDAPRequestHandlerTest.java
+/Users/martin/Documents/Projects/MLEAProxy/src/test/java/com/marklogic/handlers/undertow/OAuthTokenHandlerEdgeCaseTest.java
+/Users/martin/Documents/Projects/MLEAProxy/src/test/java/com/marklogic/handlers/undertow/OAuthTokenHandlerTest.java
+/Users/martin/Documents/Projects/MLEAProxy/src/test/java/com/marklogic/handlers/undertow/SAMLAuthHandlerEdgeCaseTest.java
+/Users/martin/Documents/Projects/MLEAProxy/src/test/java/com/marklogic/handlers/undertow/SAMLAuthHandlerTest.java
+/Users/martin/Documents/Projects/MLEAProxy/src/test/java/com/marklogic/repository/JsonUserRepositoryTest.java
+/Users/martin/Documents/Projects/MLEAProxy/src/test/java/com/marklogic/repository/XmlUserRepositoryTest.java

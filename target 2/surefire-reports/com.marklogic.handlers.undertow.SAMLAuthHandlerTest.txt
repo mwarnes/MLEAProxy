@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.marklogic.handlers.undertow.SAMLAuthHandlerTest
+-------------------------------------------------------------------------------
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.209 s -- in com.marklogic.handlers.undertow.SAMLAuthHandlerTest

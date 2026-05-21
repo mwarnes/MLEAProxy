@@ -1,7 +1,7 @@
 POST http://localhost:8080/saml/encode
 
 <saml:Assertion xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns="urn:oasis:names:tc:SAML:2.0:assertion" ID="ID_dee1843a-165d-4dc1-97ec-47f5aa3a0efe" IssueInstant="2021-06-15T09:13:47.481Z" Version="2.0">
-	<saml:Issuer>http://saml.warnesnet.com:8080/auth/realms/MarkLogic</saml:Issuer>
+	<saml:Issuer>http://rocky.warnesnet.com:8080/auth/realms/MarkLogic</saml:Issuer>
 	<dsig:Signature xmlns:dsig="http://www.w3.org/2000/09/xmldsig#">
 		<dsig:SignedInfo>
 			<dsig:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
@@ -37,7 +37,7 @@ POST http://localhost:8080/saml/encode
 	</saml:Subject>
 	<saml:Conditions NotBefore="2021-06-15T09:13:45.481Z" NotOnOrAfter="2021-06-15T09:14:45.481Z">
 		<saml:AudienceRestriction>
-			<saml:Audience>http://saml.warnesnet.com:8080/auth/realms/MarkLogic</saml:Audience>
+			<saml:Audience>http://rocky.warnesnet.com:8080/auth/realms/MarkLogic</saml:Audience>
 		</saml:AudienceRestriction>
 	</saml:Conditions>
 	<saml:AuthnStatement AuthnInstant="2021-06-15T09:13:47.499Z" SessionIndex="65bc5fbb-27b6-4a9d-95ce-38354fbeb2bc::21df2452-a39d-4184-9e79-7711ba294d99" SessionNotOnOrAfter="2021-06-15T19:13:47.499Z">

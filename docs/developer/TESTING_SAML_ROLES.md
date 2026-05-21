@@ -134,7 +134,7 @@ curl -X POST http://localhost:8080/saml/auth \
   -d "roles=admin,user,marklogic-admin" \
   -d "authn=SUCCESS" \
   -d "samlid=<saml-request-id>" \
-  -d "assertionUrl=http://oauth.warnesnet.com:9002"
+  -d "assertionUrl=http://rocky.warnesnet.com:9002"
 ```
 
 ## Expected Complete Log Sequence
