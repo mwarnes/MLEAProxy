@@ -13,10 +13,10 @@ MLEAProxy (MarkLogic External Authentication Proxy) is a multi-protocol authenti
 ./build.sh clean package
 
 # Run the application
-java -jar target/mlesproxy-2.0.2.jar
+java -jar target/mlesproxy-2.0.3.jar
 
 # Run with custom config
-java -jar target/mlesproxy-2.0.2.jar --mleaproxy.ldap-debug=true
+java -jar target/mlesproxy-2.0.3.jar --mleaproxy.ldap-debug=true
 
 # Run in dev mode
 mvn spring-boot:run
@@ -38,7 +38,7 @@ mvn test -Dtest=OAuthTokenHandlerTest
 mvn clean test jacoco:report    # Report at target/site/jacoco/index.html
 ```
 
-The build artifact is `target/mlesproxy-2.0.2.jar` (also copied to `release/`).
+The build artifact is `target/mlesproxy-2.0.3.jar` (also copied to `release/`).
 
 ## Architecture
 
