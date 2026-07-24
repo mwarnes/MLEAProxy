@@ -34,6 +34,7 @@ Provide a user-friendly web interface showing the same information displayed in 
 - Clickable links for all URLs
 - Hybrid real-time/static data (real-time: user count, hostname; static: endpoints)
 - Optional meta refresh tag (commented out, easy to enable)
+- **Add status page URL to startup console output** (displayed in `StartupDisplayService.displayServerInfo()`)
 
 **Out of Scope:**
 - Authentication/authorization (same as other endpoints)
@@ -107,11 +108,20 @@ public List<Map<String, Object>> getConfiguredUsers()
 // Returns: [{username, password, roles: [...]}, ...]
 ```
 
+**Also modify existing `displayServerInfo()` method:**
+- Add one line after "Base URL" logging:
+  ```java
+  logger.info("Status Page: {}/status", baseUrl);
+  ```
+- This displays the status page URL in console output at startup
+- Makes the status page discoverable without documentation
+
 **Rationale:**
 - Keeps existing console logging functionality intact
 - New methods return data instead of logging it
 - StatusHandler consumes these methods to build model
 - No duplication - single source of truth for configuration
+- Status page URL prominently displayed at startup for easy access
 
 #### 2. StatusHandler.java (new)
 
@@ -847,6 +857,7 @@ src/main/resources/
 8. ✅ Users table displays username, password, roles
 9. ✅ No errors in console logs
 10. ✅ Page works on Chrome, Firefox, Safari
+11. ✅ **Status page URL displayed in startup console output**
 
 **Verification command:**
 ```bash
