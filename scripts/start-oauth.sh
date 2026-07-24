@@ -15,6 +15,18 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+# Detect hostname (prefer FQDN, fallback to simple hostname)
+get_hostname() {
+    local hostname=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo "localhost")
+    # Filter out localhost variants
+    if [[ "$hostname" == "localhost" ]] || [[ "$hostname" == "localhost.localdomain" ]] || [[ "$hostname" =~ ^127\. ]]; then
+        hostname="localhost"
+    fi
+    echo "$hostname"
+}
+
+HOSTNAME=$(get_hostname)
+
 # Find JAR file
 if [ -f "target/mlesproxy-2.0.3.jar" ]; then
     JAR_FILE="target/mlesproxy-2.0.3.jar"
@@ -64,21 +76,21 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🔑 Token Endpoint:${NC}"
-    echo "  URL: http://localhost:8080/oauth/token"
+    echo "  URL: http://$HOSTNAME:8080/oauth/token"
     echo "  Methods: POST"
     echo "  Description: Generate JWT access tokens"
     echo "  Grant Types: password, client_credentials, refresh_token"
     echo ""
 
     echo -e "${CYAN}🔐 JWKS Endpoint (JSON Web Key Set):${NC}"
-    echo "  URL: http://localhost:8080/oauth/jwks"
+    echo "  URL: http://$HOSTNAME:8080/oauth/jwks"
     echo "  Methods: GET"
     echo "  Description: Public keys for token verification"
     echo "  Format: JWK (JSON Web Key)"
     echo ""
 
     echo -e "${CYAN}📋 Discovery Endpoint (OpenID Configuration):${NC}"
-    echo "  URL: http://localhost:8080/.well-known/openid-configuration"
+    echo "  URL: http://$HOSTNAME:8080/.well-known/openid-configuration"
     echo "  Methods: GET"
     echo "  Description: OAuth/OIDC server metadata (RFC 8414)"
     echo "  Contains: issuer, endpoints, grant types, algorithms"
@@ -97,7 +109,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}📝 JWT Token Claims (Standard):${NC}"
-    echo "  iss (Issuer): http://localhost:8080"
+    echo "  iss (Issuer): http://$HOSTNAME:8080"
     echo "  sub (Subject): username"
     echo "  aud (Audience): marklogic"
     echo "  exp (Expiration): issued_at + validity"
@@ -161,7 +173,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🧪 Get Access Token (Password Grant - admin):${NC}"
-    echo "  curl -X POST http://localhost:8080/oauth/token \\"
+    echo "  curl -X POST http://$HOSTNAME:8080/oauth/token \\"
     echo "    -d \"grant_type=password\" \\"
     echo "    -d \"username=admin\" \\"
     echo "    -d \"password=admin\" \\"
@@ -170,7 +182,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🧪 Get Access Token (Password Grant - user1):${NC}"
-    echo "  curl -X POST http://localhost:8080/oauth/token \\"
+    echo "  curl -X POST http://$HOSTNAME:8080/oauth/token \\"
     echo "    -d \"grant_type=password\" \\"
     echo "    -d \"username=user1\" \\"
     echo "    -d \"password=password\" \\"
@@ -179,7 +191,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🧪 Get Access Token with Custom Roles:${NC}"
-    echo "  curl -X POST http://localhost:8080/oauth/token \\"
+    echo "  curl -X POST http://$HOSTNAME:8080/oauth/token \\"
     echo "    -d \"grant_type=password\" \\"
     echo "    -d \"username=admin\" \\"
     echo "    -d \"password=admin\" \\"
@@ -189,7 +201,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🧪 Client Credentials Grant:${NC}"
-    echo "  curl -X POST http://localhost:8080/oauth/token \\"
+    echo "  curl -X POST http://$HOSTNAME:8080/oauth/token \\"
     echo "    -d \"grant_type=client_credentials\" \\"
     echo "    -d \"client_id=marklogic\" \\"
     echo "    -d \"client_secret=secret\""
@@ -198,7 +210,7 @@ if ps -p $PID > /dev/null; then
     echo -e "${CYAN}🧪 Refresh Token Grant:${NC}"
     echo "  # First get a token with password grant (includes refresh_token)"
     echo "  # Then use the refresh_token:"
-    echo "  curl -X POST http://localhost:8080/oauth/token \\"
+    echo "  curl -X POST http://$HOSTNAME:8080/oauth/token \\"
     echo "    -d \"grant_type=refresh_token\" \\"
     echo "    -d \"refresh_token=YOUR_REFRESH_TOKEN\" \\"
     echo "    -d \"client_id=marklogic\" \\"
@@ -206,11 +218,11 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🧪 Get JWKS (Public Keys):${NC}"
-    echo "  curl http://localhost:8080/oauth/jwks | jq ."
+    echo "  curl http://$HOSTNAME:8080/oauth/jwks | jq ."
     echo ""
 
     echo -e "${CYAN}🧪 Get OpenID Discovery:${NC}"
-    echo "  curl http://localhost:8080/.well-known/openid-configuration | jq ."
+    echo "  curl http://$HOSTNAME:8080/.well-known/openid-configuration | jq ."
     echo ""
 
     echo -e "${CYAN}🧪 Decode JWT Token:${NC}"
@@ -239,7 +251,7 @@ if ps -p $PID > /dev/null; then
     echo ""
     echo "  Payload:"
     echo "    {"
-    echo "      \"iss\": \"http://localhost:8080\","
+    echo "      \"iss\": \"http://$HOSTNAME:8080\","
     echo "      \"sub\": \"admin\","
     echo "      \"aud\": \"marklogic\","
     echo "      \"exp\": 1676300000,"

@@ -17,6 +17,18 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+# Detect hostname (prefer FQDN, fallback to simple hostname)
+get_hostname() {
+    local hostname=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo "localhost")
+    # Filter out localhost variants
+    if [[ "$hostname" == "localhost" ]] || [[ "$hostname" == "localhost.localdomain" ]] || [[ "$hostname" =~ ^127\. ]]; then
+        hostname="localhost"
+    fi
+    echo "$hostname"
+}
+
+HOSTNAME=$(get_hostname)
+
 # Find JAR file
 if [ -f "target/mlesproxy-2.0.3.jar" ]; then
     JAR_FILE="target/mlesproxy-2.0.3.jar"
@@ -80,13 +92,13 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}📡 LDAP Proxy Listener:${NC}"
-    echo "  URL: ldap://localhost:10389"
+    echo "  URL: ldap://$HOSTNAME:10389"
     echo "  Description: Proxies requests to backend or processes internally"
     echo "  Mode: INTERNAL (standalone JSON authentication)"
     echo ""
 
     echo -e "${CYAN}📡 In-Memory LDAP Directory Server:${NC}"
-    echo "  URL: ldap://localhost:60389"
+    echo "  URL: ldap://$HOSTNAME:60389"
     echo "  Description: Standalone LDAP directory with test data"
     echo "  Base DN: dc=MarkLogic,dc=Local"
     echo ""
@@ -149,7 +161,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🧪 Test In-Memory Server:${NC}"
-    echo "  ldapsearch -H ldap://localhost:60389 \\"
+    echo "  ldapsearch -H ldap://$HOSTNAME:60389 \\"
     echo "    -D \"cn=Directory Manager\" \\"
     echo "    -w password \\"
     echo "    -b \"dc=MarkLogic,dc=Local\" \\"
@@ -157,7 +169,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🧪 Test Proxy with JSON Auth (admin):${NC}"
-    echo "  ldapsearch -H ldap://localhost:10389 \\"
+    echo "  ldapsearch -H ldap://$HOSTNAME:10389 \\"
     echo "    -D \"cn=admin,ou=users,dc=marklogic,dc=local\" \\"
     echo "    -w admin \\"
     echo "    -b \"ou=users,dc=marklogic,dc=local\" \\"
@@ -165,7 +177,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🧪 Test Proxy with JSON Auth (user1):${NC}"
-    echo "  ldapsearch -H ldap://localhost:10389 \\"
+    echo "  ldapsearch -H ldap://$HOSTNAME:10389 \\"
     echo "    -D \"cn=user1,ou=users,dc=marklogic,dc=local\" \\"
     echo "    -w password \\"
     echo "    -b \"ou=users,dc=marklogic,dc=local\" \\"
@@ -173,7 +185,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🧪 Search for All Users:${NC}"
-    echo "  ldapsearch -H ldap://localhost:10389 \\"
+    echo "  ldapsearch -H ldap://$HOSTNAME:10389 \\"
     echo "    -D \"cn=manager,ou=users,dc=marklogic,dc=local\" \\"
     echo "    -w password \\"
     echo "    -b \"ou=users,dc=marklogic,dc=local\" \\"

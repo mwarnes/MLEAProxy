@@ -15,6 +15,18 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+# Detect hostname (prefer FQDN, fallback to simple hostname)
+get_hostname() {
+    local hostname=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo "localhost")
+    # Filter out localhost variants
+    if [[ "$hostname" == "localhost" ]] || [[ "$hostname" == "localhost.localdomain" ]] || [[ "$hostname" =~ ^127\. ]]; then
+        hostname="localhost"
+    fi
+    echo "$hostname"
+}
+
+HOSTNAME=$(get_hostname)
+
 # Find JAR file
 if [ -f "target/mlesproxy-2.0.3.jar" ]; then
     JAR_FILE="target/mlesproxy-2.0.3.jar"
@@ -64,14 +76,14 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🔐 Authentication Endpoint:${NC}"
-    echo "  URL: http://localhost:8080/saml/auth"
+    echo "  URL: http://$HOSTNAME:8080/saml/auth"
     echo "  Methods: POST"
     echo "  Description: Authenticates users and generates SAML assertions"
     echo "  Parameters: username, password, roles (optional)"
     echo ""
 
     echo -e "${CYAN}📄 Metadata Endpoint:${NC}"
-    echo "  URL: http://localhost:8080/saml/metadata"
+    echo "  URL: http://$HOSTNAME:8080/saml/metadata"
     echo "  Methods: GET"
     echo "  Description: SAML IdP metadata (EntityDescriptor)"
     echo "  Format: XML (SAML 2.0 Metadata)"
@@ -79,14 +91,14 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}📦 Wrap Assertion Endpoint:${NC}"
-    echo "  URL: http://localhost:8080/saml/wrapassertion"
+    echo "  URL: http://$HOSTNAME:8080/saml/wrapassertion"
     echo "  Methods: POST"
     echo "  Description: Wraps existing SAML assertion in Response"
     echo "  Use Case: Converting assertions between formats"
     echo ""
 
     echo -e "${CYAN}🔒 CA Certificates Endpoint:${NC}"
-    echo "  URL: http://localhost:8080/saml/cacerts"
+    echo "  URL: http://$HOSTNAME:8080/saml/cacerts"
     echo "  Methods: GET"
     echo "  Description: Retrieves IdP CA certificates"
     echo "  Format: PEM-encoded X.509 certificates"
@@ -113,7 +125,7 @@ if ps -p $PID > /dev/null; then
     echo -e "${CYAN}📝 SAML Assertion Attributes:${NC}"
     echo "  Standard Attributes:"
     echo "    - Subject (NameID): User's username"
-    echo "    - Issuer: http://localhost:8080"
+    echo "    - Issuer: http://$HOSTNAME:8080"
     echo "    - Audience: Configured SP entity ID"
     echo "    - AuthnInstant: Authentication timestamp"
     echo ""
@@ -174,28 +186,28 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🧪 Authenticate and Get SAML Assertion (admin):${NC}"
-    echo "  curl -X POST http://localhost:8080/saml/auth \\\\"
+    echo "  curl -X POST http://$HOSTNAME:8080/saml/auth \\\\"
     echo "    -d \"username=admin\" \\\\"
     echo "    -d \"password=admin\" \\\\"
     echo "    -d \"roles=admin,marklogic-admin\""
     echo ""
 
     echo -e "${CYAN}🧪 Authenticate with Default Roles (user1):${NC}"
-    echo "  curl -X POST http://localhost:8080/saml/auth \\\\"
+    echo "  curl -X POST http://$HOSTNAME:8080/saml/auth \\\\"
     echo "    -d \"username=user1\" \\\\"
     echo "    -d \"password=password\""
     echo ""
 
     echo -e "${CYAN}🧪 Get SAML IdP Metadata:${NC}"
-    echo "  curl http://localhost:8080/saml/metadata | xmllint --format -"
+    echo "  curl http://$HOSTNAME:8080/saml/metadata | xmllint --format -"
     echo ""
 
     echo -e "${CYAN}🧪 Get CA Certificates:${NC}"
-    echo "  curl http://localhost:8080/saml/cacerts"
+    echo "  curl http://$HOSTNAME:8080/saml/cacerts"
     echo ""
 
     echo -e "${CYAN}🧪 Wrap Existing SAML Assertion:${NC}"
-    echo "  curl -X POST http://localhost:8080/saml/wrapassertion \\\\"
+    echo "  curl -X POST http://$HOSTNAME:8080/saml/wrapassertion \\\\"
     echo "    -H \"Content-Type: application/xml\" \\\\"
     echo "    -d @assertion.xml"
     echo ""
@@ -212,7 +224,7 @@ if ps -p $PID > /dev/null; then
 
     echo -e "${CYAN}📄 Assertion Structure:${NC}"
     echo "  <saml:Assertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\">"
-    echo "    <saml:Issuer>http://localhost:8080</saml:Issuer>"
+    echo "    <saml:Issuer>http://$HOSTNAME:8080</saml:Issuer>"
     echo "    <saml:Subject>"
     echo "      <saml:NameID Format=\"urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified\">"
     echo "        admin"
@@ -252,7 +264,7 @@ if ps -p $PID > /dev/null; then
 
     echo -e "${CYAN}📋 Integration Steps:${NC}"
     echo "  1. Download IdP metadata:"
-    echo "     curl http://localhost:8080/saml/metadata > idp-metadata.xml"
+    echo "     curl http://$HOSTNAME:8080/saml/metadata > idp-metadata.xml"
     echo ""
     echo "  2. Configure MarkLogic External Security:"
     echo "     - Create SAML configuration in MarkLogic Admin UI"
@@ -261,7 +273,7 @@ if ps -p $PID > /dev/null; then
     echo ""
     echo "  3. Test SAML authentication with MarkLogic:"
     echo "     - Access MarkLogic application"
-    echo "     - Redirect to http://localhost:8080/saml/auth"
+    echo "     - Redirect to http://$HOSTNAME:8080/saml/auth"
     echo "     - Authenticate with admin/admin"
     echo ""
 
@@ -276,7 +288,7 @@ if ps -p $PID > /dev/null; then
     echo "  3. Default Roles: saml.default.roles property (default: user)"
     echo ""
     echo "  Example with custom roles:"
-    echo "    curl -X POST http://localhost:8080/saml/auth \\\\"
+    echo "    curl -X POST http://$HOSTNAME:8080/saml/auth \\\\"
     echo "      -d \"username=user1\" \\\\"
     echo "      -d \"password=password\" \\\\"
     echo "      -d \"roles=superuser,admin\""

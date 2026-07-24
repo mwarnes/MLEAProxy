@@ -15,6 +15,18 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+# Detect hostname (prefer FQDN, fallback to simple hostname)
+get_hostname() {
+    local hostname=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo "localhost")
+    # Filter out localhost variants
+    if [[ "$hostname" == "localhost" ]] || [[ "$hostname" == "localhost.localdomain" ]] || [[ "$hostname" =~ ^127\. ]]; then
+        hostname="localhost"
+    fi
+    echo "$hostname"
+}
+
+HOSTNAME=$(get_hostname)
+
 # Find JAR file
 if [ -f "target/mlesproxy-2.0.3.jar" ]; then
     JAR_FILE="target/mlesproxy-2.0.3.jar"
@@ -115,7 +127,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🔐 Kerberos Authentication Endpoint:${NC}"
-    echo "  URL: http://localhost:8080/kerberos/auth"
+    echo "  URL: http://$HOSTNAME:8080/kerberos/auth"
     echo "  Methods: POST"
     echo "  Description: SPNEGO authentication using Kerberos tickets"
     echo "  Auth Mechanism: HTTP Negotiate (SPNEGO)"
@@ -123,7 +135,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🔄 Kerberos to OAuth Bridge:${NC}"
-    echo "  URL: http://localhost:8080/kerberos/oauth"
+    echo "  URL: http://$HOSTNAME:8080/kerberos/oauth"
     echo "  Methods: POST"
     echo "  Description: Converts Kerberos ticket to OAuth JWT token"
     echo "  Auth Mechanism: HTTP Negotiate (SPNEGO)"
@@ -132,7 +144,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🔄 Kerberos to SAML Bridge:${NC}"
-    echo "  URL: http://localhost:8080/kerberos/saml"
+    echo "  URL: http://$HOSTNAME:8080/kerberos/saml"
     echo "  Methods: POST"
     echo "  Description: Converts Kerberos ticket to SAML assertion"
     echo "  Auth Mechanism: HTTP Negotiate (SPNEGO)"
@@ -182,7 +194,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🧪 Step 3a: Test Kerberos Authentication:${NC}"
-    echo "  curl -X POST http://localhost:8080/kerberos/auth \\\\"
+    echo "  curl -X POST http://$HOSTNAME:8080/kerberos/auth \\\\"
     echo "    --negotiate -u : \\\\"
     echo "    -v"
     echo ""
@@ -191,7 +203,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🧪 Step 3b: Test Kerberos to OAuth Bridge:${NC}"
-    echo "  curl -X POST http://localhost:8080/kerberos/oauth \\\\"
+    echo "  curl -X POST http://$HOSTNAME:8080/kerberos/oauth \\\\"
     echo "    --negotiate -u : \\\\"
     echo "    -v"
     echo ""
@@ -204,7 +216,7 @@ if ps -p $PID > /dev/null; then
     echo ""
 
     echo -e "${CYAN}🧪 Step 3c: Test Kerberos to SAML Bridge:${NC}"
-    echo "  curl -X POST http://localhost:8080/kerberos/saml \\\\"
+    echo "  curl -X POST http://$HOSTNAME:8080/kerberos/saml \\\\"
     echo "    --negotiate -u : \\\\"
     echo "    -v"
     echo ""
@@ -228,7 +240,7 @@ if ps -p $PID > /dev/null; then
     echo -e "${CYAN}🧪 Alternative: Test with User Principal:${NC}"
     echo "  kinit user@EXAMPLE.COM"
     echo "  # Enter password: password"
-    echo "  curl -X POST http://localhost:8080/kerberos/auth --negotiate -u : -v"
+    echo "  curl -X POST http://$HOSTNAME:8080/kerberos/auth --negotiate -u : -v"
     echo "  kdestroy"
     echo ""
 
@@ -240,7 +252,7 @@ if ps -p $PID > /dev/null; then
     echo -e "${CYAN}📄 Kerberos Configuration:${NC}"
     echo "  Location: ./kerberos.properties"
     echo "  Realm: EXAMPLE.COM"
-    echo "  KDC Host: localhost:88"
+    echo "  KDC Host: $HOSTNAME:88"
     echo "  Principals: admin@EXAMPLE.COM, user@EXAMPLE.COM, HTTP/localhost@EXAMPLE.COM"
     echo "  Service Principal: HTTP/localhost@EXAMPLE.COM"
     echo ""
@@ -254,8 +266,8 @@ if ps -p $PID > /dev/null; then
     echo ""
     echo "  [realms]"
     echo "      EXAMPLE.COM = {"
-    echo "          kdc = localhost:88"
-    echo "          admin_server = localhost:88"
+    echo "          kdc = $HOSTNAME:88"
+    echo "          admin_server = $HOSTNAME:88"
     echo "      }"
     echo ""
     echo "  [domain_realm]"
@@ -330,7 +342,7 @@ if ps -p $PID > /dev/null; then
     echo "  KRB5_TRACE=/dev/stdout kinit admin@EXAMPLE.COM"
     echo ""
     echo "  # Test with curl verbose:"
-    echo "  curl -X POST http://localhost:8080/kerberos/auth \\\\"
+    echo "  curl -X POST http://$HOSTNAME:8080/kerberos/auth \\\\"
     echo "    --negotiate -u : -v 2>&1 | grep -i negotiate"
     echo ""
 

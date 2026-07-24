@@ -12,6 +12,18 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0;m'
 
+# Detect hostname (prefer FQDN, fallback to simple hostname)
+get_hostname() {
+    local hostname=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo "localhost")
+    # Filter out localhost variants
+    if [[ "$hostname" == "localhost" ]] || [[ "$hostname" == "localhost.localdomain" ]] || [[ "$hostname" =~ ^127\. ]]; then
+        hostname="localhost"
+    fi
+    echo "$hostname"
+}
+
+HOSTNAME=$(get_hostname)
+
 # Find JAR file
 if [ -f "target/mlesproxy-2.0.3.jar" ]; then
     JAR_FILE="target/mlesproxy-2.0.3.jar"
@@ -51,20 +63,20 @@ if ps -p $PID > /dev/null; then
     echo "PID: $PID"
     echo ""
     echo "LDAP Endpoints:"
-    echo "  - Proxy: ldap://localhost:10389"
-    echo "  - In-memory: ldap://localhost:60389"
+    echo "  - Proxy: ldap://$HOSTNAME:10389"
+    echo "  - In-memory: ldap://$HOSTNAME:60389"
     echo ""
     echo "OAuth Endpoints:"
-    echo "  - Token: http://localhost:8080/oauth/token"
-    echo "  - JWKS: http://localhost:8080/oauth/jwks"
+    echo "  - Token: http://$HOSTNAME:8080/oauth/token"
+    echo "  - JWKS: http://$HOSTNAME:8080/oauth/jwks"
     echo ""
     echo "SAML Endpoints:"
-    echo "  - Auth: http://localhost:8080/saml/auth"
-    echo "  - Metadata: http://localhost:8080/saml/metadata"
+    echo "  - Auth: http://$HOSTNAME:8080/saml/auth"
+    echo "  - Metadata: http://$HOSTNAME:8080/saml/metadata"
     echo ""
     echo "Kerberos Endpoints:"
-    echo "  - KDC: localhost:88"
-    echo "  - Auth: http://localhost:8080/kerberos/auth"
+    echo "  - KDC: $HOSTNAME:8088"
+    echo "  - Auth: http://$HOSTNAME:8080/kerberos/auth"
     echo ""
     echo "Stop with: ./scripts/stop.sh"
     echo "View logs: tail -f $LOG_FILE"
