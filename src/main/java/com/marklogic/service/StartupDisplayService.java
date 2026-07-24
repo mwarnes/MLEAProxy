@@ -70,24 +70,49 @@ public class StartupDisplayService {
     
     /**
      * Gets the server's hostname, preferring the canonical hostname (FQDN).
+     * Priority:
+     * 1. mleaproxy.server.hostname property (manual override)
+     * 2. Canonical hostname (FQDN) from InetAddress
+     * 3. Simple hostname from InetAddress
+     * 4. Hostname from environment variable
+     * 5. localhost (final fallback)
      */
     private String getServerHostname() {
+        // Check for manual override first
+        if (environment != null) {
+            String configuredHostname = environment.getProperty("mleaproxy.server.hostname");
+            if (configuredHostname != null && !configuredHostname.isEmpty()) {
+                return configuredHostname;
+            }
+        }
+        
         try {
             // Try to get the fully qualified domain name
             String canonicalHostname = InetAddress.getLocalHost().getCanonicalHostName();
             if (canonicalHostname != null && !canonicalHostname.isEmpty() 
                     && !canonicalHostname.equals("localhost")
+                    && !canonicalHostname.equals("localhost.localdomain")
                     && !canonicalHostname.startsWith("127.")) {
                 return canonicalHostname;
             }
             
             // Fall back to simple hostname
             String hostname = InetAddress.getLocalHost().getHostName();
-            if (hostname != null && !hostname.isEmpty()) {
+            if (hostname != null && !hostname.isEmpty() 
+                    && !hostname.equals("localhost")
+                    && !hostname.startsWith("127.")) {
                 return hostname;
             }
         } catch (UnknownHostException e) {
-            logger.debug("Could not determine server hostname: {}", e.getMessage());
+            logger.debug("Could not determine server hostname from InetAddress: {}", e.getMessage());
+        }
+        
+        // Try environment variable HOSTNAME (common on Linux/macOS)
+        String envHostname = System.getenv("HOSTNAME");
+        if (envHostname != null && !envHostname.isEmpty() 
+                && !envHostname.equals("localhost")
+                && !envHostname.startsWith("127.")) {
+            return envHostname;
         }
         
         // Final fallback
