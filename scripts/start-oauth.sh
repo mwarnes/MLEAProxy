@@ -40,7 +40,9 @@ echo -e "${GREEN}Starting MLEAProxy in OAuth mode...${NC}"
 cp "$CONFIG_FILE" oauth.properties
 
 java -Dspring.config.location=classpath:/application.properties,./oauth.properties \
-     -jar "$JAR_FILE" > "$LOG_FILE" 2>&1 &
+     -jar "$JAR_FILE" \
+     --users-json=./users.json \
+     > "$LOG_FILE" 2>&1 &
 
 PID=$!
 echo $PID > mleaproxy.pid

@@ -52,7 +52,9 @@ cp "$CONFIG_FILE" ldap.properties
 
 # Start the application
 java -Dspring.config.location=classpath:/application.properties,./ldap.properties \
-     -jar "$JAR_FILE" > "$LOG_FILE" 2>&1 &
+     -jar "$JAR_FILE" \
+     --users-json=./users.json \
+     > "$LOG_FILE" 2>&1 &
 
 # Save PID
 PID=$!

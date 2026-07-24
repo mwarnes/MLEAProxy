@@ -38,7 +38,9 @@ cp examples/kerberos/01-kerberos-basic.properties kerberos.properties
 
 # Start with all configs
 java -Dspring.config.location=classpath:/application.properties,./ldap.properties,./oauth.properties,./saml.properties,./kerberos.properties \
-     -jar "$JAR_FILE" > "$LOG_FILE" 2>&1 &
+     -jar "$JAR_FILE" \
+     --users-json=./users.json \
+     > "$LOG_FILE" 2>&1 &
 
 PID=$!
 echo $PID > mleaproxy.pid
