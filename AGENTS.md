@@ -45,6 +45,7 @@ The build artifact is `target/mlesproxy-2.0.3.jar` (also copied to `release/`).
 ### Entry Point & Startup
 
 `MLEAProxy.java` is the Spring Boot main class. `ApplicationListener` (implements `ApplicationRunner`) is a lightweight orchestrator that delegates to specialized service classes:
+
 1. Loads configuration via Spring `@ConfigurationProperties` (`MleaProxyProperties`)
 2. Registers BouncyCastle security provider
 3. Delegates to `LDAPServerService` to start in-memory LDAP directory servers
@@ -60,6 +61,7 @@ The startup flow follows the Single Responsibility Principle with focused servic
 Uses **Spring Boot @ConfigurationProperties** with `MleaProxyProperties` as the root config bean. All properties use the `mleaproxy.*` prefix with kebab-case naming.
 
 Properties are loaded in priority order (lowest to highest):
+
 1. `classpath:mleaproxy.properties` (bundled defaults)
 2. `/etc/mleaproxy.properties` (system-wide)
 3. `${HOME}/mleaproxy.properties` (user home)
@@ -69,6 +71,7 @@ Properties are loaded in priority order (lowest to highest):
 7. **Command-line args (`--mleaproxy.*`)** - HIGHEST PRIORITY
 
 **Key property patterns:**
+
 - `mleaproxy.ldap-debug=true` - Global settings
 - `mleaproxy.directory-servers.{name}.*` - In-memory LDAP servers
 - `mleaproxy.ldap-listeners.{name}.*` - LDAP proxy listeners
@@ -97,6 +100,7 @@ Properties are loaded in priority order (lowest to highest):
 ### Protocol Endpoints
 
 All HTTP endpoints share the web server port (default 8080):
+
 - **OAuth**: `/oauth/token`, `/oauth/jwks`, `/.well-known/openid-configuration`
 - **SAML**: `/saml/auth`, `/saml/metadata`, `/saml/wrapassertion`, `/saml/cacerts`
 - **Kerberos**: `/kerberos/auth`, `/kerberos/oauth`, `/kerberos/saml`
@@ -122,6 +126,7 @@ LDAP listeners run on separate ports (default: 10389 proxy, 61389 in-memory).
 ## Documentation
 
 Protocol-specific guides are in `docs/user/`:
+
 - `QUICKSTART_VERIFICATION.md` - Working examples for all protocols with verification commands
 - `CONFIGURATION_GUIDE.md` - Complete property reference with new Spring-style keys
 - `LDAP_GUIDE.md`, `OAUTH_GUIDE.md`, `SAML_GUIDE.md`, `KERBEROS_GUIDE.md`
