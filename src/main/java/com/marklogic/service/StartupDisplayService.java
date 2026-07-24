@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Service for displaying startup information and endpoint summaries.
@@ -51,7 +53,7 @@ public class StartupDisplayService {
      * 1. oauth.server.base.url property (if explicitly configured)
      * 2. Auto-detect from server hostname, port, and SSL settings
      */
-    private String getBaseUrl() {
+    public String getBaseUrl() {
         if (environment == null) {
             return "http://localhost:8080";
         }
@@ -83,7 +85,7 @@ public class StartupDisplayService {
      * 4. Hostname from environment variable
      * 5. localhost (final fallback)
      */
-    private String getServerHostname() {
+    public String getServerHostname() {
         // Check for manual override first
         if (environment != null) {
             String configuredHostname = environment.getProperty("mleaproxy.server.hostname");
@@ -126,6 +128,119 @@ public class StartupDisplayService {
     }
 
     /**
+     * Returns server information as structured data for status page.
+     * 
+     * @return Map containing port, baseUrl, hostname
+     */
+    public Map<String, String> getServerInfo() {
+        if (environment == null) {
+            return Map.of(
+                "port", "8080",
+                "baseUrl", "http://localhost:8080",
+                "hostname", "localhost"
+            );
+        }
+        
+        String port = environment.getProperty("local.server.port", "8080");
+        String baseUrl = getBaseUrl();
+        String hostname = getServerHostname();
+        
+        return Map.of(
+            "port", port,
+            "baseUrl", baseUrl,
+            "hostname", hostname
+        );
+    }
+
+    /**
+     * Returns OAuth 2.0 endpoint information as structured data.
+     * 
+     * @return Map containing OAuth endpoints and example curl command
+     */
+    public Map<String, String> getOAuthInfo() {
+        if (environment == null) {
+            return Map.of(
+                "tokenUrl", "http://localhost:8080/oauth/token",
+                "jwksUrl", "http://localhost:8080/oauth/jwks",
+                "configUrl", "http://localhost:8080/oauth/.well-known/config",
+                "exampleCurl", "curl -s -X POST http://localhost:8080/oauth/token ...",
+                "curlFlags", "-s"
+            );
+        }
+        
+        String baseUrl = getBaseUrl();
+        boolean isHttps = baseUrl.startsWith("https://");
+        String curlFlag = isHttps ? "-sk" : "-s";
+        
+        String tokenUrl = baseUrl + "/oauth/token";
+        String jwksUrl = baseUrl + "/oauth/jwks";
+        String configUrl = baseUrl + "/oauth/.well-known/config";
+        
+        String exampleCurl = String.format(
+            "curl %s -X POST %s/oauth/token \\\n" +
+            "  -d \"grant_type=password\" \\\n" +
+            "  -d \"username=admin\" \\\n" +
+            "  -d \"password=password\" \\\n" +
+            "  -d \"client_id=marklogic\" \\\n" +
+            "  -d \"client_secret=secret\"",
+            curlFlag, baseUrl
+        );
+        
+        return Map.of(
+            "tokenUrl", tokenUrl,
+            "jwksUrl", jwksUrl,
+            "configUrl", configUrl,
+            "exampleCurl", exampleCurl,
+            "curlFlags", curlFlag
+        );
+    }
+
+    /**
+     * Returns SAML 2.0 endpoint information as structured data.
+     * 
+     * @return Map containing SAML endpoints and configuration status
+     */
+    public Map<String, Object> getSAMLInfo() {
+        if (environment == null) {
+            return Map.of(
+                "authUrl", "http://localhost:8080/saml/auth",
+                "metadataUrl", "http://localhost:8080/saml/idp-metadata",
+                "caUrl", "http://localhost:8080/saml/ca",
+                "configured", false
+            );
+        }
+        
+        String baseUrl = getBaseUrl();
+        boolean configured = samlBean != null && samlBean.getConfig() != null;
+        
+        return Map.of(
+            "authUrl", baseUrl + "/saml/auth",
+            "metadataUrl", baseUrl + "/saml/idp-metadata",
+            "caUrl", baseUrl + "/saml/ca",
+            "configured", configured
+        );
+    }
+
+    /**
+     * Returns configured users as structured data.
+     * 
+     * @return List of user maps containing username, password, roles
+     */
+    public List<Map<String, Object>> getConfiguredUsers() {
+        if (jsonUserRepository == null) {
+            return List.of();
+        }
+        
+        return jsonUserRepository.getAllUsers().stream()
+            .map(user -> Map.<String, Object>of(
+                "username", user.getUsername(),
+                "password", user.getPassword(),
+                "roles", user.getRoles()
+            ))
+            .toList();
+    }
+
+    /**
      * Displays server port and base URL information.
      */
     private void displayServerInfo() {
@@ -142,6 +257,7 @@ public class StartupDisplayService {
         logger.info("================================================================================");
         logger.info("Server Port: {}", port);
         logger.info("Base URL: {}", baseUrl);
+        logger.info("Status Page: {}/status", baseUrl);
         logger.info("================================================================================");
     }
 
