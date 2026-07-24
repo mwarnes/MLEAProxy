@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <title>MLEAProxy Status</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <!-- Optional auto-refresh (uncomment to enable):
+    <meta http-equiv="refresh" content="30">
+    -->
+</head>
+<body>
+<div class="container mt-4 mb-5">
+    <h1 class="mb-4"><i class="fa fa-server"></i> MLEAProxy Status</h1>
+
+    <!-- Server Info Section -->
+    <div class="card mb-3">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fa fa-info-circle"></i> Server Information</h5>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Server Port:</dt>
+                <dd class="col-sm-9" th:text="${serverInfo.port}">8080</dd>
+
+                <dt class="col-sm-3">Hostname:</dt>
+                <dd class="col-sm-9" th:text="${serverInfo.hostname}">localhost</dd>
+
+                <dt class="col-sm-3">Base URL:</dt>
+                <dd class="col-sm-9">
+                    <a th:href="${serverInfo.baseUrl}" th:text="${serverInfo.baseUrl}">http://localhost:8080</a>
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    <!-- OAuth Section -->
+    <div class="card mb-3">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fa fa-key"></i> OAuth 2.0 Endpoints</h5>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Token Endpoint:</dt>
+                <dd class="col-sm-9">
+                    <a th:href="${oauthInfo.tokenUrl}" th:text="${oauthInfo.tokenUrl}">http://localhost:8080/oauth/token</a>
+                </dd>
+
+                <dt class="col-sm-3">JWKS Endpoint:</dt>
+                <dd class="col-sm-9">
+                    <a th:href="${oauthInfo.jwksUrl}" th:text="${oauthInfo.jwksUrl}">http://localhost:8080/oauth/jwks</a>
+                </dd>
+
+                <dt class="col-sm-3">OpenID Config:</dt>
+                <dd class="col-sm-9">
+                    <a th:href="${oauthInfo.configUrl}" th:text="${oauthInfo.configUrl}">http://localhost:8080/oauth/.well-known/config</a>
+                </dd>
+            </dl>
+
+            <h6 class="mt-3">Example Token Request:</h6>
+            <div class="position-relative">
+                <button class="btn btn-sm btn-outline-secondary position-absolute"
+                        style="top: 5px; right: 5px; z-index: 10;"
+                        onclick="copyToClipboard('oauthCurl')">
+                    <i class="fa fa-copy"></i> Copy
+                </button>
+                <pre class="bg-light p-3 rounded" style="overflow-x: auto;"><code id="oauthCurl" th:text="${oauthInfo.exampleCurl}">curl -s -X POST ...</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- SAML Section -->
+    <div class="card mb-3">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fa fa-shield-alt"></i> SAML 2.0 Endpoints</h5>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Authentication:</dt>
+                <dd class="col-sm-9">
+                    <a th:href="${samlInfo.authUrl}" th:text="${samlInfo.authUrl}">http://localhost:8080/saml/auth</a>
+                </dd>
+
+                <dt class="col-sm-3">IdP Metadata:</dt>
+                <dd class="col-sm-9">
+                    <a th:href="${samlInfo.metadataUrl}" th:text="${samlInfo.metadataUrl}">http://localhost:8080/saml/idp-metadata</a>
+                </dd>
+
+                <dt class="col-sm-3">CA Certificates:</dt>
+                <dd class="col-sm-9">
+                    <a th:href="${samlInfo.caUrl}" th:text="${samlInfo.caUrl}">http://localhost:8080/saml/ca</a>
+                </dd>
+
+                <dt class="col-sm-3">Configuration:</dt>
+                <dd class="col-sm-9">
+                    <span th:if="${samlInfo.configured}" class="badge badge-success">Loaded</span>
+                    <span th:unless="${samlInfo.configured}" class="badge badge-warning">Not configured</span>
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    <!-- Users Section -->
+    <div class="card mb-3">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0"><i class="fa fa-users"></i> Configured Users</h5>
+        </div>
+        <div class="card-body">
+            <div th:if="${users == null or users.isEmpty()}">
+                <p class="text-muted mb-0">No users configured</p>
+            </div>
+            <div th:if="${users != null and !users.isEmpty()}">
+                <table class="table table-sm table-striped">
+                    <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Password</th>
+                        <th>Roles</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="user : ${users}">
+                        <td th:text="${user.username}">admin</td>
+                        <td th:text="${user.password}">password</td>
+                        <td>
+                            <span th:if="${user.roles == null or user.roles.isEmpty()}" class="text-muted">(none)</span>
+                            <span th:if="${user.roles != null and !user.roles.isEmpty()}" th:text="${#strings.listJoin(user.roles, ', ')}">admin, user</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+                <p class="text-muted mb-0">
+                    <small>Total users: <span th:text="${users.size()}">0</span></small>
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function copyToClipboard(elementId) {
+        const element = document.getElementById(elementId);
+        const text = element.textContent;
+
+        navigator.clipboard.writeText(text).then(function() {
+            // Success feedback
+            const btn = event.target.closest('button');
+            const icon = btn.querySelector('i');
+            const originalClass = icon.className;
+
+            icon.className = 'fa fa-check';
+            btn.classList.add('btn-success');
+            btn.classList.remove('btn-outline-secondary');
+
+            setTimeout(function() {
+                icon.className = originalClass;
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-secondary');
+            }, 2000);
+        }).catch(function(err) {
+            // Fallback: select text
+            const range = document.createRange();
+            range.selectNode(element);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            alert('Press Ctrl+C (or Cmd+C) to copy');
+        });
+    }
+</script>
+</body>
+</html>
