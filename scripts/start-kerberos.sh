@@ -350,6 +350,7 @@ if ps -p $PID > /dev/null; then
     echo -e "${BLUE}                           Management${NC}"
     echo -e "${BLUE}═══════════════════════════════════════════════════════════════════════════${NC}"
     echo ""
+    echo "  Status Page: http://$HOSTNAME:8080/status"
     echo "  Stop Server: ./scripts/stop.sh"
     echo "  View Logs: tail -f $LOG_FILE"
     echo "  Check Status: ./scripts/status.sh"

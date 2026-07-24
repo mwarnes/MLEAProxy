@@ -78,6 +78,8 @@ if ps -p $PID > /dev/null; then
     echo "  - KDC: $HOSTNAME:8088"
     echo "  - Auth: http://$HOSTNAME:8080/kerberos/auth"
     echo ""
+    echo "Status Page: http://$HOSTNAME:8080/status"
+    echo ""
     echo "Stop with: ./scripts/stop.sh"
     echo "View logs: tail -f $LOG_FILE"
 else
