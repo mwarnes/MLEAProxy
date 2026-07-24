@@ -4,8 +4,8 @@ import com.marklogic.configuration.properties.RequestProcessorProperties;
 import com.unboundid.ldap.listener.LDAPListenerClientConnection;
 import com.unboundid.ldap.protocol.*;
 import com.unboundid.ldap.sdk.*;
-import org.json.JSONArray;
-import org.json.JSONObject;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,8 +25,9 @@ import java.util.List;
 public class JsonRequestProcessor implements IRequestProcessor {
 
     private static final Logger logger = LoggerFactory.getLogger(JsonRequestProcessor.class);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     
-    private JSONObject usersData;
+    private JsonNode usersData;
     private RequestProcessorProperties cfg;
 
     @Override
@@ -61,10 +62,10 @@ public class JsonRequestProcessor implements IRequestProcessor {
         }
         
         String jsonContent = Files.readString(path);
-        this.usersData = new JSONObject(jsonContent);
+        this.usersData = objectMapper.readTree(jsonContent);
         
-        JSONArray users = usersData.getJSONArray("users");
-        logger.info("Loaded {} users from JSON file", users.length());
+        JsonNode users = usersData.get("users");
+        logger.info("Loaded {} users from JSON file", users.size());
     }
 
     private void loadJsonUserDataFromClasspath() throws IOException {
@@ -72,10 +73,10 @@ public class JsonRequestProcessor implements IRequestProcessor {
             String jsonContent = new String(
                 getClass().getClassLoader().getResourceAsStream("users.json").readAllBytes()
             );
-            this.usersData = new JSONObject(jsonContent);
+            this.usersData = objectMapper.readTree(jsonContent);
             
-            JSONArray users = usersData.getJSONArray("users");
-            logger.info("Loaded {} users from JSON classpath", users.length());
+            JsonNode users = usersData.get("users");
+            logger.info("Loaded {} users from JSON classpath", users.size());
         } catch (Exception e) {
             throw new IOException("Failed to load users.json from classpath", e);
         }
@@ -93,7 +94,7 @@ public class JsonRequestProcessor implements IRequestProcessor {
             String password = request.getSimplePassword().stringValue();
             
             // Find user by DN
-            JSONObject user = findUserByDN(bindDN);
+            JsonNode user = findUserByDN(bindDN);
             if (user == null) {
                 logger.warn("User not found for DN: {}", bindDN);
                 LDAPResult bindResult = new LDAPResult(messageID, ResultCode.INVALID_CREDENTIALS);
@@ -108,9 +109,9 @@ public class JsonRequestProcessor implements IRequestProcessor {
             }
             
             // Verify password
-            String expectedPassword = user.getString("password");
+            String expectedPassword = user.get("password").asText();
             if (!password.equals(expectedPassword)) {
-                logger.warn("Invalid password for user: {}", user.getString("username"));
+                logger.warn("Invalid password for user: {}", user.get("username").asText());
                 LDAPResult bindResult = new LDAPResult(messageID, ResultCode.INVALID_CREDENTIALS);
                 BindResponseProtocolOp bindResponseProtocolOp = new BindResponseProtocolOp(
                     bindResult.getResultCode().intValue(),
@@ -122,7 +123,7 @@ public class JsonRequestProcessor implements IRequestProcessor {
                     Arrays.asList(bindResult.getResponseControls()));
             }
             
-            logger.info("Successful bind for user: {}", user.getString("username"));
+            logger.info("Successful bind for user: {}", user.get("username").asText());
             LDAPResult bindResult = new LDAPResult(messageID, ResultCode.SUCCESS);
             BindResponseProtocolOp bindResponseProtocolOp = new BindResponseProtocolOp(
                 bindResult.getResultCode().intValue(),
@@ -158,11 +159,11 @@ public class JsonRequestProcessor implements IRequestProcessor {
         try {
             List<SearchResultEntry> entries = new ArrayList<>();
             
-            JSONArray users = usersData.getJSONArray("users");
+            JsonNode users = usersData.get("users");
             
             // Process each user and check if it matches the search criteria
-            for (int i = 0; i < users.length(); i++) {
-                JSONObject user = users.getJSONObject(i);
+            for (int i = 0; i < users.size(); i++) {
+                JsonNode user = users.get(i);
                 SearchResultEntry entry = createSearchResultEntry(user, request);
                 if (entry != null) {
                     entries.add(entry);
@@ -198,12 +199,12 @@ public class JsonRequestProcessor implements IRequestProcessor {
         }
     }
 
-    private JSONObject findUserByDN(String dn) {
+    private JsonNode findUserByDN(String dn) {
         try {
-            JSONArray users = usersData.getJSONArray("users");
-            for (int i = 0; i < users.length(); i++) {
-                JSONObject user = users.getJSONObject(i);
-                if (dn.equals(user.getString("dn"))) {
+            JsonNode users = usersData.get("users");
+            for (int i = 0; i < users.size(); i++) {
+                JsonNode user = users.get(i);
+                if (dn.equals(user.get("dn").asText())) {
                     return user;
                 }
             }
@@ -213,10 +214,10 @@ public class JsonRequestProcessor implements IRequestProcessor {
         return null;
     }
 
-    private SearchResultEntry createSearchResultEntry(JSONObject user, SearchRequestProtocolOp request) {
+    private SearchResultEntry createSearchResultEntry(JsonNode user, SearchRequestProtocolOp request) {
         try {
-            String userDN = user.getString("dn");
-            String username = user.getString("username");
+            String userDN = user.get("dn").asText();
+            String username = user.get("username").asText();
             
             // Basic DN matching - for simplicity, we'll return all users for now
             // In a full implementation, you'd want to properly parse and match the search base and filter
@@ -231,10 +232,10 @@ public class JsonRequestProcessor implements IRequestProcessor {
             
             // Add roles if present
             if (user.has("roles")) {
-                JSONArray roles = user.getJSONArray("roles");
+                JsonNode roles = user.get("roles");
                 List<String> roleStrings = new ArrayList<>();
-                for (int i = 0; i < roles.length(); i++) {
-                    roleStrings.add(roles.getString(i));
+                for (int i = 0; i < roles.size(); i++) {
+                    roleStrings.add(roles.get(i).asText());
                 }
                 if (!roleStrings.isEmpty()) {
                     attributes.add(new Attribute("memberOf", roleStrings.toArray(new String[0])));
