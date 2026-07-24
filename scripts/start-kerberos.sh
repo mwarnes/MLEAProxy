@@ -16,10 +16,10 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Find JAR file
-if [ -f "target/mlesproxy-2.0.2.jar" ]; then
-    JAR_FILE="target/mlesproxy-2.0.2.jar"
-elif [ -f "release/mlesproxy-2.0.2.jar" ]; then
-    JAR_FILE="release/mlesproxy-2.0.2.jar"
+if [ -f "target/mlesproxy-2.0.3.jar" ]; then
+    JAR_FILE="target/mlesproxy-2.0.3.jar"
+elif [ -f "release/mlesproxy-2.0.3.jar" ]; then
+    JAR_FILE="release/mlesproxy-2.0.3.jar"
 else
     echo -e "${RED}Error: MLEAProxy JAR not found${NC}"
     echo "Please build the project first: ./build.sh clean package"
