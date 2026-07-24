@@ -65,7 +65,7 @@ public class LDAPServerService {
      * @throws Exception if server startup fails
      */
     private void startInMemoryServer(String serverName, DirectoryServerProperties dsConfig) throws Exception {
-        logger.info("Configuring in-memory LDAP server: {}", serverName);
+        logger.debug("Configuring in-memory LDAP server: {}", serverName);
 
         // Create directory server configuration
         DN baseDN = new DN(dsConfig.getBaseDn());
@@ -96,7 +96,7 @@ public class LDAPServerService {
         server.startListening();
         runningServers.add(server);
 
-        logger.info("In-memory LDAP server '{}' started on {}:{} with base DN '{}'",
+        logger.debug("In-memory LDAP server '{}' started on {}:{} with base DN '{}'",
                    serverName, ipAddress, port, dsConfig.getBaseDn());
 
         // Generate MarkLogic configuration
@@ -124,13 +124,13 @@ public class LDAPServerService {
 
         if (ldifPath != null && !ldifPath.trim().isEmpty()) {
             // Load from file system
-            logger.info("Loading LDIF from override path: {}", ldifPath);
+            logger.debug("Loading LDIF from override path: {}", ldifPath);
             server.importFromLDIF(false, ldifPath);
-            logger.info("Successfully imported LDIF from: {}", ldifPath);
+            logger.debug("Successfully imported LDIF from: {}", ldifPath);
         } else {
             // Load from classpath
             String classpathLdif = "/marklogic.ldif";
-            logger.info("Loading LDIF from classpath: {}", classpathLdif);
+            logger.debug("Loading LDIF from classpath: {}", classpathLdif);
 
             try (InputStream ldifStream = getClass().getResourceAsStream(classpathLdif)) {
                 if (ldifStream == null) {
@@ -139,7 +139,7 @@ public class LDAPServerService {
 
                 try (LDIFReader ldifReader = new LDIFReader(ldifStream)) {
                     server.importFromLDIF(false, ldifReader);
-                    logger.info("Successfully imported LDIF from classpath: {}", classpathLdif);
+                    logger.debug("Successfully imported LDIF from classpath: {}", classpathLdif);
                 }
             }
         }

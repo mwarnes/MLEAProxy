@@ -1,6 +1,7 @@
 package com.marklogic.service;
 
 import com.marklogic.beans.SamlBean;
+import com.marklogic.configuration.properties.MleaProxyProperties;
 import com.marklogic.repository.JsonUserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,11 +30,16 @@ public class StartupDisplayService {
     @Autowired(required = false)
     private SamlBean samlBean;
 
+    @Autowired(required = false)
+    private MleaProxyProperties properties;
+
     /**
      * Displays comprehensive startup summary including server info, endpoints, and users.
      */
     public void displayStartupSummary() {
         displayServerInfo();
+        displayLDAPEndpoints();
+        displayKerberosEndpoints();
         displayOAuthEndpoints();
         displaySAMLEndpoints();
         displayConfiguredUsers();
@@ -136,6 +142,76 @@ public class StartupDisplayService {
         logger.info("================================================================================");
         logger.info("Server Port: {}", port);
         logger.info("Base URL: {}", baseUrl);
+        logger.info("================================================================================");
+    }
+
+    /**
+     * Displays LDAP endpoints (directory servers and listeners).
+     */
+    private void displayLDAPEndpoints() {
+        if (properties == null || (properties.getDirectoryServers().isEmpty() && properties.getLdapListeners().isEmpty())) {
+            return;
+        }
+
+        String hostname = getServerHostname();
+        logger.info("");
+        logger.info("LDAP Endpoints:");
+        logger.info("--------------------------------------------------------------------------------");
+
+        // Display in-memory directory servers
+        if (!properties.getDirectoryServers().isEmpty()) {
+            properties.getDirectoryServers().forEach((name, server) -> {
+                String url = String.format("ldap://%s:%d", hostname, server.getPort());
+                logger.info("In-Memory Server '{}':   {}", name, url);
+                logger.info("  Base DN: {}", server.getBaseDn());
+            });
+        }
+
+        // Display LDAP listeners
+        if (!properties.getLdapListeners().isEmpty()) {
+            properties.getLdapListeners().forEach((name, listener) -> {
+                String url = String.format("ldap://%s:%d", hostname, listener.getPort());
+                logger.info("LDAP Listener '{}':      {}", name, url);
+                logger.info("  Description: {}", listener.getDescription() != null ? listener.getDescription() : "LDAP proxy/authentication");
+            });
+        }
+
+        logger.info("");
+        logger.info("Example LDAP Search:");
+        if (!properties.getLdapListeners().isEmpty()) {
+            var firstListener = properties.getLdapListeners().entrySet().iterator().next();
+            logger.info("ldapsearch -H ldap://{}:{} \\", hostname, firstListener.getValue().getPort());
+            logger.info("  -D \"cn=admin,ou=users,dc=marklogic,dc=local\" \\");
+            logger.info("  -w password \\");
+            logger.info("  -b \"ou=users,dc=marklogic,dc=local\" \\");
+            logger.info("  \"(objectClass=*)\"");
+        }
+        logger.info("================================================================================");
+    }
+
+    /**
+     * Displays Kerberos KDC endpoints and configuration.
+     */
+    private void displayKerberosEndpoints() {
+        if (properties == null || properties.getKerberos() == null || !properties.getKerberos().isEnabled()) {
+            return;
+        }
+
+        var kerberos = properties.getKerberos();
+        String hostname = getServerHostname();
+        
+        logger.info("");
+        logger.info("Kerberos KDC:");
+        logger.info("--------------------------------------------------------------------------------");
+        logger.info("Realm:                    {}", kerberos.getRealm());
+        logger.info("KDC:                      {}:{}", hostname, kerberos.getKdcPort());
+        logger.info("HTTP Endpoint:            http://{}:8080/kerberos/auth", hostname);
+        logger.info("");
+        logger.info("Test with kinit:");
+        logger.info("  export KRB5_CONFIG=./krb5.conf");
+        logger.info("  kinit mluser1@{}", kerberos.getRealm());
+        logger.info("  (password: password)");
+        logger.info("  klist");
         logger.info("================================================================================");
     }
 

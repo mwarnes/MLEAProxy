@@ -71,7 +71,7 @@ public class LDAPListenerService {
      * @throws Exception if listener startup fails
      */
     private void startListener(String listenerName, LdapListenerProperties listenerCfg) throws Exception {
-        logger.info("Starting LDAP listener: {}", listenerName);
+        logger.debug("Starting LDAP listener: {}", listenerName);
 
         // Set log level for this listener
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
