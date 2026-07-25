@@ -1,5 +1,3 @@
-[🏠 Home](../../README.md) > [📚 User Docs](./README.md) > Kerberos Guide
-
 # MLEAProxy Kerberos Guide
 
 Complete guide for Kerberos authentication, SPNEGO, and OAuth/SAML protocol bridges in MLEAProxy.
@@ -16,8 +14,8 @@ Complete guide for Kerberos authentication, SPNEGO, and OAuth/SAML protocol brid
 - [Client Configuration (krb5.conf)](#client-configuration-krb5conf)
 - [Testing Examples](#testing-examples)
 - [Bridge Endpoints](#bridge-endpoints)
-- [MarkLogic Integration](#marklogic-integration)
 - [Troubleshooting](#troubleshooting)
+- [MarkLogic Integration](#marklogic-integration)
 - [Related Documentation](#related-documentation)
 
 ---
@@ -498,40 +496,6 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/protected
 
 ---
 
-## MarkLogic Integration
-
-### Configure MarkLogic for Kerberos
-
-1. **Enable External Security** in MarkLogic Admin UI
-2. **Configure the External Security** to point to MLEAProxy
-3. **Map users** between Kerberos principals and MarkLogic users
-
-### Example MarkLogic External Security Configuration
-
-```xml
-<external-security xmlns="http://marklogic.com/manage">
-  <external-security-name>mleaproxy-kerberos</external-security-name>
-  <authentication>kerberos</authentication>
-  <cache-timeout>300</cache-timeout>
-  <authorization>internal</authorization>
-  <ldap-server-uri>ldap://localhost:10389</ldap-server-uri>
-</external-security>
-```
-
-### Using Kerberos-OAuth Bridge with MarkLogic
-
-```bash
-# Get OAuth token via Kerberos
-kinit mluser1@MARKLOGIC.LOCAL
-TOKEN=$(curl -s --negotiate -u : -X POST http://localhost:8080/kerberos/oauth | jq -r .access_token)
-
-# Use token with MarkLogic REST API
-curl -H "Authorization: Bearer $TOKEN" \
-     "http://localhost:8002/v1/documents?uri=/example.json"
-```
-
----
-
 ## Troubleshooting
 
 ### Common Issues
@@ -666,6 +630,40 @@ netstat -an | grep 8088
 ```bash
 # List principals in keytab
 klist -kt ./kerberos/keytabs/HTTP_localhost.keytab
+```
+
+---
+
+## MarkLogic Integration
+
+### Configure MarkLogic for Kerberos
+
+1. **Enable External Security** in MarkLogic Admin UI
+2. **Configure the External Security** to point to MLEAProxy
+3. **Map users** between Kerberos principals and MarkLogic users
+
+### Example MarkLogic External Security Configuration
+
+```xml
+<external-security xmlns="http://marklogic.com/manage">
+  <external-security-name>mleaproxy-kerberos</external-security-name>
+  <authentication>kerberos</authentication>
+  <cache-timeout>300</cache-timeout>
+  <authorization>internal</authorization>
+  <ldap-server-uri>ldap://localhost:10389</ldap-server-uri>
+</external-security>
+```
+
+### Using Kerberos-OAuth Bridge with MarkLogic
+
+```bash
+# Get OAuth token via Kerberos
+kinit mluser1@MARKLOGIC.LOCAL
+TOKEN=$(curl -s --negotiate -u : -X POST http://localhost:8080/kerberos/oauth | jq -r .access_token)
+
+# Use token with MarkLogic REST API
+curl -H "Authorization: Bearer $TOKEN" \
+     "http://localhost:8002/v1/documents?uri=/example.json"
 ```
 
 ---

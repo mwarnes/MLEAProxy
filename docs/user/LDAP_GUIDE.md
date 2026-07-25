@@ -1,5 +1,3 @@
-[🏠 Home](../../README.md) > [📚 User Docs](./README.md) > LDAP Guide
-
 # MLEAProxy LDAP Guide
 
 Complete guide for LDAP/LDAPS authentication proxy functionality in MLEAProxy.
@@ -15,9 +13,9 @@ Complete guide for LDAP/LDAPS authentication proxy functionality in MLEAProxy.
 - [Configuration Reference](#configuration-reference)
 - [Usage Examples](#usage-examples)
 - [In-Memory LDAP Server](#in-memory-ldap-server)
-- [MarkLogic Integration](#marklogic-integration)
 - [Security Features](#security-features)
 - [Troubleshooting](#troubleshooting)
+- [MarkLogic Integration](#marklogic-integration)
 
 ---
 
@@ -599,69 +597,6 @@ mleaproxy.directory-servers.server2.ldif-path=/opt/data/example.ldif
 
 ---
 
-## MarkLogic Integration
-
-### Automatic External Security Configuration
-
-MLEAProxy automatically generates MarkLogic External Security configurations for each LDAP listener at startup.
-
-**Example Startup Output:**
-
-```
-MarkLogic External Security Configuration Generated:
-  Configuration file: marklogic-external-security-ldapjson.json
-  LDAP URI: ldap://localhost:20389
-  LDAP Base: ou=users,dc=marklogic,dc=local
-  LDAP Attribute: sAMAccountName
-  Apply with: curl -X POST --anyauth -u admin:admin \
-    -H "Content-Type:application/json" \
-    -d @marklogic-external-security-ldapjson.json \
-    http://localhost:8002/manage/v2/external-security
-```
-
-### Apply Configuration
-
-```bash
-curl -X POST --anyauth -u admin:admin -H "Content-Type:application/json" \
-  -d @marklogic-external-security-ldapjson.json \
-  http://localhost:8002/manage/v2/external-security
-```
-
-### Generated Configuration Example
-
-```json
-{
-  "external-security-name": "MLEAProxy-ldapjson",
-  "description": "External security for MLEAProxy LDAP listener 'ldapjson'",
-  "authentication": "ldap",
-  "cache-timeout": "300",
-  "authorization": "ldap",
-  "ldap-server-uri": "ldap://localhost:20389",
-  "ldap-base": "ou=users,dc=marklogic,dc=local",
-  "ldap-attribute": "sAMAccountName",
-  "ldap-default-user": "default",
-  "ldap-password": "password",
-  "ldap-bind-method": "simple"
-}
-```
-
-### MarkLogic REST API Operations
-
-```bash
-# List external security configurations
-curl --anyauth -u admin:admin http://localhost:8002/manage/v2/external-security
-
-# Get specific configuration
-curl --anyauth -u admin:admin \
-  http://localhost:8002/manage/v2/external-security/MLEAProxy-ldapjson
-
-# Delete configuration
-curl -X DELETE --anyauth -u admin:admin \
-  http://localhost:8002/manage/v2/external-security/MLEAProxy-ldapjson
-```
-
----
-
 ## Security Features
 
 ### LDAP Injection Protection
@@ -791,6 +726,69 @@ mleaproxy.request-processors.ldapproxy.debug-level=DEBUG
 2024-01-15 14:30:15.150 DEBUG --- Backend Connection: Connecting to ldap.company.com:389
 2024-01-15 14:30:15.280 DEBUG --- Backend Response: BindResponse(resultCode=SUCCESS)
 2024-01-15 14:30:15.281 DEBUG --- Client Response: BindResponse(resultCode=SUCCESS)
+```
+
+---
+
+## MarkLogic Integration
+
+### Automatic External Security Configuration
+
+MLEAProxy automatically generates MarkLogic External Security configurations for each LDAP listener at startup.
+
+**Example Startup Output:**
+
+```
+MarkLogic External Security Configuration Generated:
+  Configuration file: marklogic-external-security-ldapjson.json
+  LDAP URI: ldap://localhost:20389
+  LDAP Base: ou=users,dc=marklogic,dc=local
+  LDAP Attribute: sAMAccountName
+  Apply with: curl -X POST --anyauth -u admin:admin \
+    -H "Content-Type:application/json" \
+    -d @marklogic-external-security-ldapjson.json \
+    http://localhost:8002/manage/v2/external-security
+```
+
+### Apply Configuration
+
+```bash
+curl -X POST --anyauth -u admin:admin -H "Content-Type:application/json" \
+  -d @marklogic-external-security-ldapjson.json \
+  http://localhost:8002/manage/v2/external-security
+```
+
+### Generated Configuration Example
+
+```json
+{
+  "external-security-name": "MLEAProxy-ldapjson",
+  "description": "External security for MLEAProxy LDAP listener 'ldapjson'",
+  "authentication": "ldap",
+  "cache-timeout": "300",
+  "authorization": "ldap",
+  "ldap-server-uri": "ldap://localhost:20389",
+  "ldap-base": "ou=users,dc=marklogic,dc=local",
+  "ldap-attribute": "sAMAccountName",
+  "ldap-default-user": "default",
+  "ldap-password": "password",
+  "ldap-bind-method": "simple"
+}
+```
+
+### MarkLogic REST API Operations
+
+```bash
+# List external security configurations
+curl --anyauth -u admin:admin http://localhost:8002/manage/v2/external-security
+
+# Get specific configuration
+curl --anyauth -u admin:admin \
+  http://localhost:8002/manage/v2/external-security/MLEAProxy-ldapjson
+
+# Delete configuration
+curl -X DELETE --anyauth -u admin:admin \
+  http://localhost:8002/manage/v2/external-security/MLEAProxy-ldapjson
 ```
 
 ---
