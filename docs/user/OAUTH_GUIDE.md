@@ -1,5 +1,3 @@
-[🏠 Home](../../README.md) > [📚 User Docs](./README.md) > OAuth 2.0 Guide
-
 # MLEAProxy OAuth 2.0 Guide
 
 Complete guide for OAuth 2.0 token generation and JWT verification in MLEAProxy.
@@ -15,10 +13,10 @@ Complete guide for OAuth 2.0 token generation and JWT verification in MLEAProxy.
 - [Token Generation Examples](#token-generation-examples)
 - [JWKS and Discovery Endpoints](#jwks-and-discovery-endpoints)
 - [Role Resolution](#role-resolution)
-- [MarkLogic Integration](#marklogic-integration)
 - [Client Integration](#client-integration)
 - [Security Best Practices](#security-best-practices)
 - [Troubleshooting](#troubleshooting)
+- [MarkLogic Integration](#marklogic-integration)
 
 ---
 
@@ -385,67 +383,6 @@ java -jar mlesproxy-2.0.3.jar --users=/path/to/custom/users.json
 
 ---
 
-## MarkLogic Integration
-
-### Configure MarkLogic External Security
-
-1. **Ensure JWKS URL is accessible from MarkLogic**
-
-   ```bash
-   # Test from MarkLogic server
-   curl http://mleaproxy-host:8080/oauth/jwks
-   ```
-
-2. **Create External Security Configuration**
-
-   Use MarkLogic Admin UI or REST API to create an external security profile:
-   - Authentication: External
-   - Authorization: External
-   - JWKS URI: `http://mleaproxy-host:8080/oauth/jwks`
-
-3. **Configure App Server**
-
-   Set the App Server to use the external security profile for JWT authentication.
-
-### Using Tokens with MarkLogic
-
-```bash
-# Generate token
-TOKEN=$(curl -s -X POST http://localhost:8080/oauth/token \
-  -d "grant_type=password" \
-  -d "username=admin" \
-  -d "password=password" \
-  -d "client_id=marklogic" \
-  -d "client_secret=secret" | jq -r '.access_token')
-
-# Use token with MarkLogic REST API
-curl -H "Authorization: Bearer $TOKEN" \
-  http://marklogic-host:8000/v1/documents?uri=/test.json
-```
-
-### JWKS Key Management Scripts
-
-MLEAProxy includes scripts for managing JWKS keys in MarkLogic:
-
-```bash
-# Extract and upload keys to MarkLogic
-./scripts/extract-jwks-keys.sh http://localhost:8080/oauth/jwks \
-  --upload-to-marklogic \
-  --marklogic-host ml.example.com \
-  --marklogic-user admin \
-  --marklogic-pass admin \
-  --external-security OAuth2-Profile
-
-# Clean up obsolete keys
-./scripts/cleanup-obsolete-jwks-keys.sh http://localhost:8080/oauth/jwks \
-  --marklogic-host ml.example.com \
-  --external-security OAuth2-Profile
-```
-
-See `docs/developer/README-JWKS-Integration.md` for complete documentation.
-
----
-
 ## Client Integration
 
 ### JavaScript/Node.js
@@ -650,6 +587,67 @@ Resource servers should validate:
 | 401 | Unauthorized | Invalid credentials |
 | 405 | Method Not Allowed | Wrong HTTP method (use POST for /oauth/token) |
 | 500 | Internal Server Error | Server configuration error |
+
+---
+
+## MarkLogic Integration
+
+### Configure MarkLogic External Security
+
+1. **Ensure JWKS URL is accessible from MarkLogic**
+
+   ```bash
+   # Test from MarkLogic server
+   curl http://mleaproxy-host:8080/oauth/jwks
+   ```
+
+2. **Create External Security Configuration**
+
+   Use MarkLogic Admin UI or REST API to create an external security profile:
+   - Authentication: External
+   - Authorization: External
+   - JWKS URI: `http://mleaproxy-host:8080/oauth/jwks`
+
+3. **Configure App Server**
+
+   Set the App Server to use the external security profile for JWT authentication.
+
+### Using Tokens with MarkLogic
+
+```bash
+# Generate token
+TOKEN=$(curl -s -X POST http://localhost:8080/oauth/token \
+  -d "grant_type=password" \
+  -d "username=admin" \
+  -d "password=password" \
+  -d "client_id=marklogic" \
+  -d "client_secret=secret" | jq -r '.access_token')
+
+# Use token with MarkLogic REST API
+curl -H "Authorization: Bearer $TOKEN" \
+  http://marklogic-host:8000/v1/documents?uri=/test.json
+```
+
+### JWKS Key Management Scripts
+
+MLEAProxy includes scripts for managing JWKS keys in MarkLogic:
+
+```bash
+# Extract and upload keys to MarkLogic
+./scripts/extract-jwks-keys.sh http://localhost:8080/oauth/jwks \
+  --upload-to-marklogic \
+  --marklogic-host ml.example.com \
+  --marklogic-user admin \
+  --marklogic-pass admin \
+  --external-security OAuth2-Profile
+
+# Clean up obsolete keys
+./scripts/cleanup-obsolete-jwks-keys.sh http://localhost:8080/oauth/jwks \
+  --marklogic-host ml.example.com \
+  --external-security OAuth2-Profile
+```
+
+See `docs/developer/README-JWKS-Integration.md` for complete documentation.
 
 ---
 

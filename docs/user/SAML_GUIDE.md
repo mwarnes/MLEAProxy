@@ -1,5 +1,3 @@
-[🏠 Home](../../README.md) > [📚 User Docs](./README.md) > SAML 2.0 Guide
-
 # MLEAProxy SAML 2.0 Guide
 
 Complete guide for SAML 2.0 Identity Provider functionality in MLEAProxy.
@@ -387,20 +385,7 @@ xmllint --xpath "string(//*[local-name()='SingleSignOnService']/@Location)" meta
 xmllint --xpath "//*[local-name()='X509Certificate']/text()" metadata.xml 2>/dev/null
 ```
 
-### Example 2: Extract Certificate for MarkLogic
-
-```bash
-# One-liner to create PEM certificate
-curl -s http://localhost:8080/saml/idp-metadata | \
-  xmllint --xpath "//*[local-name()='X509Certificate']/text()" - 2>/dev/null | \
-  fold -w 64 | \
-  { echo "-----BEGIN CERTIFICATE-----"; cat; echo "-----END CERTIFICATE-----"; } > idp-cert.pem
-
-# Verify certificate details
-openssl x509 -in idp-cert.pem -text -noout | grep -E "(Subject|Issuer|Not Before|Not After)"
-```
-
-### Example 3: Decode SAML Response
+### Example 2: Decode SAML Response
 
 After authentication, decode the SAMLResponse:
 
@@ -420,7 +405,7 @@ echo "$SAML_RESPONSE" | base64 -d | \
   xmllint --xpath "//*[local-name()='Attribute'][@Name='roles']//*[local-name()='AttributeValue']/text()" - 2>/dev/null
 ```
 
-### Example 4: Test with Custom Certificates
+### Example 3: Test with Custom Certificates
 
 ```bash
 # Generate self-signed certificate
@@ -436,7 +421,7 @@ java -jar mlesproxy-2.0.3.jar \
   --mleaproxy.saml-key-path=./saml-key.pem
 ```
 
-### Example 5: Enable Debug Logging
+### Example 4: Enable Debug Logging
 
 ```bash
 # Via command line
@@ -467,14 +452,17 @@ User -> MarkLogic (SP) -> MLEAProxy (IdP) -> Authenticate -> SAML Response -> Ma
 curl -s http://localhost:8080/saml/idp-metadata > mleaproxy-idp-metadata.xml
 ```
 
-### Step 2: Extract Certificate
+### Step 2: Extract Certificate for MarkLogic
 
 ```bash
-# Extract and format certificate
+# One-liner to create PEM certificate
 curl -s http://localhost:8080/saml/idp-metadata | \
   xmllint --xpath "//*[local-name()='X509Certificate']/text()" - 2>/dev/null | \
   fold -w 64 | \
   { echo "-----BEGIN CERTIFICATE-----"; cat; echo "-----END CERTIFICATE-----"; } > idp-cert.pem
+
+# Verify certificate details
+openssl x509 -in idp-cert.pem -text -noout | grep -E "(Subject|Issuer|Not Before|Not After)"
 
 # Verify certificate
 openssl x509 -in idp-cert.pem -noout -dates
@@ -639,6 +627,101 @@ curl -s http://localhost:8080/actuator/health 2>/dev/null || echo "Health endpoi
 | `Using roles from JSON for user` | Priority 2 role resolution |
 | `User not found in JSON, using default roles` | Priority 3 role resolution |
 | `IdP metadata served successfully` | Metadata endpoint working |
+
+---
+
+## MarkLogic Integration
+
+### Configuration Overview
+
+```
+User -> MarkLogic (SP) -> MLEAProxy (IdP) -> Authenticate -> SAML Response -> MarkLogic
+```
+
+### Step 1: Get IdP Metadata
+
+```bash
+curl -s http://localhost:8080/saml/idp-metadata > mleaproxy-idp-metadata.xml
+```
+
+### Step 2: Extract Certificate
+
+```bash
+# Extract and format certificate
+curl -s http://localhost:8080/saml/idp-metadata | \
+  xmllint --xpath "//*[local-name()='X509Certificate']/text()" - 2>/dev/null | \
+  fold -w 64 | \
+  { echo "-----BEGIN CERTIFICATE-----"; cat; echo "-----END CERTIFICATE-----"; } > idp-cert.pem
+
+# Verify certificate
+openssl x509 -in idp-cert.pem -noout -dates
+```
+
+### Step 3: Create External Security (Admin Console)
+
+Navigate to: **Security > External Security > Create**
+
+| Setting | Value |
+| --------- | ------- |
+| external security name | `mleaproxy-saml` |
+| authentication | `saml` |
+| authorization | `saml` |
+| cache timeout | `300` |
+| SAML entity ID | `http://localhost:8080/saml/idp` |
+| SAML destination | `http://localhost:8080/saml/auth` |
+| SAML issuer | `marklogic-server` |
+| SAML assertion host | `localhost:8000` |
+| SAML IDP certificate | *(paste contents of idp-cert.pem)* |
+
+### Step 4: Create External Security (REST API)
+
+```bash
+# Read certificate content
+CERT_CONTENT=$(cat idp-cert.pem)
+
+# Create external security configuration
+curl -X POST "http://localhost:8002/manage/v2/external-security" \
+  -H "Content-Type: application/json" \
+  -u admin:admin \
+  -d "{
+    \"external-security-name\": \"mleaproxy-saml\",
+    \"description\": \"SAML authentication via MLEAProxy\",
+    \"authentication\": \"saml\",
+    \"cache-timeout\": 300,
+    \"authorization\": \"saml\",
+    \"saml-entity-id\": \"http://localhost:8080/saml/idp\",
+    \"saml-destination\": \"http://localhost:8080/saml/auth\",
+    \"saml-issuer\": \"marklogic-server\",
+    \"saml-assertion-host\": \"localhost:8000\",
+    \"saml-idp-certificate\": \"$CERT_CONTENT\"
+  }"
+```
+
+### Step 5: Configure App Server
+
+```bash
+curl -X PUT "http://localhost:8002/manage/v2/servers/App-Services/properties?group-id=Default" \
+  -H "Content-Type: application/json" \
+  -u admin:admin \
+  -d '{
+    "authentication": "application-level",
+    "internal-security": false,
+    "external-security": ["mleaproxy-saml"]
+  }'
+```
+
+### Step 6: Test Authentication
+
+```bash
+# Access MarkLogic - should redirect to MLEAProxy
+open http://localhost:8000/
+
+# After login, verify user in MarkLogic
+curl -X POST "http://localhost:8000/v1/eval" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --negotiate -u : \
+  -d "xquery=xdmp:get-current-user()"
+```
 
 ---
 
