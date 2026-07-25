@@ -146,6 +146,29 @@ echo "$TOKEN" | cut -d'.' -f2 | base64 -d 2>/dev/null | jq .
 
 ---
 
+## Startup Output
+
+When MLEAProxy starts, you'll see the OAuth 2.0 endpoints section:
+
+```
+OAuth 2.0 Endpoints:
+--------------------------------------------------------------------------------
+Token Endpoint:           http://martins-air.localdomain:8080/oauth/token
+JWKS Endpoint:            http://martins-air.localdomain:8080/oauth/jwks
+OpenID Configuration:     http://martins-air.localdomain:8080/oauth/.well-known/config
+
+Example Token Request:
+curl -s -X POST http://martins-air.localdomain:8080/oauth/token \
+  -d "grant_type=password" \
+  -d "username=admin" \
+  -d "password=password" \
+  -d "client_id=marklogic" \
+  -d "client_secret=secret"
+================================================================================
+```
+
+---
+
 ## Configuration Reference
 
 Create `oauth.properties` in your working directory to customize OAuth behavior.

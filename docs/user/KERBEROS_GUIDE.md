@@ -165,6 +165,27 @@ kdestroy
 
 ---
 
+## Startup Output
+
+When MLEAProxy starts with Kerberos enabled, you'll see the Kerberos KDC section:
+
+```
+Kerberos KDC:
+--------------------------------------------------------------------------------
+Realm:                    EXAMPLE.COM
+KDC:                      martins-air.localdomain:8088
+HTTP Endpoint:            http://martins-air.localdomain:8080/kerberos/auth
+
+Test with kinit:
+  export KRB5_CONFIG=./krb5.conf
+  kinit mluser1@EXAMPLE.COM
+  (password: password)
+  klist
+================================================================================
+```
+
+---
+
 ## Configuration Reference
 
 ### Core Kerberos Properties

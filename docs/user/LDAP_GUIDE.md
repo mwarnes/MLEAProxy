@@ -140,6 +140,31 @@ java -jar mlesproxy-2.0.3.jar --mleaproxy.ldap-debug=true --mleaproxy.ldap-liste
 
 ---
 
+## Startup Output
+
+When MLEAProxy starts, you'll see the LDAP endpoints section:
+
+```
+LDAP Endpoints:
+--------------------------------------------------------------------------------
+In-Memory Server 'marklogic':   ldap://martins-air.localdomain:60389
+  Base DN: dc=MarkLogic,dc=Local
+LDAP Listener 'proxy':      ldap://martins-air.localdomain:10389
+  Description: LDAP Authentication Proxy
+LDAP Listener 'ldapjson':      ldap://martins-air.localdomain:20389
+  Description: Simple LDAP Server using JSON user store
+
+Example LDAP Search:
+ldapsearch -H ldap://martins-air.localdomain:10389 \
+  -D "cn=admin,ou=users,dc=marklogic,dc=local" \
+  -w password \
+  -b "ou=users,dc=marklogic,dc=local" \
+  "(objectClass=*)"
+================================================================================
+```
+
+---
+
 ## Configuration Reference
 
 MLEAProxy uses Spring Boot configuration properties with the `mleaproxy.*` prefix. Properties can be set via:
