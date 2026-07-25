@@ -167,8 +167,8 @@ The status page displays:
 
 When SAML is enabled, the status page shows:
 - Authentication endpoint: `http://<hostname>:8080/saml/auth`
-- IdP metadata: `http://<hostname>:8080/saml/metadata`
-- CA certificates: `http://<hostname>:8080/saml/cacerts`
+- IdP metadata: `http://<hostname>:8080/saml/idp-metadata`
+- CA certificates: `http://<hostname>:8080/saml/ca`
 - SAML configuration status
 
 ---

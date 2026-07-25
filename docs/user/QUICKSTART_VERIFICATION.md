@@ -614,8 +614,6 @@ java -jar target/mlesproxy-2.0.3.jar \
 | SAML | `/saml/auth` | POST | Generate SAML assertion |
 | Kerberos | `/kerberos/auth` | GET | SPNEGO authentication |
 | Kerberos | `/kerberos/token` | GET | Get service token |
-| Utility | `/b64encode` | GET/POST | Base64 encode |
-| Utility | `/b64decode` | GET/POST | Base64 decode |
 
 ---
 
@@ -627,5 +625,5 @@ java -jar target/mlesproxy-2.0.3.jar \
 | LDAP Proxy | 10389 | LDAP authentication proxy |
 | LDAP JSON | 20389 | LDAP server with JSON user store |
 | LDAP Directory | 60389 | In-memory LDAP directory |
-| Kerberos KDC | 60088 | Kerberos Key Distribution Center |
+| Kerberos KDC | 8088 | Kerberos Key Distribution Center |
 | Kerberos Admin | 60749 | Kerberos admin server |
