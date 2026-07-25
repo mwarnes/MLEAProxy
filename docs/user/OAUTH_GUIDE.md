@@ -36,7 +36,7 @@ MLEAProxy provides OAuth 2.0 authorization server functionality with JWT token g
 ### Endpoints
 
 | Endpoint | Method | Purpose | RFC |
-|----------|--------|---------|-----|
+| ---------- | -------- | --------- | ----- |
 | `/oauth/token` | POST | Generate JWT access tokens | RFC 6749 |
 | `/oauth/jwks` | GET | Public key discovery (JWKS) | RFC 7517 |
 | `/oauth/.well-known/config` | GET | Server metadata | RFC 8414 |
@@ -48,7 +48,7 @@ MLEAProxy provides OAuth 2.0 authorization server functionality with JWT token g
 ### Requirements
 
 - Java 21 or later
-- MLEAProxy 2.0.2 JAR file
+- MLEAProxy 2.0.3 JAR file
 - (Optional) `jq` for JSON parsing in examples
 - (Optional) Custom RSA private key for production
 
@@ -56,7 +56,7 @@ MLEAProxy provides OAuth 2.0 authorization server functionality with JWT token g
 
 ```bash
 # Download the release JAR
-# Place mlesproxy-2.0.2.jar in your working directory
+# Place mlesproxy-2.0.3.jar in your working directory
 
 # Verify Java version
 java -version
@@ -70,7 +70,7 @@ java -version
 ### 1. Start MLEAProxy
 
 ```bash
-java -jar mlesproxy-2.0.2.jar
+java -jar mlesproxy-2.0.3.jar
 ```
 
 ### 2. Generate a Token
@@ -153,7 +153,7 @@ Create `oauth.properties` in your working directory to customize OAuth behavior.
 ### Core Properties
 
 | Property | Description | Default |
-|----------|-------------|---------|
+| ---------- | ------------- | --------- |
 | `oauth.token.expiration.seconds` | Access token validity in seconds | `3600` |
 | `oauth.refresh.token.expiry.seconds` | Refresh token validity in seconds | `2592000` (30 days) |
 | `oauth.signing.key.path` | Path to RSA private key (PEM format) | Built-in key |
@@ -195,7 +195,7 @@ oauth.refresh.token.enabled=true
 Override any property at startup:
 
 ```bash
-java -jar mlesproxy-2.0.2.jar \
+java -jar mlesproxy-2.0.3.jar \
   --oauth.token.expiration.seconds=7200 \
   --oauth.jwt.issuer=my-custom-issuer \
   --oauth.default.roles=guest,readonly
@@ -271,7 +271,7 @@ curl -X POST http://localhost:8080/oauth/token \
 ### Request Parameters
 
 | Parameter | Required | Description | Example |
-|-----------|----------|-------------|---------|
+| ----------- | ---------- | ------------- | --------- |
 | `grant_type` | Yes | OAuth grant type | `password`, `client_credentials`, `refresh_token` |
 | `username` | Yes* | Username for authentication | `admin` |
 | `password` | Yes* | User password | `password` |
@@ -378,7 +378,7 @@ Users are defined in `users.json`:
 ### Custom User Repository Location
 
 ```bash
-java -jar mlesproxy-2.0.2.jar --users=/path/to/custom/users.json
+java -jar mlesproxy-2.0.3.jar --users=/path/to/custom/users.json
 ```
 
 ---
@@ -583,6 +583,7 @@ oauth.server.base.url=https://auth.example.com
 ### Token Validation Checklist
 
 Resource servers should validate:
+
 - Signature (using JWKS public key)
 - Issuer (`iss` claim)
 - Expiration (`exp` claim)
@@ -596,7 +597,7 @@ Resource servers should validate:
 ### Common Errors
 
 | Error | Cause | Solution |
-|-------|-------|----------|
+| ------- | ------- | ---------- |
 | `invalid_grant` | Invalid username/password | Verify credentials in users.json |
 | `invalid_client` | Invalid client_id/client_secret | Check client credentials |
 | `invalid_request` | Missing required parameter | Include all required parameters |
@@ -614,22 +615,26 @@ Resource servers should validate:
 ### Debugging Tips
 
 1. **Check startup logs** for OAuth endpoint registration:
+
    ```
    Token Endpoint:           http://localhost:8080/oauth/token
    JWKS Endpoint:            http://localhost:8080/oauth/jwks
    ```
 
 2. **Verify JWKS is accessible**:
+
    ```bash
    curl -v http://localhost:8080/oauth/jwks
    ```
 
 3. **Decode token to inspect claims**:
+
    ```bash
    echo "$TOKEN" | cut -d'.' -f2 | base64 -d 2>/dev/null | jq .
    ```
 
 4. **Enable debug logging**:
+
    ```properties
    logging.level.com.marklogic.handlers.undertow.OAuthTokenHandler=DEBUG
    ```
@@ -637,7 +642,7 @@ Resource servers should validate:
 ### HTTP Status Codes
 
 | Code | Meaning | Scenario |
-|------|---------|----------|
+| ------ | --------- | ---------- |
 | 200 | OK | Token generated successfully |
 | 400 | Bad Request | Missing required parameters |
 | 401 | Unauthorized | Invalid credentials |

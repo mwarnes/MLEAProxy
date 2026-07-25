@@ -9,10 +9,10 @@ This guide provides working examples for all protocols with configuration, expec
 ./build.sh clean package
 
 # Verify the JAR was created
-ls -la target/mlesproxy-2.0.2.jar
+ls -la target/mlesproxy-2.0.3.jar
 
 # Set JAR variable for examples
-JAR=target/mlesproxy-2.0.2.jar
+JAR=target/mlesproxy-2.0.3.jar
 ```
 
 ---
@@ -30,7 +30,7 @@ MLEAProxy includes a working default configuration in `src/main/resources/mleapr
 ### 1.2 Start the Server
 
 ```bash
-java -jar target/mlesproxy-2.0.2.jar
+java -jar target/mlesproxy-2.0.3.jar
 ```
 
 ### 1.3 Expected Startup Output
@@ -91,6 +91,7 @@ ldapsearch -H ldap://localhost:60389 \
 ```
 
 **Expected output:**
+
 ```
 dn: dc=MarkLogic,dc=Local
 objectClass: organization
@@ -112,6 +113,7 @@ ldapsearch -H ldap://localhost:60389 \
 ```
 
 **Expected output:**
+
 ```
 dn: uid=mluser1,ou=Users,dc=MarkLogic,dc=Local
 uid: mluser1
@@ -168,6 +170,7 @@ curl -X POST http://localhost:8080/oauth/token \
 ```
 
 **Expected output:**
+
 ```json
 {
   "access_token": "eyJraWQiOiI...",
@@ -195,6 +198,7 @@ curl -s http://localhost:8080/oauth/jwks | jq .
 ```
 
 **Expected output:**
+
 ```json
 {
   "keys": [
@@ -217,6 +221,7 @@ curl -s http://localhost:8080/oauth/.well-known/config | jq .
 ```
 
 **Expected output:**
+
 ```json
 {
   "issuer": "mleaproxy-oauth-server",
@@ -245,6 +250,7 @@ echo $TOKEN | cut -d'.' -f2 | base64 -d 2>/dev/null | jq .
 ```
 
 **Expected payload:**
+
 ```json
 {
   "iss": "mleaproxy-oauth-server",
@@ -289,6 +295,7 @@ curl -s http://localhost:8080/saml/idp-metadata
 ```
 
 **Expected output (formatted):**
+
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
@@ -317,6 +324,7 @@ curl -s http://localhost:8080/saml/ca
 ```
 
 **Expected output:**
+
 ```
 -----BEGIN CERTIFICATE-----
 MIIDyzCCArOgAwIBAgIUVfpV56K9w6BsaPh9Wd6nRzF4zB0wDQYJKoZIhvcNAQEL
@@ -332,6 +340,7 @@ curl -s http://localhost:8080/saml/ca | openssl x509 -text -noout | head -20
 ```
 
 **Expected output:**
+
 ```
 Certificate:
     Data:
@@ -374,7 +383,7 @@ mleaproxy.kerberos.ldap-base-dn=dc=MarkLogic,dc=Local
 ### 4.2 Start with Kerberos Enabled
 
 ```bash
-java -jar target/mlesproxy-2.0.2.jar \
+java -jar target/mlesproxy-2.0.3.jar \
   --mleaproxy.kerberos.enabled=true
 ```
 
@@ -441,7 +450,7 @@ Run all basic verification tests:
 # Save as verify-mleaproxy.sh
 
 echo "=== Starting MLEAProxy ==="
-java -jar target/mlesproxy-2.0.2.jar &
+java -jar target/mlesproxy-2.0.3.jar &
 PID=$!
 sleep 6
 
@@ -490,24 +499,24 @@ Override any property at runtime:
 
 ```bash
 # Change HTTP port
-java -jar target/mlesproxy-2.0.2.jar --server.port=9090
+java -jar target/mlesproxy-2.0.3.jar --server.port=9090
 
 # Change LDAP listener port
-java -jar target/mlesproxy-2.0.2.jar \
+java -jar target/mlesproxy-2.0.3.jar \
   --mleaproxy.ldap-listeners.proxy.port=20389
 
 # Enable debug logging
-java -jar target/mlesproxy-2.0.2.jar \
+java -jar target/mlesproxy-2.0.3.jar \
   --mleaproxy.ldap-debug=true \
   --mleaproxy.saml-debug=true
 
 # Enable Kerberos
-java -jar target/mlesproxy-2.0.2.jar \
+java -jar target/mlesproxy-2.0.3.jar \
   --mleaproxy.kerberos.enabled=true \
   --mleaproxy.kerberos.realm=MYCOMPANY.COM
 
 # Multiple overrides
-java -jar target/mlesproxy-2.0.2.jar \
+java -jar target/mlesproxy-2.0.3.jar \
   --server.port=9090 \
   --mleaproxy.ldap-listeners.proxy.port=20389 \
   --mleaproxy.kerberos.enabled=true
@@ -550,7 +559,7 @@ curl -v http://localhost:8080/oauth/jwks
 
 ```bash
 # Run with debug logging
-java -jar target/mlesproxy-2.0.2.jar \
+java -jar target/mlesproxy-2.0.3.jar \
   --logging.level.com.marklogic=DEBUG
 ```
 
@@ -559,7 +568,7 @@ java -jar target/mlesproxy-2.0.2.jar \
 ## Endpoint Reference
 
 | Protocol | Endpoint | Method | Description |
-|----------|----------|--------|-------------|
+| ---------- | ---------- | -------- | ------------- |
 | OAuth | `/oauth/token` | POST | Get access token |
 | OAuth | `/oauth/jwks` | GET | Get JSON Web Key Set |
 | OAuth | `/oauth/.well-known/config` | GET | OpenID Connect discovery |
@@ -576,7 +585,7 @@ java -jar target/mlesproxy-2.0.2.jar \
 ## Default Ports
 
 | Service | Port | Description |
-|---------|------|-------------|
+| --------- | ------ | ------------- |
 | HTTP | 8080 | OAuth, SAML, Kerberos endpoints |
 | LDAP Proxy | 10389 | LDAP authentication proxy |
 | LDAP JSON | 20389 | LDAP server with JSON user store |

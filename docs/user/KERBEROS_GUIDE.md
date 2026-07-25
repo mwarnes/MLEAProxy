@@ -36,7 +36,7 @@ MLEAProxy includes an embedded Kerberos Key Distribution Center (KDC) for testin
 ### Endpoints Summary
 
 | Endpoint | Method | Authentication | Description |
-|----------|--------|----------------|-------------|
+| ---------- | -------- | ---------------- | ------------- |
 | `/kerberos/auth` | GET | SPNEGO | Get JWT token |
 | `/kerberos/token` | GET | SPNEGO | Alias for /auth |
 | `/kerberos/whoami` | GET | SPNEGO | Get user info |
@@ -87,7 +87,7 @@ Use MIT Kerberos for Windows or Windows native Kerberos with a properly configur
 ```bash
 # Start with Kerberos enabled
 java -Dmleaproxy.kerberos.enabled=true \
-     -jar target/mlesproxy-2.0.2.jar
+     -jar target/mlesproxy-2.0.3.jar
 ```
 
 Or use a properties file:
@@ -103,7 +103,7 @@ EOF
 
 # Start MLEAProxy
 java -Dmleaproxy.properties=./kerberos-test.properties \
-     -jar target/mlesproxy-2.0.2.jar
+     -jar target/mlesproxy-2.0.3.jar
 ```
 
 ### 2. Configure Kerberos Client
@@ -129,6 +129,7 @@ klist
 ```
 
 Expected output:
+
 ```
 Ticket cache: FILE:/tmp/krb5cc_501
 Default principal: mluser1@MARKLOGIC.LOCAL
@@ -145,6 +146,7 @@ curl --negotiate -u : http://localhost:8080/kerberos/auth
 ```
 
 Expected response:
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiJ9...",
@@ -170,7 +172,7 @@ kdestroy
 All Kerberos properties use the `mleaproxy.kerberos.*` prefix.
 
 | Property | Default | Description |
-|----------|---------|-------------|
+| ---------- | --------- | ------------- |
 | `mleaproxy.kerberos.enabled` | `false` | Enable/disable embedded KDC |
 | `mleaproxy.kerberos.realm` | `MARKLOGIC.LOCAL` | Kerberos realm (UPPERCASE) |
 | `mleaproxy.kerberos.kdc-host` | `localhost` | KDC hostname |
@@ -182,7 +184,7 @@ All Kerberos properties use the `mleaproxy.kerberos.*` prefix.
 ### Principal Management Properties
 
 | Property | Default | Description |
-|----------|---------|-------------|
+| ---------- | --------- | ------------- |
 | `mleaproxy.kerberos.principals-import-from-ldap` | `true` | Import users from LDAP |
 | `mleaproxy.kerberos.principals-ldap-base-dn` | `dc=MarkLogic,dc=Local` | LDAP base DN for import |
 | `mleaproxy.kerberos.service-principals` | `HTTP/localhost,ldap/localhost` | Service principals to create |
@@ -190,7 +192,7 @@ All Kerberos properties use the `mleaproxy.kerberos.*` prefix.
 ### Advanced Properties
 
 | Property | Default | Description |
-|----------|---------|-------------|
+| ---------- | --------- | ------------- |
 | `mleaproxy.kerberos.ticket-lifetime` | `36000` | Ticket lifetime (seconds, 10 hours) |
 | `mleaproxy.kerberos.ticket-renewable-lifetime` | `604800` | Renewable lifetime (seconds, 7 days) |
 | `mleaproxy.kerberos.clock-skew` | `300` | Clock skew tolerance (seconds, 5 minutes) |
@@ -249,6 +251,7 @@ When `mleaproxy.kerberos.enabled=true`, MLEAProxy automatically:
 When importing from LDAP (`principals-import-from-ldap=true`), these principals are created:
 
 **User Principals** (password: `password`):
+
 - `mluser1@MARKLOGIC.LOCAL`
 - `mluser2@MARKLOGIC.LOCAL`
 - `mluser3@MARKLOGIC.LOCAL`
@@ -257,6 +260,7 @@ When importing from LDAP (`principals-import-from-ldap=true`), these principals 
 - `appadmin@MARKLOGIC.LOCAL`
 
 **Service Principals**:
+
 - `HTTP/localhost@MARKLOGIC.LOCAL`
 - `ldap/localhost@MARKLOGIC.LOCAL`
 - `krbtgt/MARKLOGIC.LOCAL@MARKLOGIC.LOCAL` (auto-created)
@@ -424,6 +428,7 @@ curl --negotiate -u : -X POST http://localhost:8080/kerberos/oauth
 ```
 
 **Response:**
+
 ```json
 {
   "access_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjE3Y2UwNDc0MjgyYmEwMDEifQ...",
@@ -452,6 +457,7 @@ curl --negotiate -u : -X POST http://localhost:8080/kerberos/saml
 ```
 
 **Response:**
+
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <saml:Assertion xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
@@ -529,6 +535,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 **Cause:** `KRB5_CONFIG` not set or points to wrong file.
 
 **Solution:**
+
 ```bash
 export KRB5_CONFIG=./kerberos/krb5.conf
 # Verify the file exists
@@ -540,6 +547,7 @@ cat $KRB5_CONFIG
 **Cause:** User principal does not exist in KDC.
 
 **Solution:**
+
 ```bash
 # Check if Kerberos is enabled and users imported from LDAP
 # Verify in startup logs:
@@ -553,6 +561,7 @@ grep "Created principal" logs/mleaproxy.log
 **Cause:** Time difference between client and KDC exceeds tolerance (default 5 minutes).
 
 **Solution:**
+
 ```bash
 # Sync system time
 # macOS:
@@ -570,6 +579,7 @@ sudo ntpdate pool.ntp.org
 **Cause:** Wrong password.
 
 **Solution:**
+
 ```bash
 # Default password for all test users is: password
 kinit mluser1@MARKLOGIC.LOCAL
@@ -581,6 +591,7 @@ kinit mluser1@MARKLOGIC.LOCAL
 **Cause:** Another KDC or process using the port.
 
 **Solution:**
+
 ```bash
 # Check what's using the port
 lsof -i :60088
@@ -594,6 +605,7 @@ mleaproxy.kerberos.kdc-port=60089
 **Cause:** No valid Kerberos ticket or SPNEGO not working.
 
 **Solution:**
+
 ```bash
 # Verify you have a valid ticket
 klist
@@ -626,10 +638,11 @@ logging.level.com.marklogic.security.KerberosAuthenticationFilter=DEBUG
 ```
 
 Run with debug:
+
 ```bash
 java -Dsun.security.krb5.debug=true \
      -Dmleaproxy.kerberos.debug=true \
-     -jar target/mlesproxy-2.0.2.jar
+     -jar target/mlesproxy-2.0.3.jar
 ```
 
 ### Verify KDC is Running

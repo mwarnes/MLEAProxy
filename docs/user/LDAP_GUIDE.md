@@ -32,7 +32,7 @@ MLEAProxy provides comprehensive LDAP/LDAPS proxy and server capabilities:
 ### Default LDAP Endpoints
 
 | Protocol | Default Port | Purpose |
-|----------|--------------|---------|
+| ---------- | -------------- | --------- |
 | LDAP | 10389 | LDAP proxy (requires backend) |
 | LDAP | 20389 | JSON LDAP server (standalone) |
 | LDAP | 60389 | In-memory directory server |
@@ -59,7 +59,7 @@ Expected output: `openjdk version "21.x.x"` or similar.
 
 ### Option 1: Download Pre-built JAR
 
-Download `mlesproxy-2.0.2.jar` from the releases page.
+Download `mlesproxy-2.0.3.jar` from the releases page.
 
 ### Option 2: Build from Source
 
@@ -69,12 +69,12 @@ cd MLEAProxy
 ./build.sh clean package
 ```
 
-The built JAR is located at `target/mlesproxy-2.0.2.jar`.
+The built JAR is located at `target/mlesproxy-2.0.3.jar`.
 
 ### Verify Installation
 
 ```bash
-java -jar mlesproxy-2.0.2.jar --help
+java -jar mlesproxy-2.0.3.jar --help
 ```
 
 ---
@@ -111,7 +111,7 @@ mleaproxy.request-processors.jsonauth.auth-class=com.marklogic.processors.JsonRe
 **2. Start MLEAProxy:**
 
 ```bash
-java -jar mlesproxy-2.0.2.jar
+java -jar mlesproxy-2.0.3.jar
 ```
 
 **3. Verify with ldapsearch:**
@@ -135,7 +135,7 @@ memberOf: admin
 Override any property via command line:
 
 ```bash
-java -jar mlesproxy-2.0.2.jar --mleaproxy.ldap-debug=true --mleaproxy.ldap-listeners.ldapjson.port=30389
+java -jar mlesproxy-2.0.3.jar --mleaproxy.ldap-debug=true --mleaproxy.ldap-listeners.ldapjson.port=30389
 ```
 
 ---
@@ -166,7 +166,7 @@ LDAP Client --> Listener --> Request Processor --> Server Set --> Backend Server
 Prefix: `mleaproxy.ldap-listeners.{name}.*`
 
 | Property | Description | Default | Required |
-|----------|-------------|---------|----------|
+| ---------- | ------------- | --------- | ---------- |
 | `ip-address` | IP address to bind | `0.0.0.0` | No |
 | `port` | Listening port | - | Yes |
 | `secure` | Enable LDAPS | `false` | No |
@@ -183,7 +183,7 @@ Prefix: `mleaproxy.ldap-listeners.{name}.*`
 **LDAP Modes:**
 
 | Mode | Description |
-|------|-------------|
+| ------ | ------------- |
 | `internal` | Standalone mode, no backend servers |
 | `single` | Use only first server in set |
 | `failover` | Primary server with automatic failover |
@@ -197,7 +197,7 @@ Prefix: `mleaproxy.ldap-listeners.{name}.*`
 Prefix: `mleaproxy.ldap-sets.{name}.*`
 
 | Property | Description | Default | Required |
-|----------|-------------|---------|----------|
+| ---------- | ------------- | --------- | ---------- |
 | `servers` | Comma-separated server names | - | Yes |
 | `secure` | Use LDAPS to backend | `false` | No |
 | `keystore` | Client keystore path | - | No |
@@ -219,7 +219,7 @@ Prefix: `mleaproxy.ldap-servers.{name}.*`
 Prefix: `mleaproxy.request-processors.{name}.*`
 
 | Property | Description | Default | Required |
-|----------|-------------|---------|----------|
+| ---------- | ------------- | --------- | ---------- |
 | `auth-class` | Fully qualified processor class | - | Yes |
 | `debug-level` | Logging level | `INFO` | No |
 | `params` | List of additional parameters | - | No |
@@ -227,7 +227,7 @@ Prefix: `mleaproxy.request-processors.{name}.*`
 **Built-in Processors:**
 
 | Class | Description |
-|-------|-------------|
+| ------- | ------------- |
 | `com.marklogic.processors.JsonRequestProcessor` | JSON user repository (standalone) |
 | `com.marklogic.processors.ProxyRequestProcessor` | Proxy to backend LDAP |
 | `com.marklogic.processors.XmlRequestProcessor` | Legacy XML user repository |
@@ -237,7 +237,7 @@ Prefix: `mleaproxy.request-processors.{name}.*`
 Prefix: `mleaproxy.directory-servers.{name}.*`
 
 | Property | Description | Default | Required |
-|----------|-------------|---------|----------|
+| ---------- | ------------- | --------- | ---------- |
 | `name` | Display name | - | No |
 | `ip-address` | Bind address | `0.0.0.0` | No |
 | `port` | Listening port | `60389` | No |
@@ -549,7 +549,7 @@ mleaproxy.directory-servers.marklogic.admin-password=password
 **Start:**
 
 ```bash
-java -jar mlesproxy-2.0.2.jar
+java -jar mlesproxy-2.0.3.jar
 ```
 
 **Test:**
@@ -573,7 +573,7 @@ mleaproxy.directory-servers.custom.ldif-path=/opt/ldap-data/custom.ldif
 The default `marklogic.ldif` includes:
 
 | Username | DN | Password |
-|----------|-----|----------|
+| ---------- | ----- | ---------- |
 | mluser1 | `uid=mluser1,ou=Users,dc=MarkLogic,dc=Local` | password |
 | mluser2 | `uid=mluser2,ou=Users,dc=MarkLogic,dc=Local` | password |
 | appreader | `uid=appreader,ou=Users,dc=MarkLogic,dc=Local` | password |
@@ -665,6 +665,7 @@ curl -X DELETE --anyauth -u admin:admin \
 ### LDAP Injection Protection
 
 MLEAProxy automatically sanitizes LDAP inputs:
+
 - Escapes special characters: `*`, `(`, `)`, `\`, `NUL`
 - Validates DN syntax
 - Prevents filter injection
@@ -706,6 +707,7 @@ MLEAProxy uses JSON format for user data:
 ```
 
 Features:
+
 - Case-insensitive username lookup
 - Bcrypt password hashing support
 - Role-based access control
@@ -717,7 +719,7 @@ Features:
 ### Enable Debug Logging
 
 ```bash
-java -jar mlesproxy-2.0.2.jar --mleaproxy.ldap-debug=true
+java -jar mlesproxy-2.0.3.jar --mleaproxy.ldap-debug=true
 ```
 
 Or in configuration:
@@ -735,6 +737,7 @@ mleaproxy.request-processors.ldapproxy.debug-level=DEBUG
 **Symptom:** `Connection refused` when connecting
 
 **Solutions:**
+
 1. Verify listener is running: `netstat -an | grep 10389`
 2. Check bind address: `mleaproxy.ldap-listeners.proxy.ip-address=0.0.0.0`
 3. Check firewall: `sudo ufw allow 10389/tcp`
@@ -744,6 +747,7 @@ mleaproxy.request-processors.ldapproxy.debug-level=DEBUG
 **Symptom:** `INVALID_CREDENTIALS` error
 
 **Solutions:**
+
 1. Enable debug: `--mleaproxy.ldap-debug=true`
 2. Verify user exists in `users.json`
 3. Check password (case-sensitive)
@@ -754,6 +758,7 @@ mleaproxy.request-processors.ldapproxy.debug-level=DEBUG
 **Symptom:** `SSLHandshakeException` or certificate errors
 
 **Solutions:**
+
 1. Verify certificate: `keytool -list -v -keystore keystore.jks`
 2. Add CA cert to truststore: `keytool -import -file ca.crt -keystore truststore.jks`
 3. Check hostname matches certificate CN
@@ -763,6 +768,7 @@ mleaproxy.request-processors.ldapproxy.debug-level=DEBUG
 **Symptom:** Cannot connect to backend LDAP server
 
 **Solutions:**
+
 1. Test backend directly: `ldapsearch -H ldap://backend:389 -x`
 2. Verify server set configuration
 3. Check network connectivity: `telnet backend 389`
@@ -770,7 +776,7 @@ mleaproxy.request-processors.ldapproxy.debug-level=DEBUG
 ### LDAPS Troubleshooting Checklist
 
 | Issue | Check | Solution |
-|-------|-------|----------|
+| ------- | ------- | ---------- |
 | Certificate Errors | Truststore has CA cert | `keytool -import -file ca.crt -keystore truststore.jks` |
 | Hostname Mismatch | CN matches hostname | Update DNS or certificate |
 | Connection Timeout | Port 636 accessible | `telnet ldap.company.com 636` |

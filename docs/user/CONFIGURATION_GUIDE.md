@@ -20,14 +20,14 @@ cd MLEAProxy
 ./build.sh clean package
 
 # Verify build
-ls -la target/mlesproxy-2.0.2.jar
+ls -la target/mlesproxy-2.0.3.jar
 ```
 
 ### Run the Application
 
 ```bash
 # Basic startup (uses ./application.properties or ./mleaproxy.properties)
-java -jar target/mlesproxy-2.0.2.jar
+java -jar target/mlesproxy-2.0.3.jar
 
 # With Spring Boot dev mode
 mvn spring-boot:run
@@ -53,7 +53,7 @@ Properties are loaded from multiple sources. Later sources override earlier ones
 ### Configuration Files
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `mleaproxy.properties` | Main configuration (all settings) |
 | `ldap.properties` | LDAP listeners, server sets, backend servers |
 | `saml.properties` | SAML IdP settings |
@@ -107,7 +107,7 @@ mleaproxy.directory-servers.test.admin-password=secret
 **Directory Server Properties:**
 
 | Property | Type | Default | Description |
-|----------|------|---------|-------------|
+| ---------- | ------ | --------- | ------------- |
 | `ip-address` | String | `0.0.0.0` | IP address to bind to |
 | `port` | Integer | `60389` | Port number |
 | `base-dn` | String | `dc=MarkLogic,dc=Local` | Base distinguished name |
@@ -146,7 +146,7 @@ mleaproxy.ldap-listeners.secure-proxy.truststore-password=changeit
 **LDAP Listener Properties:**
 
 | Property | Type | Default | Description |
-|----------|------|---------|-------------|
+| ---------- | ------ | --------- | ------------- |
 | `ip-address` | String | `0.0.0.0` | IP address to bind to |
 | `port` | Integer | (required) | Port number |
 | `secure` | Boolean | `false` | Enable LDAPS |
@@ -162,6 +162,7 @@ mleaproxy.ldap-listeners.secure-proxy.truststore-password=changeit
 | `request-handler` | String | `com.marklogic.handlers.LDAPRequestHandler` | Handler class |
 
 **LDAP Modes:**
+
 - `internal` - Route to in-memory directory server
 - `single` - Connect to a single backend server
 - `roundrobin` - Round-robin load balancing
@@ -200,7 +201,7 @@ mleaproxy.ldap-sets.pem-backend.ca-path=/path/to/ca.pem
 **Server Set Properties:**
 
 | Property | Type | Default | Description |
-|----------|------|---------|-------------|
+| ---------- | ------ | --------- | ------------- |
 | `servers` | List | (empty) | Comma-separated server names |
 | `mode` | String | (none) | SINGLE, ROUNDROBIN, FAILOVER, FASTEST, FEWEST, ROUNDROBINDNS |
 | `secure` | Boolean | `false` | Enable SSL/TLS |
@@ -240,7 +241,7 @@ mleaproxy.ldap-servers.adserver2.port=636
 **Backend Server Properties:**
 
 | Property | Type | Default | Description |
-|----------|------|---------|-------------|
+| ---------- | ------ | --------- | ------------- |
 | `host` | String | (none) | Server hostname or IP |
 | `port` | Integer | (required) | Server port |
 | `auth-type` | String | `simple` | Authentication type |
@@ -266,7 +267,7 @@ mleaproxy.request-processors.passthrough.debug-level=WARN
 **Request Processor Properties:**
 
 | Property | Type | Default | Description |
-|----------|------|---------|-------------|
+| ---------- | ------ | --------- | ------------- |
 | `auth-class` | String | (none) | Fully qualified processor class name |
 | `debug-level` | String | `INFO` | Logging level |
 | `params` | List | (empty) | Additional processor parameters |
@@ -301,7 +302,7 @@ mleaproxy.kerberos.clock-skew=300
 **Kerberos Properties:**
 
 | Property | Type | Default | Description |
-|----------|------|---------|-------------|
+| ---------- | ------ | --------- | ------------- |
 | `enabled` | Boolean | `false` | Enable embedded KDC |
 | `realm` | String | `MARKLOGIC.LOCAL` | Kerberos realm (uppercase) |
 | `kdc-host` | String | `localhost` | KDC bind address |
@@ -331,7 +332,7 @@ mleaproxy.saml-listeners.default.description=SAML IdP endpoint
 **SAML Listener Properties:**
 
 | Property | Type | Default | Description |
-|----------|------|---------|-------------|
+| ---------- | ------ | --------- | ------------- |
 | `ip-address` | String | `0.0.0.0` | IP address to bind to |
 | `port` | Integer | (required) | Port number |
 | `debug-level` | String | `INFO` | Logging level |
@@ -361,7 +362,7 @@ server.ssl.key-store-password=changeit
 Spring Boot's relaxed binding supports environment variables. Convert property names to SCREAMING_SNAKE_CASE:
 
 | Property | Environment Variable |
-|----------|---------------------|
+| ---------- | --------------------- |
 | `mleaproxy.ldap-debug` | `MLEAPROXY_LDAP_DEBUG` |
 | `mleaproxy.saml-debug` | `MLEAPROXY_SAML_DEBUG` |
 | `mleaproxy.ssl-verify-certificates` | `MLEAPROXY_SSL_VERIFY_CERTIFICATES` |
@@ -370,11 +371,12 @@ Spring Boot's relaxed binding supports environment variables. Convert property n
 | `mleaproxy.kerberos.realm` | `MLEAPROXY_KERBEROS_REALM` |
 
 **Example:**
+
 ```bash
 export MLEAPROXY_LDAP_DEBUG=true
 export MLEAPROXY_KERBEROS_ENABLED=true
 export MLEAPROXY_KERBEROS_REALM=CORP.EXAMPLE.COM
-java -jar target/mlesproxy-2.0.2.jar
+java -jar target/mlesproxy-2.0.3.jar
 ```
 
 ## Command-Line Overrides
@@ -384,10 +386,11 @@ Spring Boot supports two methods for runtime property overrides:
 ### Using `--` Arguments (Recommended)
 
 ```bash
-java -jar target/mlesproxy-2.0.2.jar --mleaproxy.ldap-debug=true
+java -jar target/mlesproxy-2.0.3.jar --mleaproxy.ldap-debug=true
 ```
 
 The `--` syntax is preferred because:
+
 - Arguments appear after the JAR, making them easier to read
 - They have the highest priority (override `-D` flags and environment variables)
 - Better compatibility with container orchestration tools
@@ -395,7 +398,7 @@ The `--` syntax is preferred because:
 ### Using `-D` System Properties
 
 ```bash
-java -Dmleaproxy.ldap-debug=true -jar target/mlesproxy-2.0.2.jar
+java -Dmleaproxy.ldap-debug=true -jar target/mlesproxy-2.0.3.jar
 ```
 
 ### Combining Both
@@ -403,7 +406,7 @@ java -Dmleaproxy.ldap-debug=true -jar target/mlesproxy-2.0.2.jar
 ```bash
 # -- takes precedence over -D
 java -Dmleaproxy.ldap-debug=false \
-     -jar target/mlesproxy-2.0.2.jar \
+     -jar target/mlesproxy-2.0.3.jar \
      --mleaproxy.ldap-debug=true
 # Result: ldap-debug will be true
 ```
@@ -411,34 +414,39 @@ java -Dmleaproxy.ldap-debug=false \
 ### Common Override Examples
 
 **Enable debug logging:**
+
 ```bash
-java -jar target/mlesproxy-2.0.2.jar \
+java -jar target/mlesproxy-2.0.3.jar \
     --mleaproxy.ldap-debug=true \
     --mleaproxy.saml-debug=true \
     --logging.level.com.marklogic=TRACE
 ```
 
 **Change listener port:**
+
 ```bash
-java -jar target/mlesproxy-2.0.2.jar \
+java -jar target/mlesproxy-2.0.3.jar \
     --mleaproxy.ldap-listeners.proxy.port=20389
 ```
 
 **Switch backend server:**
+
 ```bash
-java -jar target/mlesproxy-2.0.2.jar \
+java -jar target/mlesproxy-2.0.3.jar \
     --mleaproxy.ldap-servers.server1.host=backup-ldap.example.com
 ```
 
 **Override web server port:**
+
 ```bash
-java -jar target/mlesproxy-2.0.2.jar \
+java -jar target/mlesproxy-2.0.3.jar \
     --server.port=9090
 ```
 
 **Multiple overrides:**
+
 ```bash
-java -jar target/mlesproxy-2.0.2.jar \
+java -jar target/mlesproxy-2.0.3.jar \
     --mleaproxy.ldap-debug=true \
     --mleaproxy.ldap-listeners.proxy.port=20389 \
     --mleaproxy.ldap-listeners.proxy.ip-address=127.0.0.1 \
@@ -452,6 +460,7 @@ java -jar target/mlesproxy-2.0.2.jar \
 ### Example 1: Development Environment
 
 **mleaproxy.properties:**
+
 ```properties
 # === Global Debug Settings ===
 mleaproxy.ldap-debug=true
@@ -483,6 +492,7 @@ logging.level.com.marklogic=TRACE
 ### Example 2: Production with Active Directory
 
 **mleaproxy.properties:**
+
 ```properties
 # === Global Settings ===
 mleaproxy.ldap-debug=false
@@ -533,6 +543,7 @@ server.ssl.enabled=true
 ### Example 3: Load-Balanced LDAP Cluster
 
 **mleaproxy.properties:**
+
 ```properties
 # === Debug ===
 mleaproxy.ldap-debug=true
@@ -568,6 +579,7 @@ mleaproxy.request-processors.passthrough.debug-level=INFO
 ### Example 4: Kerberos with LDAP Backend
 
 **mleaproxy.properties:**
+
 ```properties
 # === Kerberos KDC ===
 mleaproxy.kerberos.enabled=true
@@ -614,6 +626,7 @@ mleaproxy.request-processors.jsonauth.debug-level=INFO
 Split configuration across multiple files for better organization:
 
 **ldap.properties:**
+
 ```properties
 mleaproxy.ldap-debug=true
 
@@ -636,6 +649,7 @@ mleaproxy.request-processors.jsonauth.debug-level=INFO
 ```
 
 **saml.properties:**
+
 ```properties
 mleaproxy.saml-debug=true
 mleaproxy.saml-ca-path=/etc/mleaproxy/certs/saml-cert.pem
@@ -644,6 +658,7 @@ mleaproxy.saml-response-validity=300
 ```
 
 **directory.properties:**
+
 ```properties
 mleaproxy.directory-servers.dev.ip-address=0.0.0.0
 mleaproxy.directory-servers.dev.port=60389
@@ -653,6 +668,7 @@ mleaproxy.directory-servers.dev.admin-password=password
 ```
 
 **kerberos.properties:**
+
 ```properties
 mleaproxy.kerberos.enabled=true
 mleaproxy.kerberos.realm=CORP.EXAMPLE.COM
@@ -665,14 +681,16 @@ mleaproxy.kerberos.kdc-port=60088
 ### Docker
 
 **Dockerfile:**
+
 ```dockerfile
 FROM eclipse-temurin:21-jre
-COPY target/mlesproxy-2.0.2.jar /app/mlesproxy.jar
+COPY target/mlesproxy-2.0.3.jar /app/mlesproxy.jar
 WORKDIR /app
 ENTRYPOINT ["java", "-jar", "mlesproxy.jar"]
 ```
 
 **Run with environment variables:**
+
 ```bash
 docker run -p 8080:8080 -p 10389:10389 \
     -e MLEAPROXY_LDAP_DEBUG=true \
@@ -681,6 +699,7 @@ docker run -p 8080:8080 -p 10389:10389 \
 ```
 
 **Run with command-line arguments:**
+
 ```bash
 docker run -p 8080:8080 -p 10389:10389 mleaproxy \
     --mleaproxy.ldap-debug=true \
@@ -691,6 +710,7 @@ docker run -p 8080:8080 -p 10389:10389 mleaproxy \
 ### Kubernetes
 
 **ConfigMap:**
+
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -712,6 +732,7 @@ data:
 ```
 
 **Deployment:**
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -729,7 +750,7 @@ spec:
     spec:
       containers:
       - name: mleaproxy
-        image: mleaproxy:2.0.2
+        image: mleaproxy:2.0.3
         ports:
         - containerPort: 8080
         - containerPort: 10389
@@ -750,7 +771,7 @@ spec:
 Enable debug logging to see configuration values:
 
 ```bash
-java -jar target/mlesproxy-2.0.2.jar \
+java -jar target/mlesproxy-2.0.3.jar \
     --logging.level.org.springframework.boot.context.properties=DEBUG
 ```
 
@@ -765,7 +786,7 @@ java -jar target/mlesproxy-2.0.2.jar \
 ### SSL Certificate Issues
 
 ```bash
-java -jar target/mlesproxy-2.0.2.jar \
+java -jar target/mlesproxy-2.0.3.jar \
     --mleaproxy.ssl-verify-certificates=false \
     --mleaproxy.ldap-debug=true
 ```
@@ -775,7 +796,7 @@ java -jar target/mlesproxy-2.0.2.jar \
 Enable debug logging and check backend server configuration:
 
 ```bash
-java -jar target/mlesproxy-2.0.2.jar \
+java -jar target/mlesproxy-2.0.3.jar \
     --mleaproxy.ldap-debug=true \
     --logging.level.com.marklogic=TRACE
 ```
@@ -785,7 +806,7 @@ java -jar target/mlesproxy-2.0.2.jar \
 Check startup logs for configuration summary:
 
 ```bash
-java -jar target/mlesproxy-2.0.2.jar 2>&1 | grep -i "listener\|server\|directory"
+java -jar target/mlesproxy-2.0.3.jar 2>&1 | grep -i "listener\|server\|directory"
 ```
 
 ## Best Practices

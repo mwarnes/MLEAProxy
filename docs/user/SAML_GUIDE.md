@@ -35,7 +35,7 @@ MLEAProxy provides complete SAML 2.0 Identity Provider (IdP) functionality for S
 ### SAML Endpoints Summary
 
 | Endpoint | Method | Purpose |
-|----------|--------|---------|
+| ---------- | -------- | --------- |
 | `/saml/auth` | GET/POST | SAML authentication (SSO) |
 | `/saml/idp-metadata` | GET | IdP metadata XML |
 | `/saml/ca` | GET | CA certificates (PEM format) |
@@ -56,7 +56,7 @@ MLEAProxy provides complete SAML 2.0 Identity Provider (IdP) functionality for S
 
 ```bash
 # Download the latest release
-wget https://github.com/marklogic/mleaproxy/releases/download/v2.0.2/mlesproxy-2.0.2.jar
+wget https://github.com/marklogic/mleaproxy/releases/download/v2.0.3/mlesproxy-2.0.3.jar
 
 # Or build from source
 git clone https://github.com/marklogic/mleaproxy.git
@@ -71,7 +71,7 @@ cd mleaproxy
 java -version
 
 # Run MLEAProxy
-java -jar mlesproxy-2.0.2.jar
+java -jar mlesproxy-2.0.3.jar
 
 # Verify SAML endpoints are available
 curl -s http://localhost:8080/saml/idp-metadata | head -5
@@ -84,7 +84,7 @@ curl -s http://localhost:8080/saml/idp-metadata | head -5
 ### Step 1: Start MLEAProxy
 
 ```bash
-java -jar mlesproxy-2.0.2.jar
+java -jar mlesproxy-2.0.3.jar
 ```
 
 ### Step 2: Get IdP Metadata
@@ -160,13 +160,13 @@ echo "Open: http://localhost:8080/saml/auth?SAMLRequest=$SAML_REQUEST"
 Create `saml.properties` or add to `mleaproxy.properties`:
 
 ```bash
-java -jar mlesproxy-2.0.2.jar --spring.config.additional-location=./saml.properties
+java -jar mlesproxy-2.0.3.jar --spring.config.additional-location=./saml.properties
 ```
 
 ### SAML Properties
 
 | Property | Default | Description |
-|----------|---------|-------------|
+| ---------- | --------- | ------------- |
 | `mleaproxy.saml-debug` | `false` | Enable debug logging for SAML operations |
 | `mleaproxy.saml-ca-path` | (bundled) | Path to CA certificate file (PEM format) |
 | `mleaproxy.saml-key-path` | (bundled) | Path to private key file (PEM format) |
@@ -176,7 +176,7 @@ java -jar mlesproxy-2.0.2.jar --spring.config.additional-location=./saml.propert
 ### Additional Properties
 
 | Property | Default | Description |
-|----------|---------|-------------|
+| ---------- | --------- | ------------- |
 | `saml.idp.entity.id` | `http://localhost:8080/saml/idp` | IdP Entity ID |
 | `saml.idp.sso.url` | `http://localhost:8080/saml/auth` | SSO endpoint URL |
 | `saml.certificate.path` | (bundled) | Certificate path for metadata |
@@ -251,7 +251,7 @@ curl -G "http://localhost:8080/saml/auth" \
 **POST Request** - Process authentication:
 
 | Parameter | Required | Description |
-|-----------|----------|-------------|
+| ----------- | ---------- | ------------- |
 | `SAMLRequest` | Yes | Base64-encoded SAML AuthnRequest |
 | `RelayState` | No | Application state to preserve |
 | `userid` | Yes | Username for authentication |
@@ -259,6 +259,7 @@ curl -G "http://localhost:8080/saml/auth" \
 | `roles` | No | Comma-separated roles (override) |
 
 **Response**: HTTP 302 redirect with auto-submitting form containing:
+
 - `SAMLResponse` - Base64-encoded signed SAML Response
 - `RelayState` - Original relay state (if provided)
 
@@ -277,6 +278,7 @@ curl -s http://localhost:8080/saml/idp-metadata > idp-metadata.xml
 ```
 
 **Response:** EntityDescriptor XML containing:
+
 - Entity ID
 - Signing certificate (X.509)
 - SingleSignOnService endpoint
@@ -427,7 +429,7 @@ openssl req -x509 -newkey rsa:2048 \
   -subj "/CN=mleaproxy.example.com/O=Example/C=US"
 
 # Start with custom certificates
-java -jar mlesproxy-2.0.2.jar \
+java -jar mlesproxy-2.0.3.jar \
   --mleaproxy.saml-ca-path=./saml-cert.pem \
   --mleaproxy.saml-key-path=./saml-key.pem
 ```
@@ -436,7 +438,7 @@ java -jar mlesproxy-2.0.2.jar \
 
 ```bash
 # Via command line
-java -jar mlesproxy-2.0.2.jar --mleaproxy.saml-debug=true
+java -jar mlesproxy-2.0.3.jar --mleaproxy.saml-debug=true
 
 # Via properties file
 cat > saml.properties << 'EOF'
@@ -444,7 +446,7 @@ mleaproxy.saml-debug=true
 logging.level.com.marklogic.handlers.undertow.SAMLAuthHandler=DEBUG
 EOF
 
-java -jar mlesproxy-2.0.2.jar --spring.config.additional-location=./saml.properties
+java -jar mlesproxy-2.0.3.jar --spring.config.additional-location=./saml.properties
 ```
 
 ---
@@ -481,7 +483,7 @@ openssl x509 -in idp-cert.pem -noout -dates
 Navigate to: **Security > External Security > Create**
 
 | Setting | Value |
-|---------|-------|
+| --------- | ------- |
 | external security name | `mleaproxy-saml` |
 | authentication | `saml` |
 | authorization | `saml` |
@@ -553,12 +555,13 @@ curl -X POST "http://localhost:8000/v1/eval" \
 **Symptom:** IdP metadata returns error about certificate not configured
 
 **Solution:**
+
 ```bash
 # Verify bundled certificates exist
-java -jar mlesproxy-2.0.2.jar --mleaproxy.saml-debug=true 2>&1 | grep -i certificate
+java -jar mlesproxy-2.0.3.jar --mleaproxy.saml-debug=true 2>&1 | grep -i certificate
 
 # Or provide custom certificates
-java -jar mlesproxy-2.0.2.jar \
+java -jar mlesproxy-2.0.3.jar \
   --mleaproxy.saml-ca-path=/path/to/cert.pem \
   --mleaproxy.saml-key-path=/path/to/key.pem
 ```
@@ -568,6 +571,7 @@ java -jar mlesproxy-2.0.2.jar \
 **Symptom:** "SAML response signature validation failed"
 
 **Solution:**
+
 ```bash
 # Verify certificate matches
 openssl x509 -in idp-cert.pem -noout -fingerprint -sha256
@@ -587,12 +591,13 @@ diff idp-cert.pem idp-cert-new.pem
 **Symptom:** Authentication succeeds but user has no permissions
 
 **Solution:**
+
 ```bash
 # Check users.json configuration
 cat users.json | jq '.users[] | {username, roles}'
 
 # Set default roles
-java -jar mlesproxy-2.0.2.jar --mleaproxy.saml-default-roles=user,reader
+java -jar mlesproxy-2.0.3.jar --mleaproxy.saml-default-roles=user,reader
 ```
 
 #### 4. Redirect Loop
@@ -600,6 +605,7 @@ java -jar mlesproxy-2.0.2.jar --mleaproxy.saml-default-roles=user,reader
 **Symptom:** Browser keeps redirecting between MarkLogic and MLEAProxy
 
 **Solution:**
+
 - Verify `SAML assertion host` matches MarkLogic app server host:port exactly
 - Check cookies are enabled in browser
 - Ensure clock sync between servers (SAML assertions are time-sensitive)
@@ -608,7 +614,7 @@ java -jar mlesproxy-2.0.2.jar --mleaproxy.saml-default-roles=user,reader
 
 ```bash
 # Enable verbose logging
-java -jar mlesproxy-2.0.2.jar \
+java -jar mlesproxy-2.0.3.jar \
   --mleaproxy.saml-debug=true \
   --logging.level.com.marklogic=DEBUG
 
@@ -625,7 +631,7 @@ curl -s http://localhost:8080/actuator/health 2>/dev/null || echo "Health endpoi
 ### Log Messages Reference
 
 | Log Message | Meaning |
-|-------------|---------|
+| ------------- | --------- |
 | `SAML private key loaded successfully` | Certificate configuration OK |
 | `Using roles from request parameter` | Priority 1 role resolution |
 | `Using roles from JSON for user` | Priority 2 role resolution |
