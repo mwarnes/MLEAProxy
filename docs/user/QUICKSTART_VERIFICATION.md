@@ -1,3 +1,5 @@
+[🏠 Home](../../README.md) > [📚 User Docs](./README.md) > Quick Start & Verification
+
 # MLEAProxy Quick Start & Verification Guide
 
 This guide provides working examples for all protocols with configuration, expected startup output, and verification commands.
@@ -14,43 +16,6 @@ ls -la target/mlesproxy-2.0.3.jar
 # Set JAR variable for examples
 JAR=target/mlesproxy-2.0.3.jar
 ```
-
----
-
-## 0. Status Page
-
-The status page provides a web interface to view all server configuration and endpoints.
-
-### Access
-
-**URL:** http://localhost:8080/status (or http://<your-hostname>:8080/status)
-
-### Features
-
-- **Server Information** - Port, base URL, hostname
-- **Protocol Endpoints** - OAuth, SAML, LDAP, Kerberos
-- **Configured Users** - Username, roles, passwords (test credentials)
-- **Clickable Links** - Click any URL to test the endpoint
-- **Copy Buttons** - One-click copy for example commands
-
-### Example
-
-After starting MLEAProxy with `java -jar target/mlesproxy-2.0.3.jar`, visit:
-
-http://localhost:8080/status
-
-You'll see:
-- OAuth 2.0 endpoints (token, JWKS, OpenID config)
-- SAML 2.0 endpoints (auth, metadata, CA certs)
-- Configured users from users.json
-- Example curl commands with copy buttons
-
-### When to Use
-
-- Quick reference for endpoint URLs
-- Verify server configuration
-- Copy test commands
-- Check which protocols are enabled
 
 ---
 
@@ -614,6 +579,8 @@ java -jar target/mlesproxy-2.0.3.jar \
 | SAML | `/saml/auth` | POST | Generate SAML assertion |
 | Kerberos | `/kerberos/auth` | GET | SPNEGO authentication |
 | Kerberos | `/kerberos/token` | GET | Get service token |
+| Utility | `/b64encode` | GET/POST | Base64 encode |
+| Utility | `/b64decode` | GET/POST | Base64 decode |
 
 ---
 
@@ -625,5 +592,26 @@ java -jar target/mlesproxy-2.0.3.jar \
 | LDAP Proxy | 10389 | LDAP authentication proxy |
 | LDAP JSON | 20389 | LDAP server with JSON user store |
 | LDAP Directory | 60389 | In-memory LDAP directory |
-| Kerberos KDC | 8088 | Kerberos Key Distribution Center |
+| Kerberos KDC | 60088 | Kerberos Key Distribution Center |
 | Kerberos Admin | 60749 | Kerberos admin server |
+
+---
+
+## Related Documentation
+
+### Configuration
+- ⚙️ [Configuration Guide](./CONFIGURATION_GUIDE.md)
+
+### Protocol Guides
+- 🔑 [OAuth 2.0 Guide](./OAUTH_GUIDE.md)
+- 🛡️ [SAML 2.0 Guide](./SAML_GUIDE.md)
+- 🎫 [Kerberos Guide](./KERBEROS_GUIDE.md)
+- 📂 [LDAP Guide](./LDAP_GUIDE.md)
+
+### Integration
+- 🗄️ [MarkLogic Integration Guide](./JWKS-MarkLogic-Integration-Usage-Guide.md)
+
+### Main Documentation
+- 🏠 [User Documentation Index](./README.md)
+- 📖 [Project README](../../README.md)
+- 🌐 [Status Page](http://localhost:8080/status)

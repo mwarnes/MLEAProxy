@@ -1,4 +1,24 @@
+[🏠 Home](../../README.md) > [📚 User Docs](./README.md) > Configuration Guide
+
 # Configuration Guide
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Property Loading Priority](#property-loading-priority)
+- [Property Reference](#property-reference)
+- [Environment Variables](#environment-variables)
+- [Command-Line Overrides](#command-line-overrides)
+- [Complete Configuration Examples](#complete-configuration-examples)
+- [Using Modular Configuration Files](#using-modular-configuration-files)
+- [Container Deployment](#container-deployment)
+- [Troubleshooting](#troubleshooting)
+- [Best Practices](#best-practices)
+- [Related Documentation](#related-documentation)
+
+---
 
 ## Overview
 
@@ -821,3 +841,24 @@ java -jar target/mlesproxy-2.0.3.jar 2>&1 | grep -i "listener\|server\|directory
 8. **Enable debug logging** when troubleshooting connectivity issues
 9. **Use environment variables** in containerized deployments
 10. **Document your configuration** with comments explaining each section
+
+---
+
+## Related Documentation
+
+### Quick References
+- 📚 [Quick Start & Verification](./QUICKSTART_VERIFICATION.md)
+- 🌐 [Status Page](http://localhost:8080/status)
+
+### Protocol Guides
+- 🔑 [OAuth 2.0 Guide](./OAUTH_GUIDE.md)
+- 🛡️ [SAML 2.0 Guide](./SAML_GUIDE.md)
+- 🎫 [Kerberos Guide](./KERBEROS_GUIDE.md)
+- 📂 [LDAP Guide](./LDAP_GUIDE.md)
+
+### Integration
+- 🗄️ [MarkLogic Integration Guide](./JWKS-MarkLogic-Integration-Usage-Guide.md)
+
+### Main Documentation
+- 🏠 [User Documentation Index](./README.md)
+- 📖 [Project README](../../README.md)

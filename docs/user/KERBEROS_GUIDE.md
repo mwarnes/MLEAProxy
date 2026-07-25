@@ -1,3 +1,5 @@
+[🏠 Home](../../README.md) > [📚 User Docs](./README.md) > Kerberos Guide
+
 # MLEAProxy Kerberos Guide
 
 Complete guide for Kerberos authentication, SPNEGO, and OAuth/SAML protocol bridges in MLEAProxy.
@@ -41,8 +43,8 @@ MLEAProxy includes an embedded Kerberos Key Distribution Center (KDC) for testin
 | `/kerberos/token` | GET | SPNEGO | Alias for /auth |
 | `/kerberos/whoami` | GET | SPNEGO | Get user info |
 | `/kerberos/health` | GET | None | Health check |
-| `/oauth/token-from-kerberos` | POST | SPNEGO | Exchange for OAuth token |
-| `/saml/assertion-from-kerberos` | POST | SPNEGO | Exchange for SAML assertion |
+| `/kerberos/oauth` | POST | SPNEGO | Exchange for OAuth token |
+| `/kerberos/saml` | POST | SPNEGO | Exchange for SAML assertion |
 
 ---
 
@@ -162,26 +164,6 @@ Expected response:
 # Destroy tickets when done
 kdestroy
 ```
-
----
-
-## Status Page
-
-View Kerberos configuration on the status page: http://localhost:8080/status
-
-The status page displays:
-- Kerberos realm name
-- KDC host and port (clickable)
-- HTTP authentication endpoint (clickable)
-- Example kinit command with copy-to-clipboard button
-
-### Kerberos-Specific Information
-
-When Kerberos is enabled, the status page shows:
-- Realm: `MARKLOGIC.LOCAL`
-- KDC: `<hostname>:8088`
-- HTTP endpoint: `http://<hostname>:8080/kerberos/auth`
-- Example kinit command with your actual hostname
 
 ---
 
@@ -439,7 +421,7 @@ MLEAProxy provides bridge endpoints to convert Kerberos authentication to OAuth 
 
 ### Kerberos to OAuth Bridge
 
-**POST /oauth/token-from-kerberos**
+**POST /kerberos/oauth**
 
 Exchange a Kerberos ticket for an OAuth JWT access token.
 
@@ -448,7 +430,7 @@ Exchange a Kerberos ticket for an OAuth JWT access token.
 kinit mluser1@MARKLOGIC.LOCAL
 
 # Exchange for OAuth token
-curl --negotiate -u : -X POST http://localhost:8080/oauth/token-from-kerberos
+curl --negotiate -u : -X POST http://localhost:8080/kerberos/oauth
 ```
 
 **Response:**
@@ -468,7 +450,7 @@ curl --negotiate -u : -X POST http://localhost:8080/oauth/token-from-kerberos
 
 ### Kerberos to SAML Bridge
 
-**POST /saml/assertion-from-kerberos**
+**POST /kerberos/saml**
 
 Exchange a Kerberos ticket for a SAML 2.0 assertion.
 
@@ -477,7 +459,7 @@ Exchange a Kerberos ticket for a SAML 2.0 assertion.
 kinit mluser1@MARKLOGIC.LOCAL
 
 # Exchange for SAML assertion
-curl --negotiate -u : -X POST http://localhost:8080/saml/assertion-from-kerberos
+curl --negotiate -u : -X POST http://localhost:8080/kerberos/saml
 ```
 
 **Response:**
@@ -508,7 +490,7 @@ curl --negotiate -u : -X POST http://localhost:8080/saml/assertion-from-kerberos
 
 ```bash
 # Get OAuth token from Kerberos
-TOKEN=$(curl -s --negotiate -u : -X POST http://localhost:8080/oauth/token-from-kerberos | jq -r .access_token)
+TOKEN=$(curl -s --negotiate -u : -X POST http://localhost:8080/kerberos/oauth | jq -r .access_token)
 
 # Use the token for API calls
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/protected
@@ -541,7 +523,7 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/protected
 ```bash
 # Get OAuth token via Kerberos
 kinit mluser1@MARKLOGIC.LOCAL
-TOKEN=$(curl -s --negotiate -u : -X POST http://localhost:8080/oauth/token-from-kerberos | jq -r .access_token)
+TOKEN=$(curl -s --negotiate -u : -X POST http://localhost:8080/kerberos/oauth | jq -r .access_token)
 
 # Use token with MarkLogic REST API
 curl -H "Authorization: Bearer $TOKEN" \

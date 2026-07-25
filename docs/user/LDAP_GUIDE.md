@@ -1,3 +1,5 @@
+[🏠 Home](../../README.md) > [📚 User Docs](./README.md) > LDAP Guide
+
 # MLEAProxy LDAP Guide
 
 Complete guide for LDAP/LDAPS authentication proxy functionality in MLEAProxy.
@@ -137,25 +139,6 @@ Override any property via command line:
 ```bash
 java -jar mlesproxy-2.0.3.jar --mleaproxy.ldap-debug=true --mleaproxy.ldap-listeners.ldapjson.port=30389
 ```
-
----
-
-## Status Page
-
-View LDAP configuration on the status page: http://localhost:8080/status
-
-The status page displays:
-- In-memory server URLs (clickable)
-- Proxy listener URLs (clickable)
-- Example ldapsearch commands with copy-to-clipboard buttons
-
-### LDAP-Specific Information
-
-When LDAP is enabled, the status page shows:
-- In-memory server: `ldap://<hostname>:60389`
-- LDAP proxy listener: `ldap://<hostname>:10389`
-- Base DN information
-- Example ldapsearch command with your actual hostname
 
 ---
 

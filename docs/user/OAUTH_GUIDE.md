@@ -1,3 +1,5 @@
+[🏠 Home](../../README.md) > [📚 User Docs](./README.md) > OAuth 2.0 Guide
+
 # MLEAProxy OAuth 2.0 Guide
 
 Complete guide for OAuth 2.0 token generation and JWT verification in MLEAProxy.
@@ -143,26 +145,6 @@ echo "$TOKEN" | cut -d'.' -f2 | base64 -d 2>/dev/null | jq .
   "roles": ["admin"]
 }
 ```
-
----
-
-## Status Page
-
-View OAuth configuration on the status page: http://localhost:8080/status
-
-The status page displays:
-- Token endpoint URL (clickable)
-- JWKS endpoint URL (clickable)
-- OpenID configuration URL (clickable)
-- Example curl command for token request with copy-to-clipboard button
-
-### OAuth-Specific Information
-
-When OAuth is enabled, the status page shows:
-- Token endpoint: `http://<hostname>:8080/oauth/token`
-- JWKS endpoint: `http://<hostname>:8080/oauth/jwks`
-- OpenID configuration: `http://<hostname>:8080/oauth/.well-known/openid-configuration`
-- Example token request with your actual hostname
 
 ---
 

@@ -1,3 +1,5 @@
+[🏠 Home](../../README.md) > [📚 User Docs](./README.md) > SAML 2.0 Guide
+
 # MLEAProxy SAML 2.0 Guide
 
 Complete guide for SAML 2.0 Identity Provider functionality in MLEAProxy.
@@ -150,26 +152,6 @@ SAML_REQUEST=$(echo -n "$AUTHN_REQUEST" | gzip -c | base64 | tr -d '\n' | python
 # Open in browser (will show login form)
 echo "Open: http://localhost:8080/saml/auth?SAMLRequest=$SAML_REQUEST"
 ```
-
----
-
-## Status Page
-
-View SAML configuration on the status page: http://localhost:8080/status
-
-The status page displays:
-- Authentication URL (clickable)
-- IdP metadata URL (clickable)
-- CA certificates URL (clickable)
-- Configuration status (Loaded/Not configured)
-
-### SAML-Specific Information
-
-When SAML is enabled, the status page shows:
-- Authentication endpoint: `http://<hostname>:8080/saml/auth`
-- IdP metadata: `http://<hostname>:8080/saml/idp-metadata`
-- CA certificates: `http://<hostname>:8080/saml/ca`
-- SAML configuration status
 
 ---
 
