@@ -126,6 +126,18 @@ java -jar mleaproxy.jar
 # - SAML endpoints on http://localhost:8080/saml/*
 ```
 
+### View Server Status
+
+After starting MLEAProxy, visit the status page:
+
+**Status Page:** http://localhost:8080/status
+
+Features:
+- 🔗 **Clickable endpoint URLs** - Test endpoints directly
+- 📋 **Copy-to-clipboard buttons** - Copy example commands
+- 🔄 **Real-time information** - Current hostname, user count
+- ✅ **Conditional sections** - Only shows enabled protocols
+
 ### Quick Tests
 
 ```bash

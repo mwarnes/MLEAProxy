@@ -7,6 +7,7 @@ This folder contains all user-facing documentation for MLEAProxy, including conf
 ### ⭐ Quick Start
 
 - **[QUICKSTART_VERIFICATION.md](./QUICKSTART_VERIFICATION.md)** - **Start here!** Working examples for all protocols with verification commands
+- **[Status Page](http://localhost:8080/status)** - Web interface showing all endpoints and configuration
 
 ### Configuration & Setup
 

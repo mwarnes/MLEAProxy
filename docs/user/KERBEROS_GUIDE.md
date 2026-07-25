@@ -165,6 +165,26 @@ kdestroy
 
 ---
 
+## Status Page
+
+View Kerberos configuration on the status page: http://localhost:8080/status
+
+The status page displays:
+- Kerberos realm name
+- KDC host and port (clickable)
+- HTTP authentication endpoint (clickable)
+- Example kinit command with copy-to-clipboard button
+
+### Kerberos-Specific Information
+
+When Kerberos is enabled, the status page shows:
+- Realm: `MARKLOGIC.LOCAL`
+- KDC: `<hostname>:8088`
+- HTTP endpoint: `http://<hostname>:8080/kerberos/auth`
+- Example kinit command with your actual hostname
+
+---
+
 ## Configuration Reference
 
 ### Core Kerberos Properties

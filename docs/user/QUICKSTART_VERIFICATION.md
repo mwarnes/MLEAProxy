@@ -17,6 +17,43 @@ JAR=target/mlesproxy-2.0.3.jar
 
 ---
 
+## 0. Status Page
+
+The status page provides a web interface to view all server configuration and endpoints.
+
+### Access
+
+**URL:** http://localhost:8080/status (or http://<your-hostname>:8080/status)
+
+### Features
+
+- **Server Information** - Port, base URL, hostname
+- **Protocol Endpoints** - OAuth, SAML, LDAP, Kerberos
+- **Configured Users** - Username, roles, passwords (test credentials)
+- **Clickable Links** - Click any URL to test the endpoint
+- **Copy Buttons** - One-click copy for example commands
+
+### Example
+
+After starting MLEAProxy with `java -jar target/mlesproxy-2.0.3.jar`, visit:
+
+http://localhost:8080/status
+
+You'll see:
+- OAuth 2.0 endpoints (token, JWKS, OpenID config)
+- SAML 2.0 endpoints (auth, metadata, CA certs)
+- Configured users from users.json
+- Example curl commands with copy buttons
+
+### When to Use
+
+- Quick reference for endpoint URLs
+- Verify server configuration
+- Copy test commands
+- Check which protocols are enabled
+
+---
+
 ## 1. LDAP Protocol
 
 ### 1.1 Default Configuration
