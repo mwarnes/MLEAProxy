@@ -181,7 +181,8 @@ wait_for_appserver() {
 
 create_external_security() {
     local name="$1"
-    local xml_config="$2"
+    local type="$2"
+    local xml_config="$3"
     
     # Delete existing config first (idempotent)
     delete_external_security "$name" > /dev/null 2>&1 || true
@@ -241,7 +242,7 @@ verify_json_response() {
     # Verify expected roles present (subset check)
     local all_found=true
     for expected_role in "${expected_roles[@]}"; do
-        if echo "$actual_roles" | grep -qw "$expected_role"; then
+        if echo "$response_body" | jq -e --arg role "$expected_role" '.roles[]? | select(. == $role)' > /dev/null 2>&1; then
             continue
         else
             log_error "Role '$expected_role' not found in response"
