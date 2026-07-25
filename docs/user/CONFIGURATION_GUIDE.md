@@ -281,7 +281,7 @@ Embedded Apache Kerby KDC settings:
 mleaproxy.kerberos.enabled=true
 mleaproxy.kerberos.realm=CORP.EXAMPLE.COM
 mleaproxy.kerberos.kdc-host=0.0.0.0
-mleaproxy.kerberos.kdc-port=60088
+mleaproxy.kerberos.kdc-port=8088
 mleaproxy.kerberos.admin-port=60749
 
 # Principal import from LDAP directory
@@ -306,7 +306,7 @@ mleaproxy.kerberos.clock-skew=300
 | `enabled` | Boolean | `false` | Enable embedded KDC |
 | `realm` | String | `MARKLOGIC.LOCAL` | Kerberos realm (uppercase) |
 | `kdc-host` | String | `localhost` | KDC bind address |
-| `kdc-port` | Integer | `60088` | KDC port |
+| `kdc-port` | Integer | `8088` | KDC port |
 | `admin-port` | Integer | `60749` | KDC admin port |
 | `import-principals-from-ldap` | Boolean | `true` | Import users from LDAP directory |
 | `ldap-base-dn` | String | `dc=MarkLogic,dc=Local` | LDAP base DN for import |
@@ -585,7 +585,7 @@ mleaproxy.request-processors.passthrough.debug-level=INFO
 mleaproxy.kerberos.enabled=true
 mleaproxy.kerberos.realm=CORP.EXAMPLE.COM
 mleaproxy.kerberos.kdc-host=0.0.0.0
-mleaproxy.kerberos.kdc-port=60088
+mleaproxy.kerberos.kdc-port=8088
 mleaproxy.kerberos.admin-port=60749
 mleaproxy.kerberos.import-principals-from-ldap=true
 mleaproxy.kerberos.ldap-base-dn=dc=MarkLogic,dc=Local
@@ -673,7 +673,7 @@ mleaproxy.directory-servers.dev.admin-password=password
 mleaproxy.kerberos.enabled=true
 mleaproxy.kerberos.realm=CORP.EXAMPLE.COM
 mleaproxy.kerberos.kdc-host=0.0.0.0
-mleaproxy.kerberos.kdc-port=60088
+mleaproxy.kerberos.kdc-port=8088
 ```
 
 ## Container Deployment

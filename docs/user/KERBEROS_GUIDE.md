@@ -98,7 +98,7 @@ cat > kerberos-test.properties << 'EOF'
 mleaproxy.kerberos.enabled=true
 mleaproxy.kerberos.realm=MARKLOGIC.LOCAL
 mleaproxy.kerberos.kdc-host=localhost
-mleaproxy.kerberos.kdc-port=60088
+mleaproxy.kerberos.kdc-port=8088
 EOF
 
 # Start MLEAProxy
@@ -176,10 +176,14 @@ All Kerberos properties use the `mleaproxy.kerberos.*` prefix.
 | `mleaproxy.kerberos.enabled` | `false` | Enable/disable embedded KDC |
 | `mleaproxy.kerberos.realm` | `MARKLOGIC.LOCAL` | Kerberos realm (UPPERCASE) |
 | `mleaproxy.kerberos.kdc-host` | `localhost` | KDC hostname |
-| `mleaproxy.kerberos.kdc-port` | `60088` | KDC port (standard is 88) |
+| `mleaproxy.kerberos.kdc-port` | `8088` | KDC port (standard is 88) |
 | `mleaproxy.kerberos.admin-port` | `60749` | Kadmin port (standard is 749) |
 | `mleaproxy.kerberos.work-dir` | `./kerberos` | Working directory for KDC files |
 | `mleaproxy.kerberos.debug` | `false` | Enable debug logging |
+
+> 💡 **Port 8088:** MLEAProxy uses port 8088 for the Kerberos KDC (not the standard port 88).
+> Port 88 requires root/administrator privileges. Port 8088 is a non-privileged port suitable for
+> development and testing environments. This allows the KDC to run without elevated permissions.
 
 ### Principal Management Properties
 
@@ -208,7 +212,7 @@ All Kerberos properties use the `mleaproxy.kerberos.*` prefix.
 mleaproxy.kerberos.enabled=true
 mleaproxy.kerberos.realm=MARKLOGIC.LOCAL
 mleaproxy.kerberos.kdc-host=localhost
-mleaproxy.kerberos.kdc-port=60088
+mleaproxy.kerberos.kdc-port=8088
 mleaproxy.kerberos.admin-port=60749
 mleaproxy.kerberos.work-dir=./kerberos
 mleaproxy.kerberos.debug=false
@@ -306,7 +310,7 @@ If you need to create `krb5.conf` manually:
 
 [realms]
     MARKLOGIC.LOCAL = {
-        kdc = localhost:60088
+        kdc = localhost:8088
         admin_server = localhost:60749
     }
 
@@ -586,7 +590,7 @@ kinit mluser1@MARKLOGIC.LOCAL
 # Enter: password
 ```
 
-#### Port 60088 already in use
+#### Port 8088 already in use
 
 **Cause:** Another KDC or process using the port.
 
@@ -594,10 +598,10 @@ kinit mluser1@MARKLOGIC.LOCAL
 
 ```bash
 # Check what's using the port
-lsof -i :60088
+lsof -i :8088
 
 # Use a different port
-mleaproxy.kerberos.kdc-port=60089
+mleaproxy.kerberos.kdc-port=8088
 ```
 
 #### curl --negotiate returns 401
@@ -649,10 +653,10 @@ java -Dsun.security.krb5.debug=true \
 
 ```bash
 # Check if KDC port is listening
-nc -zv localhost 60088
+nc -zv localhost 8088
 
 # Or with netstat
-netstat -an | grep 60088
+netstat -an | grep 8088
 ```
 
 ### View Keytab Contents
