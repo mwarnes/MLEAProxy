@@ -47,87 +47,35 @@ java -jar target/mlesproxy-2.0.3.jar
 
 ... [startup logs] ...
 
-================================================================================
-MLEAProxy Server Started
-================================================================================
-Server Port: 8080
-Base URL: http://martins-air.localdomain:8080
-Status Page: http://martins-air.localdomain:8080/status
-================================================================================
-
-LDAP Endpoints:
---------------------------------------------------------------------------------
-In-Memory Server 'marklogic':   ldap://martins-air.localdomain:60389
-  Base DN: dc=MarkLogic,dc=Local
-LDAP Listener 'proxy':      ldap://martins-air.localdomain:10389
-  Description: LDAP Authentication Proxy
-LDAP Listener 'ldapjson':      ldap://martins-air.localdomain:20389
-  Description: Simple LDAP Server using JSON user store
-
-Example LDAP Search:
-ldapsearch -H ldap://martins-air.localdomain:10389 \
-  -D "cn=admin,ou=users,dc=marklogic,dc=local" \
-  -w password \
-  -b "ou=users,dc=marklogic,dc=local" \
-  "(objectClass=*)"
-================================================================================
-
-Kerberos KDC:
---------------------------------------------------------------------------------
-Realm:                    EXAMPLE.COM
-KDC:                      martins-air.localdomain:8088
-HTTP Endpoint:            http://martins-air.localdomain:8080/kerberos/auth
-
-Test with kinit:
-  export KRB5_CONFIG=./krb5.conf
-  kinit mluser1@EXAMPLE.COM
-  (password: password)
-  klist
-================================================================================
-
-OAuth 2.0 Endpoints:
---------------------------------------------------------------------------------
-Token Endpoint:           http://martins-air.localdomain:8080/oauth/token
-JWKS Endpoint:            http://martins-air.localdomain:8080/oauth/jwks
-OpenID Configuration:     http://martins-air.localdomain:8080/oauth/.well-known/config
-
-Example Token Request:
-curl -s -X POST http://martins-air.localdomain:8080/oauth/token \
-  -d "grant_type=password" \
-  -d "username=admin" \
-  -d "password=password" \
-  -d "client_id=marklogic" \
-  -d "client_secret=secret"
-================================================================================
-
-SAML 2.0 Endpoints:
---------------------------------------------------------------------------------
-Authentication:           http://martins-air.localdomain:8080/saml/auth
-IdP Metadata:             http://martins-air.localdomain:8080/saml/idp-metadata
-CA Certificates:          http://martins-air.localdomain:8080/saml/ca
-
-SAML Configuration: Loaded
-================================================================================
-
-Configured Users (from users.json):
---------------------------------------------------------------------------------
-Username             Password             Roles                                   
---------------------------------------------------------------------------------
-user1                password             appreader, appwriter, appadmin          
-user2                password             appreader, appwriter                    
-manager              password             (none)                                  
-admin                password             admin                                   
-testuser             password             (none)                                  
-user3                password             appreader                               
-user4                password             (none)                                  
---------------------------------------------------------------------------------
-Total users: 7
-
-Example login: admin / password
-================================================================================
+INFO  c.m.service.LDAPServerService - In-memory LDAP server 'marklogic' started on 0.0.0.0:60389 with base DN 'dc=MarkLogic,dc=Local'
+INFO  c.m.service.LDAPListenerService - LDAP listener 'ldapjson' started on 0.0.0.0:20389 (Simple LDAP Server using JSON user store)
+INFO  c.m.service.LDAPListenerService - LDAP listener 'proxy' started on 0.0.0.0:10389 (LDAP Authentication Proxy)
+INFO  c.m.service.StartupDisplayService - ================================================================================
+INFO  c.m.service.StartupDisplayService - MLEAProxy Server Started
+INFO  c.m.service.StartupDisplayService - ================================================================================
+INFO  c.m.service.StartupDisplayService - Server Port: 8080
+INFO  c.m.service.StartupDisplayService - Base URL: http://localhost:8080
+INFO  c.m.service.StartupDisplayService - ================================================================================
+INFO  c.m.service.StartupDisplayService - 
+INFO  c.m.service.StartupDisplayService - OAuth 2.0 Endpoints:
+INFO  c.m.service.StartupDisplayService - --------------------------------------------------------------------------------
+INFO  c.m.service.StartupDisplayService - Token Endpoint:           http://localhost:8080/oauth/token
+INFO  c.m.service.StartupDisplayService - JWKS Endpoint:            http://localhost:8080/oauth/jwks
+INFO  c.m.service.StartupDisplayService - OpenID Configuration:     http://localhost:8080/oauth/.well-known/config
+INFO  c.m.service.StartupDisplayService - ================================================================================
+INFO  c.m.service.StartupDisplayService - 
+INFO  c.m.service.StartupDisplayService - Configured Users (from users.json):
+INFO  c.m.service.StartupDisplayService - --------------------------------------------------------------------------------
+INFO  c.m.service.StartupDisplayService - Username             Password             Roles
+INFO  c.m.service.StartupDisplayService - --------------------------------------------------------------------------------
+INFO  c.m.service.StartupDisplayService - admin                password             admin
+INFO  c.m.service.StartupDisplayService - user1                password             appreader, appwriter, appadmin
+INFO  c.m.service.StartupDisplayService - user2                password             appreader, appwriter
+INFO  c.m.service.StartupDisplayService - user3                password             appreader
+INFO  c.m.service.StartupDisplayService - manager              password             (none)
+INFO  c.m.service.StartupDisplayService - --------------------------------------------------------------------------------
+INFO  c.m.handlers.Applicationlistener - MLEAProxy initialization complete
 ```
-
-> 💡 **Status Page Link:** The startup output now includes a direct link to the status page. Click or copy `http://<hostname>:8080/status` to view all endpoints and configuration.
 
 ### 1.4 Verification Commands
 

@@ -153,23 +153,6 @@ echo "Open: http://localhost:8080/saml/auth?SAMLRequest=$SAML_REQUEST"
 
 ---
 
-## Startup Output
-
-When MLEAProxy starts, you'll see the SAML 2.0 endpoints section:
-
-```
-SAML 2.0 Endpoints:
---------------------------------------------------------------------------------
-Authentication:           http://martins-air.localdomain:8080/saml/auth
-IdP Metadata:             http://martins-air.localdomain:8080/saml/idp-metadata
-CA Certificates:          http://martins-air.localdomain:8080/saml/ca
-
-SAML Configuration: Loaded
-================================================================================
-```
-
----
-
 ## Configuration Reference
 
 ### Property File Location
