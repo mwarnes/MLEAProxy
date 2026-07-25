@@ -115,16 +115,31 @@ public final class LDAPRequestHandler
     }
     
     /**
-     * Checks for potential LDAP injection patterns
+     * Checks for potential LDAP injection patterns.
+     * 
+     * Legitimate filters like (objectClass=*) are allowed.
+     * Blocks filter-breaking sequences that indicate injection attempts.
      */
     private boolean containsLDAPInjection(String input) {
         if (input == null) return false;
         
-        // Check for suspicious LDAP injection patterns
+        // Check for dangerous LDAP injection patterns
+        // Note: "*)" alone is NOT blocked - it's used in legitimate filters like (objectClass=*)
+        // We only block patterns that break filter logic to inject malicious conditions
         String[] suspiciousPatterns = {
-            "*)", ")(", "*)(", "*)))", 
-            "&(|", "|(|", "!(",
-            "\\0", "\\00", "\\2a", "\\28", "\\29"
+            ")(",      // Filter breakout: closes one filter, starts another
+            "*)(",     // Wildcard + breakout
+            "*)))",    // Multiple closes to escape nested filters
+            "*)&",     // Wildcard + AND injection
+            "*)|",     // Wildcard + OR injection
+            "&(|",     // Mixed boolean operators (malformed)
+            "|(|",     // Mixed boolean operators (malformed)
+            "!(",      // Negation can be used for enumeration attacks
+            "\\0",     // Null byte injection
+            "\\00",    // Null byte (alternate encoding)
+            "\\2a",    // Hex-encoded * (evasion attempt)
+            "\\28",    // Hex-encoded ( (evasion attempt)
+            "\\29"     // Hex-encoded ) (evasion attempt)
         };
         
         String lowerInput = input.toLowerCase();
