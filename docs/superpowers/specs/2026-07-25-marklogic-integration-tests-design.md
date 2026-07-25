@@ -99,7 +99,7 @@ examples/marklogic/
 - Kerberos Test: Port 9004
 - SAML Test: Port 9005
 - OAuth Test: Port 9006
-- Template source: Manage2 AppServer (port 9002)
+- Template source: Manage AppServer (port 8002)
 
 **Design principle:**
 - Scripts designed to run on same server as MarkLogic (typically `rocky`)
@@ -115,7 +115,7 @@ examples/marklogic/
 **MarkLogic Server (rocky):**
 - Hostname: `rocky` (Linux server)
 - MarkLogic Management API: `http://localhost:8002`
-- Test Management AppServer: `http://localhost:9002` (Manage2 - used as template)
+- Test Management AppServer: `http://localhost:8002` (Manage - used as template)
 - Admin credentials: `admin` / `admin`
 
 **MLEAProxy Server:**
@@ -149,18 +149,19 @@ examples/marklogic/
 
 ### Configuration Management Functions
 
-**get_manage2_config()**
+**get_manage_config()**
 ```bash
-# Retrieves Manage2 AppServer configuration as JSON template
+# Retrieves Manage AppServer configuration as JSON template
 # Returns: Full AppServer configuration JSON
 # Used as: Base template for creating test AppServers
+# IMPORTANT: Never modifies the Manage AppServer - read-only operation
 
-GET http://localhost:8002/manage/LATEST/servers/Manage2?format=json
+GET http://localhost:8002/manage/LATEST/servers/Manage?format=json
 ```
 
 **create_test_appserver(name, port, auth_type, authz_scheme, external_security)**
 ```bash
-# Creates test AppServer by cloning Manage2 configuration
+# Creates test AppServer by cloning Manage configuration
 # Parameters:
 #   name: AppServer name (e.g., "MLEAProxy-OAuth-Test")
 #   port: Port number (e.g., 9006)
@@ -168,9 +169,9 @@ GET http://localhost:8002/manage/LATEST/servers/Manage2?format=json
 #   authz_scheme: Authorization scheme (internal|ldap)
 #   external_security: External security config name
 # Process:
-#   1. Get Manage2 config as JSON template
+#   1. Get Manage config as JSON template
 #   2. Modify only: server-name, port, authentication, authorization, external-security
-#   3. Keep all other Manage2 settings unchanged
+#   3. Keep all other Manage settings unchanged
 #   4. POST to http://localhost:8002/manage/LATEST/servers
 # Returns: Success/failure status
 # Idempotent: Deletes existing AppServer with same name first
@@ -244,7 +245,7 @@ GET http://localhost:8002/manage/LATEST/servers/Manage2?format=json
 # Checks:
 #   - MarkLogic accessible: GET http://localhost:8002
 #   - MLEAProxy running: GET http://localhost:8080/status
-#   - Manage2 template exists: GET http://localhost:8002/manage/LATEST/servers/Manage2
+#   - Manage template exists: GET http://localhost:8002/manage/LATEST/servers/Manage
 # For Kerberos: Also checks for valid Kerberos ticket (klist)
 # Exits with clear error message if any prerequisite missing
 # Returns: 0 on success, exits with code 3 on failure
@@ -283,7 +284,7 @@ Each test script follows this pattern:
 4. Check prerequisites (MarkLogic, MLEAProxy running)
 5. Cleanup existing resources (idempotent start)
 6. Create external security configuration
-7. Create test AppServer from Manage2 template
+7. Create test AppServer from Manage template
 8. Wait for AppServer to be ready
 9. Run protocol-specific authentication tests
 10. Verify JSON response (user, roles)
@@ -528,8 +529,8 @@ check_prerequisites():
      GET http://localhost:8080/status
      Fail if: Connection refused, timeout, or non-2xx response
      
-  3. Check Manage2 template exists
-     GET http://localhost:8002/manage/LATEST/servers/Manage2?format=json
+  3. Check Manage template exists
+     GET http://localhost:8002/manage/LATEST/servers/Manage?format=json
      Fail if: 404 or error response
      
   4. For Kerberos test only: Check for valid ticket
@@ -563,7 +564,7 @@ Idempotent operations:
 ### Failure Modes
 
 **Setup failures (exit code 2):**
-- Cannot retrieve Manage2 configuration template
+- Cannot retrieve Manage configuration template
 - Cannot create external security configuration (invalid XML, API error)
 - Cannot create test AppServer (port in use, configuration error)
 - AppServer doesn't become ready within timeout period
@@ -578,7 +579,7 @@ Idempotent operations:
 **Prerequisite failures (exit code 3):**
 - MarkLogic Server not running
 - MLEAProxy not running
-- Manage2 AppServer not found
+- Manage AppServer not found
 - (Kerberos only) No valid Kerberos ticket
 
 ---
@@ -595,7 +596,7 @@ Idempotent operations:
 Prerequisites:
   ✓ MarkLogic Server accessible (http://localhost:8002)
   ✓ MLEAProxy running (http://localhost:8080)
-  ✓ Manage2 template available (port 9002)
+  ✓ Manage template available (port 8002)
 
 Setup:
   ✓ Deleted existing external security 'MLEAProxy-OAuth'
@@ -820,7 +821,7 @@ performs authentication, and verifies the user and roles are correct.
 ## Prerequisites
 
 1. **MarkLogic Server running** on localhost:8002
-   - Manage2 AppServer available on port 9002
+   - Manage AppServer available on port 8002 (used as template, never modified)
    - Admin credentials: admin/admin
 
 2. **MLEAProxy running** on localhost:8080
@@ -896,7 +897,7 @@ done
 GET http://localhost:8002/manage/LATEST/servers?format=json
 
 # Get specific server config
-GET http://localhost:8002/manage/LATEST/servers/Manage2?format=json
+GET http://localhost:8002/manage/LATEST/servers/Manage?format=json
 
 # Create server
 POST http://localhost:8002/manage/LATEST/servers
@@ -924,9 +925,9 @@ DELETE http://localhost:8002/manage/LATEST/external-security/{name}
 curl -u admin:admin ...
 ```
 
-### Manage2 Template Cloning
+### Manage Template Cloning
 
-**Properties to preserve from Manage2:**
+**Properties to preserve from Manage:**
 - `group-name`
 - `modules-database`
 - `content-database`
@@ -944,7 +945,7 @@ curl -u admin:admin ...
 
 **Properties to remove/unset:**
 - `server-id` - Let MarkLogic assign new ID
-- Any Manage2-specific settings that shouldn't be cloned
+- Any Manage-specific settings that shouldn't be cloned
 
 ---
 
@@ -996,7 +997,7 @@ curl -u admin:admin ...
    - No impact on MarkLogic (only test resources created/deleted)
 
 **Safe to rollback:** Tests only create/delete test resources, never modify:
-- Existing AppServers (ports 8000, 8001, 8002, 9002)
+- Existing AppServers (ports 8000, 8001, 8002)
 - Production external security configurations
 - User data or databases
 
@@ -1046,7 +1047,7 @@ curl -u admin:admin ...
 - Designed to run on same server as MarkLogic (typically rocky)
 
 **Implementation approach:**
-- Clone Manage2 AppServer configuration as template
+- Clone Manage AppServer configuration as template
 - Customize only security settings per protocol
 - Create external security configurations pointing to MLEAProxy
 - Test authentication and verify JSON responses
