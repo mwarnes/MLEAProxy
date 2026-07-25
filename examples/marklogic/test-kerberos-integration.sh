@@ -16,8 +16,8 @@ APPSERVER_PORT="9004"
 EXTERNAL_SECURITY_NAME="MLEAProxy-Kerberos"
 AUTH_TYPE="kerberos"
 AUTHZ_SCHEME="internal"
-KERBEROS_PRINCIPAL="HTTP/rocky@MARKLOGIC.LOCAL"
-KERBEROS_KEYTAB="/path/to/http.keytab"
+KERBEROS_PRINCIPAL="${KERBEROS_PRINCIPAL:-HTTP/rocky@MARKLOGIC.LOCAL}"
+KERBEROS_KEYTAB="${KERBEROS_KEYTAB:-/etc/kerberos/http.keytab}"
 EXPECTED_USER_PATTERN="mluser1"
 
 VERBOSE=false
@@ -65,12 +65,19 @@ echo
 
 check_prerequisites true
 
+# Verify keytab file exists
+if [[ ! -f "$KERBEROS_KEYTAB" ]]; then
+    log_error "Kerberos keytab not found: $KERBEROS_KEYTAB"
+    log_error "Set KERBEROS_KEYTAB environment variable to the correct path"
+    exit 3
+fi
+
 log_info "Setup:"
 
 delete_external_security "$EXTERNAL_SECURITY_NAME" > /dev/null 2>&1 || true
 log_success "Deleted existing external security '${EXTERNAL_SECURITY_NAME}'"
 
-create_external_security "$EXTERNAL_SECURITY_NAME" "kerberos" "$EXTERNAL_SECURITY_XML"
+create_external_security "$EXTERNAL_SECURITY_NAME" "$EXTERNAL_SECURITY_XML"
 log_success "Created external security '${EXTERNAL_SECURITY_NAME}'"
 
 delete_test_appserver "$APPSERVER_NAME" > /dev/null 2>&1 || true

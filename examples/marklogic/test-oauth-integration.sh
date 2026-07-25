@@ -74,7 +74,7 @@ log_info "Setup:"
 delete_external_security "$EXTERNAL_SECURITY_NAME" > /dev/null 2>&1 || true
 log_success "Deleted existing external security '${EXTERNAL_SECURITY_NAME}'"
 
-create_external_security "$EXTERNAL_SECURITY_NAME" "oauth2" "$EXTERNAL_SECURITY_XML"
+create_external_security "$EXTERNAL_SECURITY_NAME" "$EXTERNAL_SECURITY_XML"
 log_success "Created external security '${EXTERNAL_SECURITY_NAME}'"
 
 delete_test_appserver "$APPSERVER_NAME" > /dev/null 2>&1 || true
