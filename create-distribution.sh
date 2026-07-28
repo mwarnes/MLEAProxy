@@ -31,7 +31,7 @@ else
     echo -e "${RED}✗ JAR file not found${NC}"
     echo ""
     echo "Build the JAR first:"
-    echo "  ./build.sh clean package"
+    echo "  mvn clean package -DskipTests"
     exit 1
 fi
 
