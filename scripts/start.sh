@@ -47,6 +47,16 @@ check_prerequisites() {
         echo -e "${GREEN}✓ users.json found${NC}"
     fi
     
+    # Check for Kerberos keytab
+    if ls "$PROJECT_ROOT/kerberos/keytabs"/*.keytab &> /dev/null; then
+        echo -e "${GREEN}✓ Kerberos keytab found${NC}"
+        KERBEROS_AVAILABLE=true
+    else
+        echo -e "${YELLOW}⚠ Kerberos keytab not found${NC}"
+        echo -e "  ${YELLOW}To enable Kerberos: ./scripts/create-keytab.sh${NC}"
+        KERBEROS_AVAILABLE=false
+    fi
+    
     echo ""
 }
 
@@ -54,17 +64,40 @@ check_prerequisites
 
 echo "Which protocol(s) would you like to start?"
 echo ""
-echo "  1) All protocols (LDAP, OAuth, SAML, Kerberos)"
+
+if [ "$KERBEROS_AVAILABLE" = true ]; then
+    echo "  1) All protocols (LDAP, OAuth, SAML, Kerberos)"
+else
+    echo "  1) All protocols (LDAP, OAuth, SAML, Kerberos) [DISABLED - no keytab]"
+fi
+
 echo "  2) LDAP only"
 echo "  3) OAuth only"
 echo "  4) SAML only"
-echo "  5) Kerberos only"
-echo "  6) Exit"
+
+if [ "$KERBEROS_AVAILABLE" = true ]; then
+    echo "  5) Kerberos only"
+else
+    echo "  5) Kerberos only [DISABLED - no keytab]"
+fi
+
+echo "  6) LDAP, OAuth, SAML (no Kerberos)"
+echo "  7) Exit"
 echo ""
-read -p "Enter choice [1-6]: " choice
+read -p "Enter choice [1-7]: " choice
 
 case $choice in
     1)
+        if [ "$KERBEROS_AVAILABLE" = false ]; then
+            echo ""
+            echo -e "${RED}✗ Kerberos keytab required${NC}"
+            echo ""
+            echo "Create a keytab first:"
+            echo "  ./scripts/create-keytab.sh"
+            echo ""
+            echo "Or choose option 6 to start without Kerberos"
+            exit 1
+        fi
         echo ""
         echo -e "${BLUE}Starting all protocols...${NC}"
         "$SCRIPT_DIR/start-all.sh"
@@ -85,21 +118,35 @@ case $choice in
         "$SCRIPT_DIR/start-saml.sh"
         ;;
     5)
-        if ! ls "$PROJECT_ROOT/kerberos/keytabs"/*.keytab &> /dev/null; then
+        if [ "$KERBEROS_AVAILABLE" = false ]; then
             echo ""
-            echo -e "${YELLOW}⚠ No Kerberos keytab found${NC}"
+            echo -e "${RED}✗ Kerberos keytab required${NC}"
             echo ""
-            read -p "Run keytab creation wizard? [y/N]: " create_keytab
-            if [[ "$create_keytab" =~ ^[Yy]$ ]]; then
-                "$SCRIPT_DIR/create-keytab.sh"
-                echo ""
-            fi
+            echo "Create a keytab first:"
+            echo "  ./scripts/create-keytab.sh"
+            exit 1
         fi
         echo ""
         echo -e "${BLUE}Starting Kerberos...${NC}"
         "$SCRIPT_DIR/start-kerberos.sh"
         ;;
     6)
+        echo ""
+        echo -e "${BLUE}Starting LDAP, OAuth, SAML (without Kerberos)...${NC}"
+        echo ""
+        "$SCRIPT_DIR/start-ldap.sh" &
+        LDAP_PID=$!
+        sleep 2
+        "$SCRIPT_DIR/start-oauth.sh" &
+        OAUTH_PID=$!
+        sleep 2
+        "$SCRIPT_DIR/start-saml.sh" &
+        SAML_PID=$!
+        
+        # Wait for all to start
+        wait $LDAP_PID $OAUTH_PID $SAML_PID 2>/dev/null || true
+        ;;
+    7)
         echo ""
         echo "Exiting..."
         exit 0
