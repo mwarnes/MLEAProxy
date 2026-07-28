@@ -269,10 +269,11 @@ public class StartupDisplayService {
             Map<String, String> firstListener = listeners.get(0);
             String exampleSearch = String.format(
                 "ldapsearch -H %s \\\n" +
-                "  -D \"cn=admin,ou=users,dc=marklogic,dc=local\" \\\n" +
+                "  -D \"cn=manager\" \\\n" +
                 "  -w password \\\n" +
-                "  -b \"ou=users,dc=marklogic,dc=local\" \\\n" +
-                "  \"(objectClass=*)\"",
+                "  -b \"\" \\\n" +
+                "  -s sub \\\n" +
+                "  \"(uid=admin)\"",
                 firstListener.get("url")
             );
             ldapInfo.put("exampleSearch", exampleSearch);

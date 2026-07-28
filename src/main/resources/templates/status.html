@@ -76,7 +76,7 @@
                 <div class="position-relative">
                     <button class="btn btn-sm btn-outline-secondary position-absolute"
                             style="top: 5px; right: 5px; z-index: 10;"
-                            onclick="copyToClipboard('ldapSearch')">
+                            onclick="copyToClipboard('ldapSearch', event)">
                         <i class="fa fa-copy"></i> Copy
                     </button>
                     <pre class="bg-light p-3 rounded" style="overflow-x: auto;"><code id="ldapSearch" th:text="${ldapInfo.exampleSearch}">ldapsearch ...</code></pre>
@@ -112,7 +112,7 @@
             <div class="position-relative">
                 <button class="btn btn-sm btn-outline-secondary position-absolute"
                         style="top: 5px; right: 5px; z-index: 10;"
-                        onclick="copyToClipboard('oauthCurl')">
+                        onclick="copyToClipboard('oauthCurl', event)">
                     <i class="fa fa-copy"></i> Copy
                 </button>
                 <pre class="bg-light p-3 rounded" style="overflow-x: auto;"><code id="oauthCurl" th:text="${oauthInfo.exampleCurl}">curl -s -X POST ...</code></pre>
@@ -190,7 +190,7 @@
 </div>
 
 <script>
-    function copyToClipboard(elementId) {
+    function copyToClipboard(elementId, event) {
         const element = document.getElementById(elementId);
         const text = element.textContent;
 
