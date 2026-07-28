@@ -75,27 +75,28 @@ check_prerequisites
 
 echo "Which protocol(s) would you like to start?"
 echo ""
+echo "  1) LDAP, OAuth, SAML (no Kerberos) - Recommended"
+echo "  2) OAuth, SAML only (no LDAP, no Kerberos)"
 
 if [ "$KERBEROS_AVAILABLE" = true ]; then
-    echo "  1) All protocols (LDAP, OAuth, SAML, Kerberos)"
+    echo "  3) All protocols (LDAP, OAuth, SAML, Kerberos)"
 else
-    echo "  1) All protocols (LDAP, OAuth, SAML, Kerberos) [DISABLED - no keytab]"
+    echo "  3) All protocols (LDAP, OAuth, SAML, Kerberos) [DISABLED - no keytab]"
 fi
 
-echo "  2) LDAP only"
-echo "  3) OAuth only"
-echo "  4) SAML only"
+echo "  4) LDAP only"
+echo "  5) OAuth only"
+echo "  6) SAML only"
 
 if [ "$KERBEROS_AVAILABLE" = true ]; then
-    echo "  5) Kerberos only"
+    echo "  7) Kerberos only"
 else
-    echo "  5) Kerberos only [DISABLED - no keytab]"
+    echo "  7) Kerberos only [DISABLED - no keytab]"
 fi
 
-echo "  6) LDAP, OAuth, SAML (no Kerberos)"
-echo "  7) Exit"
+echo "  8) Exit"
 echo ""
-read -p "Enter choice [1-7]: " choice
+read -p "Enter choice [1-8]: " choice
 
 # Detect hostname for display
 get_hostname() {
@@ -108,8 +109,90 @@ get_hostname() {
 
 HOSTNAME=$(get_hostname)
 
+# Helper function to start server with specific configs
+start_with_configs() {
+    local configs="$1"
+    local description="$2"
+    
+    cd "$PROJECT_ROOT"
+    
+    # Check if already running
+    if pgrep -f "mlesproxy.*jar" > /dev/null; then
+        echo -e "${YELLOW}Warning: MLEAProxy is already running${NC}"
+        exit 1
+    fi
+    
+    # Copy example configs if they exist
+    if [[ "$configs" == *"ldap"* ]] && [ -d "examples/ldap" ] && [ -f "examples/ldap/01-standalone-json-server.properties" ]; then
+        cp examples/ldap/01-standalone-json-server.properties ldap.properties
+    fi
+    if [[ "$configs" == *"oauth"* ]] && [ -d "examples/oauth" ] && [ -f "examples/oauth/01-oauth-basic.properties" ]; then
+        cp examples/oauth/01-oauth-basic.properties oauth.properties
+    fi
+    if [[ "$configs" == *"saml"* ]] && [ -d "examples/saml" ] && [ -f "examples/saml/01-saml-basic.properties" ]; then
+        cp examples/saml/01-saml-basic.properties saml.properties
+    fi
+    
+    # Start with specified configs
+    java -Dspring.config.location=classpath:/application.properties,$configs \
+         -jar "$JAR_FILE" \
+         --users-json=./users.json \
+         > mleaproxy.log 2>&1 &
+    
+    PID=$!
+    echo $PID > mleaproxy.pid
+    sleep 5
+    
+    if ps -p $PID > /dev/null; then
+        echo -e "${GREEN}MLEAProxy started successfully!${NC}"
+        echo "PID: $PID"
+        echo ""
+        
+        # Display relevant endpoints based on what's configured
+        if [[ "$configs" == *"ldap"* ]]; then
+            echo "LDAP Endpoints:"
+            echo "  - Proxy: ldap://$HOSTNAME:10389"
+            echo "  - In-memory: ldap://$HOSTNAME:60389"
+            echo ""
+        fi
+        
+        if [[ "$configs" == *"oauth"* ]]; then
+            echo "OAuth Endpoints:"
+            echo "  - Token: http://$HOSTNAME:8080/oauth/token"
+            echo "  - JWKS: http://$HOSTNAME:8080/oauth/jwks"
+            echo ""
+        fi
+        
+        if [[ "$configs" == *"saml"* ]]; then
+            echo "SAML Endpoints:"
+            echo "  - Auth: http://$HOSTNAME:8080/saml/auth"
+            echo "  - Metadata: http://$HOSTNAME:8080/saml/metadata"
+            echo ""
+        fi
+        
+        echo "Status Page: http://$HOSTNAME:8080/status"
+        echo ""
+        echo "Stop with: ./scripts/stop.sh"
+        echo "View logs: tail -f mleaproxy.log"
+    else
+        echo -e "${RED}Error: MLEAProxy failed to start${NC}"
+        echo "Check logs: cat mleaproxy.log"
+        exit 1
+    fi
+}
+
 case $choice in
     1)
+        echo ""
+        echo -e "${BLUE}Starting LDAP, OAuth, SAML (without Kerberos)...${NC}"
+        start_with_configs "./ldap.properties,./oauth.properties,./saml.properties" "LDAP, OAuth, SAML"
+        ;;
+    2)
+        echo ""
+        echo -e "${BLUE}Starting OAuth, SAML (without LDAP or Kerberos)...${NC}"
+        start_with_configs "./oauth.properties,./saml.properties" "OAuth, SAML"
+        ;;
+    3)
         if [ "$KERBEROS_AVAILABLE" = false ]; then
             echo ""
             echo -e "${RED}✗ Kerberos keytab required${NC}"
@@ -117,7 +200,7 @@ case $choice in
             echo "Create a keytab first:"
             echo "  ./scripts/create-keytab.sh"
             echo ""
-            echo "Or choose option 6 to start without Kerberos"
+            echo "Or choose option 1 or 2 to start without Kerberos"
             exit 1
         fi
         echo ""
@@ -125,25 +208,25 @@ case $choice in
         "$SCRIPT_DIR/start-all.sh"
         exit 0
         ;;
-    2)
+    4)
         echo ""
         echo -e "${BLUE}Starting LDAP...${NC}"
         "$SCRIPT_DIR/start-ldap.sh"
         exit 0
         ;;
-    3)
+    5)
         echo ""
         echo -e "${BLUE}Starting OAuth...${NC}"
         "$SCRIPT_DIR/start-oauth.sh"
         exit 0
         ;;
-    4)
+    6)
         echo ""
         echo -e "${BLUE}Starting SAML...${NC}"
         "$SCRIPT_DIR/start-saml.sh"
         exit 0
         ;;
-    5)
+    7)
         if [ "$KERBEROS_AVAILABLE" = false ]; then
             echo ""
             echo -e "${RED}✗ Kerberos keytab required${NC}"
@@ -157,66 +240,7 @@ case $choice in
         "$SCRIPT_DIR/start-kerberos.sh"
         exit 0
         ;;
-    6)
-        echo ""
-        echo -e "${BLUE}Starting LDAP, OAuth, SAML (without Kerberos)...${NC}"
-        
-        cd "$PROJECT_ROOT"
-        
-        # Check if already running
-        if pgrep -f "mlesproxy.*jar" > /dev/null; then
-            echo -e "${YELLOW}Warning: MLEAProxy is already running${NC}"
-            exit 1
-        fi
-        
-        # Copy example configs if they exist
-        if [ -d "examples/ldap" ] && [ -f "examples/ldap/01-standalone-json-server.properties" ]; then
-            cp examples/ldap/01-standalone-json-server.properties ldap.properties
-        fi
-        if [ -d "examples/oauth" ] && [ -f "examples/oauth/01-oauth-basic.properties" ]; then
-            cp examples/oauth/01-oauth-basic.properties oauth.properties
-        fi
-        if [ -d "examples/saml" ] && [ -f "examples/saml/01-saml-basic.properties" ]; then
-            cp examples/saml/01-saml-basic.properties saml.properties
-        fi
-        
-        # Start with LDAP, OAuth, SAML configs (no Kerberos)
-        java -Dspring.config.location=classpath:/application.properties,./ldap.properties,./oauth.properties,./saml.properties \
-             -jar "$JAR_FILE" \
-             --users-json=./users.json \
-             > mleaproxy.log 2>&1 &
-        
-        PID=$!
-        echo $PID > mleaproxy.pid
-        sleep 5
-        
-        if ps -p $PID > /dev/null; then
-            echo -e "${GREEN}MLEAProxy started successfully!${NC}"
-            echo "PID: $PID"
-            echo ""
-            echo "LDAP Endpoints:"
-            echo "  - Proxy: ldap://$HOSTNAME:10389"
-            echo "  - In-memory: ldap://$HOSTNAME:60389"
-            echo ""
-            echo "OAuth Endpoints:"
-            echo "  - Token: http://$HOSTNAME:8080/oauth/token"
-            echo "  - JWKS: http://$HOSTNAME:8080/oauth/jwks"
-            echo ""
-            echo "SAML Endpoints:"
-            echo "  - Auth: http://$HOSTNAME:8080/saml/auth"
-            echo "  - Metadata: http://$HOSTNAME:8080/saml/metadata"
-            echo ""
-            echo "Status Page: http://$HOSTNAME:8080/status"
-            echo ""
-            echo "Stop with: ./scripts/stop.sh"
-            echo "View logs: tail -f mleaproxy.log"
-        else
-            echo -e "${RED}Error: MLEAProxy failed to start${NC}"
-            echo "Check logs: cat mleaproxy.log"
-            exit 1
-        fi
-        ;;
-    7)
+    8)
         echo ""
         echo "Exiting..."
         exit 0
