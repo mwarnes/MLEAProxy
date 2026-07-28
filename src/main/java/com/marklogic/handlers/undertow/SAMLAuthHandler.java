@@ -3,6 +3,7 @@ package com.marklogic.handlers.undertow;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
@@ -91,6 +92,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.MediaType;
@@ -126,6 +128,9 @@ public class SAMLAuthHandler {
     
     @Autowired(required = false)
     private JsonUserRepository jsonUserRepository;
+    
+    @Autowired
+    private Environment environment;
     
     // Default roles to assign when user not found in repository
     @Value("${saml.default.roles:user}")
@@ -177,6 +182,24 @@ public class SAMLAuthHandler {
                 this.cachedCertificate = null;
             }
             
+            // Auto-detect base URL if using default localhost values
+            if (idpEntityId.contains("localhost") || idpSsoUrl.contains("localhost")) {
+                String port = environment.getProperty("local.server.port", "8080");
+                String contextPath = environment.getProperty("server.servlet.context-path", "");
+                boolean sslEnabled = Boolean.parseBoolean(environment.getProperty("server.ssl.enabled", "false"));
+                String protocol = sslEnabled ? "https" : "http";
+                String hostname = getServerHostname();
+                
+                String baseUrl = protocol + "://" + hostname + ":" + port + contextPath;
+                
+                this.idpEntityId = baseUrl + "/saml/idp";
+                this.idpSsoUrl = baseUrl + "/saml/auth";
+                
+                logger.info("Auto-detected SAML base URL: {}", baseUrl);
+                logger.info("SAML IdP Entity ID: {}", idpEntityId);
+                logger.info("SAML SSO URL: {}", idpSsoUrl);
+            }
+            
             this.initialized = true;
             
         } catch (Exception e) {
@@ -187,11 +210,52 @@ public class SAMLAuthHandler {
         }
     }
     
+    /**
+     * Gets the server's hostname, preferring the canonical hostname (FQDN).
+     */
+    private String getServerHostname() {
+        try {
+            String canonicalHostname = InetAddress.getLocalHost().getCanonicalHostName();
+            if (canonicalHostname != null && !canonicalHostname.isEmpty() 
+                && !canonicalHostname.equals("localhost") 
+                && !canonicalHostname.equals("localhost.localdomain")) {
+                return canonicalHostname;
+            }
+            
+            String simpleHostname = InetAddress.getLocalHost().getHostName();
+            if (simpleHostname != null && !simpleHostname.isEmpty() 
+                && !simpleHostname.equals("localhost")
+                && !simpleHostname.equals("localhost.localdomain")) {
+                return simpleHostname;
+            }
+        } catch (Exception e) {
+            logger.debug("Could not resolve hostname, falling back to HOSTNAME env var", e);
+        }
+        
+        String envHostname = System.getenv("HOSTNAME");
+        if (envHostname != null && !envHostname.isEmpty() 
+            && !envHostname.equals("localhost")
+            && !envHostname.equals("localhost.localdomain")) {
+            return envHostname;
+        }
+        
+        return "localhost";
+    }
+    
     @GetMapping(value = "/saml/auth")
-    public String authn(Model model, @RequestParam(value = "SAMLRequest") String req) {
+    public String authn(Model model, @RequestParam(value = "SAMLRequest", required = false) String req) {
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
         context.getLogger(SAMLAuthHandler.class).setLevel(saml.getConfig().isSamlDebug() ? Level.DEBUG : Level.INFO);
         model.addAttribute("saml", saml);
+        
+        // If no SAMLRequest, show info page
+        if (req == null || req.isEmpty()) {
+            model.addAttribute("error", "No SAMLRequest provided");
+            model.addAttribute("message", "This endpoint requires a SAMLRequest parameter as part of a SAML authentication flow.");
+            model.addAttribute("idpEntityId", idpEntityId);
+            model.addAttribute("idpSsoUrl", idpSsoUrl);
+            return "saml-info";
+        }
         
         try {
             logger.debug("Processing SAML Request: {}", req);
