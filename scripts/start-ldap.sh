@@ -29,8 +29,10 @@ get_hostname() {
 
 HOSTNAME=$(get_hostname)
 
-# Find JAR file
-if [ -f "target/mlesproxy-2.0.3.jar" ]; then
+# Find JAR file (check distribution location first)
+if [ -f "mlesproxy-2.0.3.jar" ]; then
+    JAR_FILE="mlesproxy-2.0.3.jar"
+elif [ -f "target/mlesproxy-2.0.3.jar" ]; then
     JAR_FILE="target/mlesproxy-2.0.3.jar"
 elif [ -f "release/mlesproxy-2.0.3.jar" ]; then
     JAR_FILE="release/mlesproxy-2.0.3.jar"
