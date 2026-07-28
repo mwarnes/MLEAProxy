@@ -35,6 +35,56 @@
         </div>
     </div>
 
+    <!-- LDAP Section -->
+    <div class="card mb-3" th:if="${ldapInfo.enabled}">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="fa fa-address-book"></i> LDAP Endpoints</h5>
+        </div>
+        <div class="card-body">
+            <!-- Directory Servers -->
+            <div th:if="${!ldapInfo.directoryServers.isEmpty()}">
+                <h6>In-Memory Directory Servers:</h6>
+                <dl class="row" th:each="server : ${ldapInfo.directoryServers}">
+                    <dt class="col-sm-3" th:text="${server.name} + ':'">
+                        Server Name:
+                    </dt>
+                    <dd class="col-sm-9">
+                        <code th:text="${server.url}">ldap://localhost:60389</code>
+                        <span class="text-muted" th:if="${server.baseDn}" th:text="'(Base DN: ' + ${server.baseDn} + ')'">Base DN</span>
+                    </dd>
+                </dl>
+            </div>
+
+            <!-- LDAP Listeners -->
+            <div th:if="${!ldapInfo.listeners.isEmpty()}">
+                <h6 th:if="${!ldapInfo.directoryServers.isEmpty()}" class="mt-3">LDAP Listeners:</h6>
+                <h6 th:if="${ldapInfo.directoryServers.isEmpty()}">LDAP Listeners:</h6>
+                <dl class="row" th:each="listener : ${ldapInfo.listeners}">
+                    <dt class="col-sm-3" th:text="${listener.name} + ':'">
+                        Listener Name:
+                    </dt>
+                    <dd class="col-sm-9">
+                        <code th:text="${listener.url}">ldap://localhost:10389</code>
+                        <span class="text-muted" th:if="${listener.description}" th:text="'(' + ${listener.description} + ')'">Description</span>
+                    </dd>
+                </dl>
+            </div>
+
+            <!-- Example LDAP Search -->
+            <div th:if="${ldapInfo.exampleSearch != null}">
+                <h6 class="mt-3">Example LDAP Search:</h6>
+                <div class="position-relative">
+                    <button class="btn btn-sm btn-outline-secondary position-absolute"
+                            style="top: 5px; right: 5px; z-index: 10;"
+                            onclick="copyToClipboard('ldapSearch')">
+                        <i class="fa fa-copy"></i> Copy
+                    </button>
+                    <pre class="bg-light p-3 rounded" style="overflow-x: auto;"><code id="ldapSearch" th:text="${ldapInfo.exampleSearch}">ldapsearch ...</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- OAuth Section -->
     <div class="card mb-3">
         <div class="card-header bg-info text-white">

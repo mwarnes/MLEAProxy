@@ -20,6 +20,9 @@ public class StatusHandler {
         // Server info
         model.addAttribute("serverInfo", startupDisplayService.getServerInfo());
         
+        // LDAP
+        model.addAttribute("ldapInfo", startupDisplayService.getLDAPInfo());
+        
         // OAuth
         model.addAttribute("oauthInfo", startupDisplayService.getOAuthInfo());
         

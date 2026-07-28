@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -219,6 +222,63 @@ public class StartupDisplayService {
             "caUrl", baseUrl + "/saml/ca",
             "configured", configured
         );
+    }
+
+    /**
+     * Returns LDAP endpoint information as structured data.
+     * 
+     * @return Map containing LDAP listeners and directory servers
+     */
+    public Map<String, Object> getLDAPInfo() {
+        if (environment == null || properties == null) {
+            return Map.of("enabled", false);
+        }
+        
+        Map<String, Object> ldapInfo = new HashMap<>();
+        List<Map<String, String>> listeners = new ArrayList<>();
+        List<Map<String, String>> directoryServers = new ArrayList<>();
+        
+        String hostname = getBaseUrl().replaceAll("https?://", "").replaceAll(":\\d+", "");
+        
+        // Collect directory servers
+        properties.getDirectoryServers().forEach((name, props) -> {
+            Map<String, String> server = new HashMap<>();
+            server.put("name", name);
+            server.put("url", String.format("ldap://%s:%d", hostname, props.getPort()));
+            server.put("baseDn", props.getBaseDn());
+            directoryServers.add(server);
+        });
+        
+        // Collect LDAP listeners
+        properties.getLdapListeners().forEach((name, props) -> {
+            Map<String, String> listener = new HashMap<>();
+            listener.put("name", name);
+            listener.put("url", String.format("ldap://%s:%d", hostname, props.getPort()));
+            listener.put("description", props.getDescription() != null ? props.getDescription() : "");
+            listeners.add(listener);
+        });
+        
+        boolean enabled = !listeners.isEmpty() || !directoryServers.isEmpty();
+        
+        ldapInfo.put("enabled", enabled);
+        ldapInfo.put("listeners", listeners);
+        ldapInfo.put("directoryServers", directoryServers);
+        
+        // Example LDAP search if there are listeners
+        if (!listeners.isEmpty()) {
+            Map<String, String> firstListener = listeners.get(0);
+            String exampleSearch = String.format(
+                "ldapsearch -H %s \\\n" +
+                "  -D \"cn=admin,ou=users,dc=marklogic,dc=local\" \\\n" +
+                "  -w password \\\n" +
+                "  -b \"ou=users,dc=marklogic,dc=local\" \\\n" +
+                "  \"(objectClass=*)\"",
+                firstListener.get("url")
+            );
+            ldapInfo.put("exampleSearch", exampleSearch);
+        }
+        
+        return ldapInfo;
     }
 
     /**
