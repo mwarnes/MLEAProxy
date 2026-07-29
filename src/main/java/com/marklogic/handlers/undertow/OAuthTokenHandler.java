@@ -30,12 +30,9 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.marklogic.repository.JsonUserRepository;
@@ -201,34 +198,7 @@ public class OAuthTokenHandler {
         return "localhost";
     }
 
-    /**
-     * GET /oauth/token - Info page
-     * Shows information about the OAuth token endpoint and example usage
-     */
-    @GetMapping(value = "/oauth/token")
-    public String tokenInfo(Model model) {
-        model.addAttribute("tokenUrl", baseUrl + "/oauth/token");
-        model.addAttribute("jwksUrl", baseUrl + "/oauth/jwks");
-        model.addAttribute("configUrl", baseUrl + "/.well-known/openid-configuration");
-        
-        // Build example curl command
-        String exampleCurl = String.format(
-            "curl -s -X POST %s \\\n" +
-            "  -H \"Content-Type: application/x-www-form-urlencoded\" \\\n" +
-            "  -d \"grant_type=password\" \\\n" +
-            "  -d \"client_id=mleaproxy\" \\\n" +
-            "  -d \"client_secret=secret\" \\\n" +
-            "  -d \"username=admin\" \\\n" +
-            "  -d \"password=password\" | jq",
-            baseUrl + "/oauth/token"
-        );
-        model.addAttribute("exampleCurl", exampleCurl);
-        
-        return "oauth-info";
-    }
-
     @PostMapping(value = "/oauth/token", produces = "application/json")
-    @ResponseBody
     public ResponseEntity<Map<String, Object>> token(
             @RequestParam(value = "grant_type", required = false) String grantType,
             @RequestParam(value = "client_id", required = false) String clientId,
