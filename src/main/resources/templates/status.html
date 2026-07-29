@@ -192,31 +192,40 @@
 <script>
     function copyToClipboard(elementId, event) {
         const element = document.getElementById(elementId);
-        const text = element.textContent;
-
-        navigator.clipboard.writeText(text).then(function() {
-            // Success feedback
-            const btn = event.target.closest('button');
-            const icon = btn.querySelector('i');
-            const originalClass = icon.className;
-
-            icon.className = 'fa fa-check';
-            btn.classList.add('btn-success');
-            btn.classList.remove('btn-outline-secondary');
-
-            setTimeout(function() {
-                icon.className = originalClass;
-                btn.classList.remove('btn-success');
-                btn.classList.add('btn-outline-secondary');
-            }, 2000);
-        }).catch(function(err) {
-            // Fallback: select text
-            const range = document.createRange();
-            range.selectNode(element);
-            window.getSelection().removeAllRanges();
-            window.getSelection().addRange(range);
-            alert('Press Ctrl+C (or Cmd+C) to copy');
-        });
+        const text = element.textContent.trim();
+        const btn = event.target.closest('button');
+        const icon = btn.querySelector('i');
+        const originalClass = icon.className;
+        
+        // Create temporary textarea for reliable copying in all contexts
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                // Success feedback
+                icon.className = 'fa fa-check';
+                btn.classList.add('btn-success');
+                btn.classList.remove('btn-outline-secondary');
+                
+                setTimeout(function() {
+                    icon.className = originalClass;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-secondary');
+                }, 2000);
+            } else {
+                alert('Copy failed. Please select and copy manually.');
+            }
+        } catch (err) {
+            alert('Copy failed. Please select and copy manually.');
+        } finally {
+            document.body.removeChild(textarea);
+        }
     }
 </script>
 </body>

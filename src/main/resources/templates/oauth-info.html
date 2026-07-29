@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <title>OAuth 2.0 Token Endpoint</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fa fa-key"></i> OAuth 2.0 Token Endpoint</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info" role="alert">
+                        <strong>Information:</strong> This endpoint requires a POST request with OAuth 2.0 credentials.
+                    </div>
+                    
+                    <h6>OAuth Endpoints:</h6>
+                    <dl class="row">
+                        <dt class="col-sm-3">Token Endpoint:</dt>
+                        <dd class="col-sm-9"><code th:text="${tokenUrl}">Token URL</code></dd>
+                        
+                        <dt class="col-sm-3">JWKS Endpoint:</dt>
+                        <dd class="col-sm-9">
+                            <a th:href="${jwksUrl}" th:text="${jwksUrl}">JWKS URL</a>
+                        </dd>
+                        
+                        <dt class="col-sm-3">OpenID Config:</dt>
+                        <dd class="col-sm-9">
+                            <a th:href="${configUrl}" th:text="${configUrl}">Config URL</a>
+                        </dd>
+                    </dl>
+                    
+                    <h6 class="mt-4">Supported Grant Types:</h6>
+                    <ul>
+                        <li><code>password</code> - Resource Owner Password Credentials Grant</li>
+                        <li><code>client_credentials</code> - Client Credentials Grant</li>
+                    </ul>
+                    
+                    <h6 class="mt-4">Required Parameters:</h6>
+                    <table class="table table-sm table-bordered">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>grant_type</code></td>
+                                <td>Yes</td>
+                                <td>Must be <code>password</code> or <code>client_credentials</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>client_id</code></td>
+                                <td>Yes</td>
+                                <td>Client identifier (e.g., <code>mleaproxy</code>)</td>
+                            </tr>
+                            <tr>
+                                <td><code>client_secret</code></td>
+                                <td>Yes</td>
+                                <td>Client secret (e.g., <code>secret</code>)</td>
+                            </tr>
+                            <tr>
+                                <td><code>username</code></td>
+                                <td>For password grant</td>
+                                <td>User's username</td>
+                            </tr>
+                            <tr>
+                                <td><code>password</code></td>
+                                <td>For password grant</td>
+                                <td>User's password</td>
+                            </tr>
+                            <tr>
+                                <td><code>scope</code></td>
+                                <td>No</td>
+                                <td>Optional space-separated scopes</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <h6 class="mt-4">Example Request:</h6>
+                    <div class="position-relative">
+                        <button class="btn btn-sm btn-outline-secondary position-absolute"
+                                style="top: 5px; right: 5px; z-index: 10;"
+                                onclick="copyToClipboard('exampleCurl', event)">
+                            <i class="fa fa-copy"></i> Copy
+                        </button>
+                        <pre class="bg-light p-3 rounded" style="overflow-x: auto;"><code id="exampleCurl" th:text="${exampleCurl}">curl command...</code></pre>
+                    </div>
+                    
+                    <h6 class="mt-4">Example Response:</h6>
+                    <pre class="bg-light p-3 rounded"><code>{
+  "access_token": "eyJhbGciOiJSUzI1NiJ9...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "scope": "read write"
+}</code></pre>
+                    
+                    <h6 class="mt-4">More Information:</h6>
+                    <ul>
+                        <li><a th:href="@{/status}">Status Page</a> - View all endpoints and configuration</li>
+                        <li><a th:href="${jwksUrl}">JWKS Endpoint</a> - Public keys for token verification</li>
+                        <li><a th:href="${configUrl}">OpenID Configuration</a> - OAuth discovery metadata</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function copyToClipboard(elementId, event) {
+        const element = document.getElementById(elementId);
+        const text = element.textContent.trim();
+        const btn = event.target.closest('button');
+        const icon = btn.querySelector('i');
+        const originalClass = icon.className;
+        
+        // Create temporary textarea for reliable copying in all contexts
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                // Success feedback
+                icon.className = 'fa fa-check';
+                btn.classList.add('btn-success');
+                btn.classList.remove('btn-outline-secondary');
+                
+                setTimeout(function() {
+                    icon.className = originalClass;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-secondary');
+                }, 2000);
+            } else {
+                alert('Copy failed. Please select and copy manually.');
+            }
+        } catch (err) {
+            alert('Copy failed. Please select and copy manually.');
+        } finally {
+            document.body.removeChild(textarea);
+        }
+    }
+</script>
+</body>
+</html>
