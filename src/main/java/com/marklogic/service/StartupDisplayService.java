@@ -6,14 +6,15 @@ import com.marklogic.repository.JsonUserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +38,12 @@ public class StartupDisplayService {
 
     @Autowired(required = false)
     private MleaProxyProperties properties;
+
+    @Autowired(required = false)
+    private TlsCertificateService tlsCertificateService;
+
+    @Value("${mleaproxy.https.ca-certificate:./certificates/ca-certificate.pem}")
+    private String caCertificatePath;
 
     /**
      * Displays comprehensive startup summary including server info, endpoints, and users.
@@ -79,6 +86,43 @@ public class StartupDisplayService {
         return protocol + "://" + hostname + ":" + port + contextPath;
     }
     
+    /**
+     * Returns HTTPS listener and CA certificate information as structured data.
+     *
+     * <p>MarkLogic must trust the CA before it can reach the JWKS and token endpoints over
+     * HTTPS, so the certificate details and a download link are surfaced rather than left
+     * for someone to find on the filesystem.
+     *
+     * @return map describing the HTTPS listener; {@code caPresent} is false when no CA exists
+     */
+    public Map<String, Object> getTlsInfo() {
+        Map<String, Object> info = new LinkedHashMap<>();
+        String httpsBaseUrl = getHttpsBaseUrl();
+
+        info.put("httpsEnabled", httpsBaseUrl != null);
+        info.put("httpsBaseUrl", httpsBaseUrl == null ? "" : httpsBaseUrl);
+        info.put("caDownloadUrl", httpsBaseUrl == null ? "" : httpsBaseUrl + "/tls/ca");
+        info.put("caPresent", false);
+        info.put("caPath", caCertificatePath == null ? "" : caCertificatePath);
+
+        if (tlsCertificateService == null || httpsBaseUrl == null) {
+            return info;
+        }
+
+        var described = tlsCertificateService.describeCaCertificate(
+            java.nio.file.Paths.get(caCertificatePath));
+        if (described.isPresent()) {
+            var ca = described.get();
+            info.put("caPresent", true);
+            info.put("caPath", ca.path());
+            info.put("caSubject", ca.subject());
+            info.put("caFingerprint", ca.fingerprint());
+            info.put("caValidUntil", ca.validUntil());
+            info.put("caPem", ca.pem());
+        }
+        return info;
+    }
+
     /**
      * Gets the base URL advertised for the OAuth 2.0 token, JWKS and discovery endpoints.
      *
@@ -487,6 +531,45 @@ public class StartupDisplayService {
         logger.info("  -d \"password=password\" \\");
         logger.info("  -d \"client_id=marklogic\" \\");
         logger.info("  -d \"client_secret=secret\"");
+        logger.info("================================================================================");
+
+        displayTlsInfo();
+    }
+
+    /**
+     * Displays HTTPS listener and CA certificate details.
+     *
+     * MarkLogic needs the CA imported before it can call the JWKS and token endpoints, and
+     * it reports the omission only as "Certificate verify failed", so the path, fingerprint
+     * and download URL are printed at startup.
+     */
+    private void displayTlsInfo() {
+        Map<String, Object> tls = getTlsInfo();
+        if (!Boolean.TRUE.equals(tls.get("httpsEnabled"))) {
+            logger.info("");
+            logger.info("HTTPS Listener: disabled");
+            logger.info("================================================================================");
+            return;
+        }
+
+        logger.info("");
+        logger.info("HTTPS Listener / TLS:");
+        logger.info("--------------------------------------------------------------------------------");
+        logger.info("Base URL:                 {}", tls.get("httpsBaseUrl"));
+
+        if (Boolean.TRUE.equals(tls.get("caPresent"))) {
+            logger.info("CA Certificate:           {}", tls.get("caPath"));
+            logger.info("CA Download URL:          {}", tls.get("caDownloadUrl"));
+            logger.info("CA Subject:               {}", tls.get("caSubject"));
+            logger.info("CA SHA-256:               {}", tls.get("caFingerprint"));
+            logger.info("CA Valid Until:           {}", tls.get("caValidUntil"));
+            logger.info("");
+            logger.info("Import the CA certificate into MarkLogic (Security > Certificate");
+            logger.info("Authorities) before configuring OAuth, or MarkLogic will report");
+            logger.info("\"SVC-SOCCONN: Certificate verify failed\" when fetching JWKS.");
+        } else {
+            logger.info("CA Certificate:           none (externally supplied certificate in use)");
+        }
         logger.info("================================================================================");
     }
 

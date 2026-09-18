@@ -132,6 +132,72 @@
         </div>
     </div>
 
+    <!-- HTTPS / CA Certificate Section -->
+    <div class="card mb-3">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fa fa-lock"></i> HTTPS Listener &amp; CA Certificate</h5>
+        </div>
+        <div class="card-body">
+            <div th:unless="${tlsInfo.httpsEnabled}" class="alert alert-secondary mb-0" role="alert">
+                The HTTPS listener is disabled, so no CA certificate is in use.
+            </div>
+
+            <div th:if="${tlsInfo.httpsEnabled}">
+                <dl class="row">
+                    <dt class="col-sm-3">HTTPS Base URL:</dt>
+                    <dd class="col-sm-9"><code th:text="${tlsInfo.httpsBaseUrl}">https://host:8443</code></dd>
+                </dl>
+
+                <div th:unless="${tlsInfo.caPresent}" class="alert alert-secondary mb-0" role="alert">
+                    No generated CA certificate &ndash; an externally supplied certificate is in use.
+                    Import whichever CA signed it into MarkLogic.
+                </div>
+
+                <div th:if="${tlsInfo.caPresent}">
+                    <div class="alert alert-warning" role="alert">
+                        <strong>Import this CA into MarkLogic</strong> under
+                        <em>Security &rarr; Certificate Authorities</em> before configuring OAuth.
+                        Without it MarkLogic cannot fetch JWKS or exchange an authorization code
+                        over HTTPS, and reports only
+                        <code>SVC-SOCCONN: Certificate verify failed</code>.
+                    </div>
+
+                    <dl class="row">
+                        <dt class="col-sm-3">Download:</dt>
+                        <dd class="col-sm-9">
+                            <a th:href="${tlsInfo.caDownloadUrl}" th:text="${tlsInfo.caDownloadUrl}"
+                               class="btn btn-sm btn-primary">Download CA</a>
+                        </dd>
+
+                        <dt class="col-sm-3">File on server:</dt>
+                        <dd class="col-sm-9"><code th:text="${tlsInfo.caPath}">/path/ca-certificate.pem</code></dd>
+
+                        <dt class="col-sm-3">Subject:</dt>
+                        <dd class="col-sm-9"><code th:text="${tlsInfo.caSubject}">CN=MLEAProxy Development CA</code></dd>
+
+                        <dt class="col-sm-3">SHA-256:</dt>
+                        <dd class="col-sm-9" style="word-break: break-all">
+                            <code th:text="${tlsInfo.caFingerprint}">AA:BB:...</code>
+                        </dd>
+
+                        <dt class="col-sm-3">Valid Until:</dt>
+                        <dd class="col-sm-9" th:text="${tlsInfo.caValidUntil}">2036-09-15</dd>
+                    </dl>
+
+                    <h6 class="mt-3">CA Certificate (PEM):</h6>
+                    <div class="position-relative">
+                        <button class="btn btn-sm btn-outline-secondary position-absolute"
+                                style="top: 5px; right: 5px; z-index: 10;"
+                                onclick="copyToClipboard('caPem', event)">
+                            <i class="fa fa-copy"></i> Copy
+                        </button>
+                        <pre class="bg-light p-3 rounded" style="overflow-x: auto;"><code id="caPem" th:text="${tlsInfo.caPem}">-----BEGIN CERTIFICATE-----</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- SAML Section -->
     <div class="card mb-3">
         <div class="card-header bg-success text-white">

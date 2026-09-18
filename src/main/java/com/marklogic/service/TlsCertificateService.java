@@ -43,6 +43,7 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -116,6 +117,58 @@ public class TlsCertificateService {
                 certPath.toAbsolutePath().getParent());
         generateChain(caCertPath, caKeyPath, certPath, keyPath, extraSans);
         return true;
+    }
+
+    /**
+     * Summary of a certificate on disk, for display and download.
+     *
+     * @param subject      the certificate subject
+     * @param issuer       the certificate issuer
+     * @param fingerprint  SHA-256 fingerprint, colon separated
+     * @param validFrom    start of the validity window
+     * @param validUntil   end of the validity window
+     * @param path         absolute path of the PEM file
+     * @param pem          the PEM text itself
+     */
+    public record CertificateInfo(
+            String subject,
+            String issuer,
+            String fingerprint,
+            Date validFrom,
+            Date validUntil,
+            String path,
+            String pem) {
+    }
+
+    /**
+     * Describes the CA certificate, if it exists.
+     *
+     * <p>Exposed so that the status page and the download endpoint can offer the CA
+     * without an administrator needing shell access to the MLEAProxy host: importing it
+     * into MarkLogic is a required step, and MarkLogic reports its absence only as
+     * {@code SVC-SOCCONN: Certificate verify failed}.
+     *
+     * @param caCertPath path to the CA certificate
+     * @return the description, or empty when the file is absent or unreadable
+     */
+    public Optional<CertificateInfo> describeCaCertificate(Path caCertPath) {
+        if (caCertPath == null || !Files.exists(caCertPath)) {
+            return Optional.empty();
+        }
+        try {
+            X509Certificate certificate = loadCertificate(caCertPath);
+            return Optional.of(new CertificateInfo(
+                    certificate.getSubjectX500Principal().toString(),
+                    certificate.getIssuerX500Principal().toString(),
+                    fingerprint(certificate),
+                    certificate.getNotBefore(),
+                    certificate.getNotAfter(),
+                    caCertPath.toAbsolutePath().normalize().toString(),
+                    Files.readString(caCertPath, StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            logger.warn("Could not read the CA certificate at {}", caCertPath, e);
+            return Optional.empty();
+        }
     }
 
     /**
@@ -340,20 +393,25 @@ public class TlsCertificateService {
      */
     private void logCertificateDetails(String label, X509Certificate certificate) {
         try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(certificate.getEncoded());
-            StringBuilder fingerprint = new StringBuilder();
-            for (byte b : digest) {
-                if (fingerprint.length() > 0) {
-                    fingerprint.append(':');
-                }
-                fingerprint.append(String.format("%02X", b));
-            }
             logger.info("{} certificate subject:     {}", label, certificate.getSubjectX500Principal());
             logger.info("{} certificate valid until: {}", label, certificate.getNotAfter());
-            logger.info("{} certificate SHA-256:     {}", label, fingerprint);
+            logger.info("{} certificate SHA-256:     {}", label, fingerprint(certificate));
         } catch (Exception e) {
             logger.debug("Could not compute certificate fingerprint", e);
         }
+    }
+
+    /** SHA-256 fingerprint in the colon separated form administrators expect. */
+    private String fingerprint(X509Certificate certificate) throws Exception {
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(certificate.getEncoded());
+        StringBuilder result = new StringBuilder();
+        for (byte b : digest) {
+            if (result.length() > 0) {
+                result.append(':');
+            }
+            result.append(String.format("%02X", b));
+        }
+        return result.toString();
     }
 
     private void logImportInstruction(Path caCertPath) {

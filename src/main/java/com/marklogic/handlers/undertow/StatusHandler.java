@@ -29,6 +29,9 @@ public class StatusHandler {
         // SAML
         model.addAttribute("samlInfo", startupDisplayService.getSAMLInfo());
         
+        // HTTPS listener and CA certificate
+        model.addAttribute("tlsInfo", startupDisplayService.getTlsInfo());
+        
         // Users
         model.addAttribute("users", startupDisplayService.getConfiguredUsers());
         
