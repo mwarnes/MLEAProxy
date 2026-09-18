@@ -2,7 +2,7 @@ package com.marklogic.handlers.undertow;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.marklogic.EphemeralLdapPorts;
+import com.marklogic.EphemeralServerPorts;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Edge case and stress tests for OAuth Token Handler
  * Tests boundary conditions, special characters, concurrent requests, and security scenarios
  */
-@EphemeralLdapPorts
+@EphemeralServerPorts
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @DisplayName("OAuth Token Handler - Edge Cases & Security Tests")

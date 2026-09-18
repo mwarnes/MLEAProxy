@@ -1,6 +1,6 @@
 package com.marklogic.handlers.undertow;
 
-import com.marklogic.EphemeralLdapPorts;
+import com.marklogic.EphemeralServerPorts;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Test suite for SAML authentication handler
  */
-@EphemeralLdapPorts
+@EphemeralServerPorts
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "spring.profiles.active=test")
 @AutoConfigureMockMvc
 public class SAMLAuthHandlerTest {

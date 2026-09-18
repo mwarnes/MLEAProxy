@@ -1,6 +1,6 @@
 package com.marklogic.handlers;
 
-import com.marklogic.EphemeralLdapPorts;
+import com.marklogic.EphemeralServerPorts;
 import com.unboundid.ldap.listener.InMemoryDirectoryServer;
 import com.unboundid.ldap.listener.InMemoryDirectoryServerConfig;
 import com.unboundid.ldap.listener.InMemoryListenerConfig;
@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive test suite for LDAP Proxy Handler
  * Tests LDAP connection, bind operations, search operations, and group membership
  */
-@EphemeralLdapPorts
+@EphemeralServerPorts
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "spring.profiles.active=test")
 @DisplayName("LDAP Request Handler Tests")
 class LDAPRequestHandlerTest {

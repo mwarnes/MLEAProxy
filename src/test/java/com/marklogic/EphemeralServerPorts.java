@@ -21,7 +21,10 @@ import java.lang.annotation.Target;
  * underlying {@code BindException} several levels down the cause chain.
  *
  * <p>Port 0 lets the OS assign a free port per context, so the suite no longer depends
- * on those ports being available. Apply this to every {@code @SpringBootTest} class.
+ * on those ports being available. The HTTPS listener is switched off outright, since a
+ * fixed 8443 in every test context would reintroduce the same contention.
+ *
+ * <p>Apply this to every {@code @SpringBootTest} class.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
@@ -29,7 +32,8 @@ import java.lang.annotation.Target;
 @Inherited
 @TestPropertySource(properties = {
         "mleaproxy.directory-servers.marklogic.port=0",
-        "mleaproxy.ldap-listeners.proxy.port=0"
+        "mleaproxy.ldap-listeners.proxy.port=0",
+        "mleaproxy.https.enabled=false"
 })
-public @interface EphemeralLdapPorts {
+public @interface EphemeralServerPorts {
 }

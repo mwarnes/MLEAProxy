@@ -1,6 +1,6 @@
 package com.marklogic.handlers.undertow;
 
-import com.marklogic.EphemeralLdapPorts;
+import com.marklogic.EphemeralServerPorts;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Edge case tests for SAML Authentication Handler
  * Tests invalid date formats, future dates, special characters, and boundary conditions
  */
-@EphemeralLdapPorts
+@EphemeralServerPorts
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @DisplayName("SAML Auth Handler - Edge Cases & Security Tests")

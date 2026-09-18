@@ -22,14 +22,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.marklogic.EphemeralLdapPorts;
+import com.marklogic.EphemeralServerPorts;
 import com.marklogic.MLEAProxy;
 
 /**
  * Comprehensive test suite for OAuth 2.0 Token Endpoint
  * Tests token generation, JWT structure, role inclusion, and error handling
  */
-@EphemeralLdapPorts
+@EphemeralServerPorts
 @SpringBootTest(
     classes = MLEAProxy.class,
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, 

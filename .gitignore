@@ -184,6 +184,14 @@ _site/
 # (Should be in release/ directory only)
 /mlesproxy-*.jar
 
+# Runtime-generated TLS material for the HTTPS listener.
+# Contains a private key - must never be committed.
+/certificates/
+tls-certificate.pem
+tls-privkey.pem
+ca-certificate.pem
+ca-privkey.pem
+
 # ================================================================
 # Notes:
 # ================================================================
@@ -191,4 +199,5 @@ _site/
 # - Test resources in src/test/resources/ ARE tracked (intentional)
 # - users.json and users.xml ARE tracked (test data)
 # - Certificate files in src/main/resources/certs/ ARE tracked
+# - /certificates/ is runtime-generated TLS material and is NOT tracked
 # ================================================================
