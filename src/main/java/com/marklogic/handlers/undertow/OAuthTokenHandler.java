@@ -6,6 +6,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
+import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
@@ -32,9 +33,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.marklogic.service.AuthorizationCodeStore;
+import com.marklogic.service.AuthorizationCodeStore.AuthorizationCode;
 import com.marklogic.repository.JsonUserRepository;
 import com.marklogic.repository.JsonUserRepository.UserInfo;
 
@@ -76,6 +80,9 @@ public class OAuthTokenHandler {
     private Environment environment;
     
     // Configurable token expiration time in seconds (default: 1 hour)
+    @Autowired
+    private AuthorizationCodeStore codeStore;
+
     @Value("${oauth.token.expiration.seconds:3600}")
     private long tokenExpirationSeconds;
     
@@ -109,6 +116,17 @@ public class OAuthTokenHandler {
     // Explicitly configured base URL (optional override)
     @Value("${oauth.server.base.url:}")
     private String configuredBaseUrl;
+
+    // Explicitly configured base URL for the authorization endpoint (optional override)
+    @Value("${oauth.authorize.base.url:}")
+    private String configuredAuthorizeBaseUrl;
+
+    // HTTPS listener settings, used to advertise the authorization endpoint
+    @Value("${mleaproxy.https.enabled:true}")
+    private boolean httpsEnabled;
+
+    @Value("${mleaproxy.https.port:8443}")
+    private int httpsPort;
     
     /**
      * Initialize the OAuth handler after Spring context is ready.
@@ -149,9 +167,16 @@ public class OAuthTokenHandler {
     
     /**
      * Initialize the base URL for OAuth endpoints.
+     *
+     * MarkLogic 12.1 requires the token and JWKS URIs to be HTTPS, so the HTTPS listener
+     * is preferred whenever it is enabled. The endpoints are served on both listeners -
+     * only the advertised URL differs - so an explicit oauth.server.base.url can still
+     * point at plain HTTP for a Resource Server setup that needs it.
+     *
      * Priority:
      * 1. Explicitly configured oauth.server.base.url
-     * 2. Auto-detect from server hostname, port, and SSL settings
+     * 2. https://&lt;hostname&gt;:&lt;mleaproxy.https.port&gt; when the HTTPS listener is enabled
+     * 3. Auto-detect from server hostname, port, and SSL settings
      */
     private void initializeBaseUrl() {
         // Check for explicitly configured base URL
@@ -160,14 +185,22 @@ public class OAuthTokenHandler {
             logger.info("Using configured OAuth base URL: {}", baseUrl);
             return;
         }
-        
-        // Auto-detect from server settings
-        String port = environment.getProperty("server.port", "8080");
+
         String contextPath = environment.getProperty("server.servlet.context-path", "");
+        String hostname = getServerHostname();
+
+        // Prefer the HTTPS listener: MarkLogic rejects http:// token and JWKS URIs.
+        if (httpsEnabled && httpsPort > 0) {
+            this.baseUrl = "https://" + hostname + ":" + httpsPort + contextPath;
+            logger.info("Auto-detected OAuth base URL (HTTPS listener): {}", baseUrl);
+            return;
+        }
+
+        // Fall back to the primary connector
+        String port = environment.getProperty("server.port", "8080");
         boolean sslEnabled = Boolean.parseBoolean(environment.getProperty("server.ssl.enabled", "false"));
         String protocol = sslEnabled ? "https" : "http";
-        String hostname = getServerHostname();
-        
+
         this.baseUrl = protocol + "://" + hostname + ":" + port + contextPath;
         logger.info("Auto-detected OAuth base URL: {}", baseUrl);
     }
@@ -206,7 +239,11 @@ public class OAuthTokenHandler {
             @RequestParam(value = "username", required = false) String username,
             @RequestParam(value = "password", required = false) String password,
             @RequestParam(value = "scope", defaultValue = "") String scope,
-            @RequestParam(value = "roles", defaultValue = "") String rolesParam) {
+            @RequestParam(value = "roles", defaultValue = "") String rolesParam,
+            @RequestParam(value = "code", required = false) String code,
+            @RequestParam(value = "redirect_uri", required = false) String redirectUri,
+            @RequestParam(value = "code_verifier", required = false) String codeVerifier,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
 
         try {
             // Check if handler is properly initialized
@@ -228,6 +265,19 @@ public class OAuthTokenHandler {
                 return createErrorResponse("invalid_request", "grant_type is required", HttpStatus.BAD_REQUEST);
             }
 
+            // Accept client_secret_basic as well as client_secret_post. MarkLogic's
+            // external security configuration only says "Client secret", so which of the
+            // two it uses cannot be assumed.
+            String[] basicCredentials = parseBasicAuthorization(authorization);
+            if (basicCredentials != null) {
+                if (clientId == null || clientId.isEmpty()) {
+                    clientId = basicCredentials[0];
+                }
+                if (clientSecret == null || clientSecret.isEmpty()) {
+                    clientSecret = basicCredentials[1];
+                }
+            }
+
             if (clientId == null || clientId.isEmpty()) {
                 return createErrorResponse("invalid_client", "client_id is required", HttpStatus.BAD_REQUEST);
             }
@@ -237,10 +287,19 @@ public class OAuthTokenHandler {
             }
 
             // Validate grant type
-            if (!grantType.equals("password") && !grantType.equals("client_credentials")) {
+            if (!grantType.equals("password") && !grantType.equals("client_credentials")
+                    && !grantType.equals("authorization_code")) {
                 return createErrorResponse("unsupported_grant_type", 
-                                "Only 'password' and 'client_credentials' grant types are supported", 
+                                "Only 'password', 'client_credentials' and 'authorization_code' "
+                                + "grant types are supported", 
                                 HttpStatus.BAD_REQUEST);
+            }
+
+            // The Authorization Code grant is handled separately: the username and roles
+            // were already decided at the authorize step, so the role resolution below
+            // does not apply to it.
+            if (grantType.equals("authorization_code")) {
+                return handleAuthorizationCodeGrant(code, redirectUri, clientId, codeVerifier);
             }
 
             // For password grant, validate username and password
@@ -348,6 +407,145 @@ public class OAuthTokenHandler {
     }
 
     /**
+     * Completes the Authorization Code grant.
+     *
+     * Redeems the code, checks it against the authorize request it was issued for, verifies
+     * PKCE, and issues the access token using the username and roles chosen at the login
+     * page.
+     *
+     * @param code         the authorization code presented by the client
+     * @param redirectUri  redirect URI sent with the exchange, checked against the original
+     * @param clientId     client performing the exchange, checked against the original
+     * @param codeVerifier PKCE verifier
+     */
+    private ResponseEntity<Map<String, Object>> handleAuthorizationCodeGrant(
+            String code, String redirectUri, String clientId, String codeVerifier) {
+
+        if (code == null || code.isEmpty()) {
+            return createErrorResponse("invalid_request",
+                "code is required for the authorization_code grant", HttpStatus.BAD_REQUEST);
+        }
+
+        // Redeeming removes the code, so a replay of the same code fails even if this
+        // exchange goes on to fail for another reason.
+        var redeemed = codeStore.redeem(code);
+        if (redeemed.isEmpty()) {
+            return createErrorResponse("invalid_grant",
+                "Authorization code is invalid, expired or has already been used",
+                HttpStatus.BAD_REQUEST);
+        }
+        AuthorizationCode details = redeemed.get();
+
+        if (details.clientId() != null && !details.clientId().isEmpty()
+                && clientId != null && !clientId.isEmpty()
+                && !details.clientId().equals(clientId)) {
+            logger.warn("Authorization code rejected: issued to client '{}' but presented by '{}'",
+                        details.clientId(), clientId);
+            return createErrorResponse("invalid_grant",
+                "Authorization code was issued to a different client", HttpStatus.BAD_REQUEST);
+        }
+
+        if (details.redirectUri() != null && redirectUri != null && !redirectUri.isEmpty()
+                && !details.redirectUri().equals(redirectUri)) {
+            logger.warn("Authorization code rejected: redirect_uri mismatch (issued for '{}', "
+                        + "presented '{}')", details.redirectUri(), redirectUri);
+            return createErrorResponse("invalid_grant",
+                "redirect_uri does not match the authorization request", HttpStatus.BAD_REQUEST);
+        }
+
+        if (details.codeChallenge() != null && !details.codeChallenge().isEmpty()
+                && !verifyPkce(details.codeChallenge(), details.codeChallengeMethod(), codeVerifier)) {
+            return createErrorResponse("invalid_grant", "PKCE verification failed",
+                HttpStatus.BAD_REQUEST);
+        }
+
+        long lifetime = details.tokenLifetimeSeconds() != null
+            ? details.tokenLifetimeSeconds()
+            : tokenExpirationSeconds;
+
+        String accessToken = generateAccessToken(clientId, details.username(), details.scope(),
+            details.roles(), "authorization_code", lifetime);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("access_token", accessToken);
+        response.put("token_type", "Bearer");
+        response.put("expires_in", lifetime);
+        if (details.scope() != null && !details.scope().isEmpty()) {
+            response.put("scope", details.scope());
+        }
+
+        logger.info("Authorization code exchanged successfully for client: {}, user: {}, roles: {}",
+                    clientId, details.username(), String.join(",", details.roles()));
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Verifies a PKCE code_verifier against the stored challenge (RFC 7636).
+     *
+     * MarkLogic 12.1 always sends code_challenge_method=S256, which is the case that
+     * matters; "plain" is accepted for completeness.
+     */
+    private boolean verifyPkce(String challenge, String method, String verifier) {
+        if (verifier == null || verifier.isEmpty()) {
+            logger.warn("PKCE verification failed: code_verifier was not supplied but the "
+                        + "authorization request included a code_challenge");
+            return false;
+        }
+
+        String computed;
+        if (method == null || method.isEmpty() || method.equalsIgnoreCase("plain")) {
+            computed = verifier;
+        } else if (method.equalsIgnoreCase("S256")) {
+            try {
+                byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(verifier.getBytes(StandardCharsets.US_ASCII));
+                computed = Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
+            } catch (Exception e) {
+                logger.error("PKCE verification failed: could not compute the S256 challenge", e);
+                return false;
+            }
+        } else {
+            logger.warn("PKCE verification failed: unsupported code_challenge_method '{}'", method);
+            return false;
+        }
+
+        // Constant-time comparison; the challenge is not secret but the habit is cheap.
+        boolean matches = MessageDigest.isEqual(
+            computed.getBytes(StandardCharsets.US_ASCII),
+            challenge.getBytes(StandardCharsets.US_ASCII));
+
+        if (!matches) {
+            logger.warn("PKCE verification failed: code_verifier does not match the challenge");
+        }
+        return matches;
+    }
+
+    /**
+     * Decodes an HTTP Basic Authorization header into client id and secret.
+     *
+     * @return a two element array, or null when the header is absent or not Basic
+     */
+    private String[] parseBasicAuthorization(String authorization) {
+        if (authorization == null || !authorization.regionMatches(true, 0, "Basic ", 0, 6)) {
+            return null;
+        }
+        try {
+            String decoded = new String(
+                Base64.getDecoder().decode(authorization.substring(6).trim()),
+                StandardCharsets.UTF_8);
+            int separator = decoded.indexOf(':');
+            if (separator < 0) {
+                return null;
+            }
+            return new String[]{decoded.substring(0, separator), decoded.substring(separator + 1)};
+        } catch (Exception e) {
+            logger.warn("Could not decode the Basic Authorization header", e);
+            return null;
+        }
+    }
+
+    /**
      * Generate a JWT access token with the specified claims using JJWT library.
      * Creates a signed JWT token with RS256 algorithm containing standard OAuth/OIDC claims
      * and custom claims for roles and grant type information.
@@ -360,9 +558,24 @@ public class OAuthTokenHandler {
      * @return Serialized JWT token string
      */
     private String generateAccessToken(String clientId, String username, String scope, List<String> roles, String grantType) {
+        return generateAccessToken(clientId, username, scope, roles, grantType, tokenExpirationSeconds);
+    }
+
+    /**
+     * Generate a JWT access token with an explicit lifetime.
+     *
+     * The Authorization Code flow carries a lifetime chosen at the login page, which lets
+     * an operator deliberately mint an already-expired token to see how MarkLogic reports
+     * the rejection.
+     *
+     * @param lifetimeSeconds token lifetime in seconds; may be negative to produce an
+     *                        already-expired token
+     */
+    private String generateAccessToken(String clientId, String username, String scope,
+                                       List<String> roles, String grantType, long lifetimeSeconds) {
         
         Instant now = Instant.now();
-        Instant expiration = now.plusSeconds(tokenExpirationSeconds);
+        Instant expiration = now.plusSeconds(lifetimeSeconds);
         
         // Build and sign JWT token using JJWT fluent API
         var builder = Jwts.builder()
@@ -466,46 +679,112 @@ public class OAuthTokenHandler {
      */
     @GetMapping(value = "/oauth/.well-known/config", produces = "application/json")
     public ResponseEntity<Map<String, Object>> wellKnownConfig() {
+        return discoveryResponse("/oauth/.well-known/config");
+    }
+
+    /**
+     * OpenID Connect discovery document, served at the standard location.
+     *
+     * Clients conventionally look for metadata here rather than at the MLEAProxy-specific
+     * /oauth/.well-known/config path, so both are served with identical content.
+     *
+     * GET /.well-known/openid-configuration
+     */
+    @GetMapping(value = "/.well-known/openid-configuration", produces = "application/json")
+    public ResponseEntity<Map<String, Object>> openidConfiguration() {
+        return discoveryResponse("/.well-known/openid-configuration");
+    }
+
+    /**
+     * OAuth 2.0 Authorization Server Metadata (RFC 8414).
+     *
+     * GET /.well-known/oauth-authorization-server
+     */
+    @GetMapping(value = "/.well-known/oauth-authorization-server", produces = "application/json")
+    public ResponseEntity<Map<String, Object>> oauthAuthorizationServerMetadata() {
+        return discoveryResponse("/.well-known/oauth-authorization-server");
+    }
+
+    private ResponseEntity<Map<String, Object>> discoveryResponse(String path) {
         try {
-            logger.debug("OAuth configuration discovery endpoint called");
-            
-            // Build configuration metadata
-            Map<String, Object> config = new LinkedHashMap<>();
-            
-            // OAuth 2.0 Authorization Server Metadata fields
-            config.put("issuer", jwtIssuer);
-            config.put("token_endpoint", baseUrl + "/oauth/token");
-            config.put("jwks_uri", baseUrl + "/oauth/jwks");
-            
-            // Supported grant types
-            config.put("grant_types_supported", List.of("password", "client_credentials"));
-            
-            // Supported response types (we only support token endpoint, not authorization)
-            config.put("response_types_supported", List.of("token"));
-            
-            // Token endpoint authentication methods
-            config.put("token_endpoint_auth_methods_supported", List.of("client_secret_post"));
-            
-            // Supported signing algorithms
-            config.put("id_token_signing_alg_values_supported", List.of("RS256"));
-            
-            // Additional claims we support
-            config.put("claims_supported", List.of(
-                "iss", "sub", "aud", "exp", "iat", "jti",
-                "client_id", "grant_type", "username", "scope", "roles", "roles_string"
-            ));
-            
-            // Scopes supported (extensible)
-            config.put("scopes_supported", List.of("openid", "profile", "email"));
-            
-            logger.info("OAuth configuration discovery served successfully");
+            logger.debug("OAuth discovery endpoint called: {}", path);
+            Map<String, Object> config = buildDiscoveryDocument();
+            logger.info("OAuth configuration discovery served successfully from {}", path);
             return ResponseEntity.ok(config);
-            
         } catch (Exception ex) {
             logger.error("Error generating OAuth configuration", ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Internal server error"));
         }
+    }
+
+    /**
+     * Builds the discovery metadata shared by all three discovery endpoints.
+     *
+     * Note on authorization_code: the grant is advertised so that MarkLogic will initiate
+     * the Authorization Code flow and its authorize request can be captured. The
+     * /oauth/authorize endpoint is currently in capture mode and does not yet issue codes,
+     * so a code exchange at /oauth/token will still be rejected.
+     */
+    private Map<String, Object> buildDiscoveryDocument() {
+        Map<String, Object> config = new LinkedHashMap<>();
+
+        // OAuth 2.0 Authorization Server Metadata fields
+        config.put("issuer", jwtIssuer);
+        config.put("authorization_endpoint", authorizeBaseUrl() + "/oauth/authorize");
+        config.put("token_endpoint", baseUrl + "/oauth/token");
+        config.put("jwks_uri", baseUrl + "/oauth/jwks");
+
+        // Supported grant types
+        config.put("grant_types_supported",
+            List.of("password", "client_credentials", "authorization_code"));
+
+        // Supported response types
+        config.put("response_types_supported", List.of("token", "code"));
+
+        // PKCE (RFC 7636) challenge methods
+        config.put("code_challenge_methods_supported", List.of("S256", "plain"));
+
+        // Token endpoint authentication methods
+        config.put("token_endpoint_auth_methods_supported",
+            List.of("client_secret_post", "client_secret_basic"));
+
+        // Supported signing algorithms
+        config.put("id_token_signing_alg_values_supported", List.of("RS256"));
+
+        // Additional claims we support
+        config.put("claims_supported", List.of(
+            "iss", "sub", "aud", "exp", "iat", "jti",
+            "client_id", "grant_type", "username", "scope", "roles", "roles_string"
+        ));
+
+        // Scopes supported (extensible)
+        config.put("scopes_supported", List.of("openid", "profile", "email"));
+
+        return config;
+    }
+
+    /**
+     * Base URL for the authorization endpoint.
+     *
+     * The Authorization Code flow redirects a browser to a login page, which is served by
+     * the HTTPS listener rather than the primary HTTP port. The token and JWKS endpoints
+     * keep using {@link #baseUrl} so that existing Resource Server configurations pointing
+     * at HTTP continue to work unchanged.
+     *
+     * Priority:
+     * 1. Explicitly configured oauth.authorize.base.url
+     * 2. https://<hostname>:<mleaproxy.https.port> when the HTTPS listener is enabled
+     * 3. The primary base URL
+     */
+    private String authorizeBaseUrl() {
+        if (configuredAuthorizeBaseUrl != null && !configuredAuthorizeBaseUrl.isEmpty()) {
+            return configuredAuthorizeBaseUrl;
+        }
+        if (httpsEnabled && httpsPort > 0) {
+            return "https://" + getServerHostname() + ":" + httpsPort;
+        }
+        return baseUrl;
     }
 
     /**

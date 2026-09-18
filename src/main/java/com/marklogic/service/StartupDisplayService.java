@@ -80,6 +80,56 @@ public class StartupDisplayService {
     }
     
     /**
+     * Gets the base URL advertised for the OAuth 2.0 token, JWKS and discovery endpoints.
+     *
+     * MarkLogic 12.1 requires HTTPS for the token and JWKS URIs, so the HTTPS listener is
+     * preferred when it is enabled. This mirrors OAuthTokenHandler so that the startup
+     * banner matches the discovery documents.
+     */
+    public String getOAuthBaseUrl() {
+        if (environment == null) {
+            return "https://localhost:8443";
+        }
+
+        String configured = environment.getProperty("oauth.server.base.url");
+        if (configured != null && !configured.isEmpty()) {
+            return configured;
+        }
+
+        String httpsBaseUrl = getHttpsBaseUrl();
+        return httpsBaseUrl != null ? httpsBaseUrl : getBaseUrl();
+    }
+
+    /**
+     * Gets the base URL of the HTTPS listener, which serves the OAuth 2.0
+     * Authorization Code flow login page.
+     * Priority:
+     * 1. oauth.authorize.base.url property (if explicitly configured)
+     * 2. https://<hostname>:<mleaproxy.https.port> when the HTTPS listener is enabled
+     * 3. null when HTTPS is disabled
+     */
+    public String getHttpsBaseUrl() {
+        if (environment == null) {
+            return null;
+        }
+
+        String configured = environment.getProperty("oauth.authorize.base.url");
+        if (configured != null && !configured.isEmpty()) {
+            return configured;
+        }
+
+        boolean httpsEnabled = Boolean.parseBoolean(
+            environment.getProperty("mleaproxy.https.enabled", "true"));
+        int httpsPort = Integer.parseInt(
+            environment.getProperty("mleaproxy.https.port", "8443"));
+
+        if (!httpsEnabled || httpsPort <= 0) {
+            return null;
+        }
+        return "https://" + getServerHostname() + ":" + httpsPort;
+    }
+
+    /**
      * Gets the server's hostname, preferring the canonical hostname (FQDN).
      * Priority:
      * 1. mleaproxy.server.hostname property (manual override)
@@ -165,19 +215,24 @@ public class StartupDisplayService {
             return Map.of(
                 "tokenUrl", "http://localhost:8080/oauth/token",
                 "jwksUrl", "http://localhost:8080/oauth/jwks",
-                "configUrl", "http://localhost:8080/oauth/.well-known/config",
+                "configUrl", "http://localhost:8080/.well-known/openid-configuration",
+                "authorizeUrl", "https://localhost:8443/oauth/authorize",
                 "exampleCurl", "curl -s -X POST http://localhost:8080/oauth/token ...",
                 "curlFlags", "-s"
             );
         }
         
-        String baseUrl = getBaseUrl();
+        String baseUrl = getOAuthBaseUrl();
         boolean isHttps = baseUrl.startsWith("https://");
         String curlFlag = isHttps ? "-sk" : "-s";
         
         String tokenUrl = baseUrl + "/oauth/token";
         String jwksUrl = baseUrl + "/oauth/jwks";
-        String configUrl = baseUrl + "/oauth/.well-known/config";
+        String configUrl = baseUrl + "/.well-known/openid-configuration";
+        String httpsBaseUrl = getHttpsBaseUrl();
+        String authorizeUrl = httpsBaseUrl != null
+            ? httpsBaseUrl + "/oauth/authorize"
+            : "";
         
         String exampleCurl = String.format(
             "curl %s -X POST %s/oauth/token \\\n" +
@@ -193,6 +248,7 @@ public class StartupDisplayService {
             "tokenUrl", tokenUrl,
             "jwksUrl", jwksUrl,
             "configUrl", configUrl,
+            "authorizeUrl", authorizeUrl,
             "exampleCurl", exampleCurl,
             "curlFlags", curlFlag
         );
@@ -400,16 +456,29 @@ public class StartupDisplayService {
             return;
         }
 
-        String baseUrl = getBaseUrl();
+        String baseUrl = getOAuthBaseUrl();
         boolean isHttps = baseUrl.startsWith("https://");
         String curlFlag = isHttps ? "-sk" : "-s";
+
+        String httpsBaseUrl = getHttpsBaseUrl();
 
         logger.info("");
         logger.info("OAuth 2.0 Endpoints:");
         logger.info("--------------------------------------------------------------------------------");
         logger.info("Token Endpoint:           {}/oauth/token", baseUrl);
         logger.info("JWKS Endpoint:            {}/oauth/jwks", baseUrl);
-        logger.info("OpenID Configuration:     {}/oauth/.well-known/config", baseUrl);
+        logger.info("OpenID Configuration:     {}/.well-known/openid-configuration", baseUrl);
+        logger.info("AS Metadata (RFC 8414):   {}/.well-known/oauth-authorization-server", baseUrl);
+        logger.info("Discovery (legacy path):  {}/oauth/.well-known/config", baseUrl);
+
+        // Authorization Code flow. The login page is browser-facing, so it is served by
+        // the HTTPS listener rather than the primary HTTP port.
+        if (httpsBaseUrl != null) {
+            logger.info("Authorization Endpoint:   {}/oauth/authorize  (HTTPS)", httpsBaseUrl);
+        } else {
+            logger.info("Authorization Endpoint:   unavailable - HTTPS listener is disabled");
+        }
+
         logger.info("");
         logger.info("Example Token Request:");
         logger.info("curl {} -X POST {}/oauth/token \\", curlFlag, baseUrl);

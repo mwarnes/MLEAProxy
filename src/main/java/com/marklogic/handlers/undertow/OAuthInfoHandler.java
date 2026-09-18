@@ -23,13 +23,28 @@ public class OAuthInfoHandler {
      */
     @GetMapping(value = "/oauth/token")
     public String tokenInfo(Model model) {
-        String port = environment.getProperty("local.server.port", "8080");
         String contextPath = environment.getProperty("server.servlet.context-path", "");
-        boolean sslEnabled = Boolean.parseBoolean(environment.getProperty("server.ssl.enabled", "false"));
-        String protocol = sslEnabled ? "https" : "http";
         String hostname = getServerHostname();
-        
-        String baseUrl = protocol + "://" + hostname + ":" + port + contextPath;
+        String baseUrl;
+
+        // Prefer the HTTPS listener so this page matches the advertised discovery
+        // metadata: MarkLogic 12.1 requires HTTPS for the token and JWKS URIs.
+        String configuredBaseUrl = environment.getProperty("oauth.server.base.url");
+        boolean httpsEnabled = Boolean.parseBoolean(
+            environment.getProperty("mleaproxy.https.enabled", "true"));
+        int httpsPort = Integer.parseInt(environment.getProperty("mleaproxy.https.port", "8443"));
+
+        if (configuredBaseUrl != null && !configuredBaseUrl.isEmpty()) {
+            baseUrl = configuredBaseUrl;
+        } else if (httpsEnabled && httpsPort > 0) {
+            baseUrl = "https://" + hostname + ":" + httpsPort + contextPath;
+        } else {
+            String port = environment.getProperty("local.server.port", "8080");
+            boolean sslEnabled = Boolean.parseBoolean(
+                environment.getProperty("server.ssl.enabled", "false"));
+            String protocol = sslEnabled ? "https" : "http";
+            baseUrl = protocol + "://" + hostname + ":" + port + contextPath;
+        }
         
         model.addAttribute("tokenUrl", baseUrl + "/oauth/token");
         model.addAttribute("jwksUrl", baseUrl + "/oauth/jwks");

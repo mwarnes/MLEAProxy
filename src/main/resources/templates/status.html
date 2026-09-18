@@ -104,7 +104,19 @@
 
                 <dt class="col-sm-3">OpenID Config:</dt>
                 <dd class="col-sm-9">
-                    <a th:href="${oauthInfo.configUrl}" th:text="${oauthInfo.configUrl}">http://localhost:8080/oauth/.well-known/config</a>
+                    <a th:href="${oauthInfo.configUrl}" th:text="${oauthInfo.configUrl}">http://localhost:8080/.well-known/openid-configuration</a>
+                </dd>
+
+                <dt class="col-sm-3">Authorization Endpoint:</dt>
+                <dd class="col-sm-9">
+                    <a th:if="${!#strings.isEmpty(oauthInfo.authorizeUrl)}"
+                       th:href="${oauthInfo.authorizeUrl}"
+                       th:text="${oauthInfo.authorizeUrl}">https://localhost:8443/oauth/authorize</a>
+                    <span th:if="${!#strings.isEmpty(oauthInfo.authorizeUrl)}"
+                          class="badge badge-info ml-2">HTTPS</span>
+                    <span th:if="${#strings.isEmpty(oauthInfo.authorizeUrl)}" class="text-muted">
+                        Unavailable &ndash; HTTPS listener is disabled
+                    </span>
                 </dd>
             </dl>
 

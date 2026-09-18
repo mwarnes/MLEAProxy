@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <title>OAuth 2.0 Authorization Endpoint - Request Capture</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-11">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fa fa-search"></i> OAuth 2.0 Authorization Endpoint &ndash; Request Capture</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning" role="alert">
+                        <strong>Capture mode.</strong> This endpoint is recording what the client sent
+                        and has <strong>not</strong> issued an authorization code. The login page and
+                        code issuance are the next stage of implementation.
+                    </div>
+
+                    <h6>Request</h6>
+                    <dl class="row">
+                        <dt class="col-sm-3">Method</dt>
+                        <dd class="col-sm-9"><code th:text="${capture['method']}">GET</code></dd>
+
+                        <dt class="col-sm-3">Path</dt>
+                        <dd class="col-sm-9"><code th:text="${capture['requestUri']}">/oauth/authorize</code></dd>
+
+                        <dt class="col-sm-3">Query string</dt>
+                        <dd class="col-sm-9">
+                            <code th:if="${capture['queryString']}" th:text="${capture['queryString']}">...</code>
+                            <span th:unless="${capture['queryString']}" class="text-muted">none</span>
+                        </dd>
+
+                        <dt class="col-sm-3">Transport</dt>
+                        <dd class="col-sm-9">
+                            <code th:text="${capture['scheme']}">https</code>
+                            on port <code th:text="${capture['localPort']}">8443</code>,
+                            secure = <code th:text="${capture['secure']}">true</code>
+                        </dd>
+
+                        <dt class="col-sm-3">Client address</dt>
+                        <dd class="col-sm-9"><code th:text="${capture['remoteAddr']}">127.0.0.1</code></dd>
+                    </dl>
+
+                    <h6 class="mt-4">PKCE</h6>
+                    <div th:if="${pkcePresent}" class="alert alert-success" role="alert">
+                        <i class="fa fa-check"></i> <strong>PKCE detected.</strong>
+                        <code>code_challenge_method</code> =
+                        <code th:text="${capture['codeChallengeMethod']} ?: 'not specified (defaults to plain)'">S256</code>
+                    </div>
+                    <div th:unless="${pkcePresent}" class="alert alert-secondary" role="alert">
+                        <i class="fa fa-info-circle"></i> No <code>code_challenge</code> parameter was sent,
+                        so this client is not using PKCE on the authorize request.
+                    </div>
+
+                    <h6 class="mt-4">OAuth 2.0 / OpenID Connect parameters</h6>
+                    <table class="table table-sm table-bordered" th:if="${!knownParams.isEmpty()}">
+                        <thead class="thead-light">
+                            <tr><th style="width: 30%">Parameter</th><th>Value</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="entry : ${knownParams}">
+                                <td><code th:text="${entry.key}">name</code></td>
+                                <td style="word-break: break-all"><code th:text="${#strings.listJoin(entry.value, ', ')}">value</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p th:if="${knownParams.isEmpty()}" class="text-muted">
+                        No recognised OAuth or OIDC parameters were present.
+                    </p>
+
+                    <h6 class="mt-4">Unrecognised parameters</h6>
+                    <table class="table table-sm table-bordered" th:if="${!unknownParams.isEmpty()}">
+                        <thead class="thead-light">
+                            <tr><th style="width: 30%">Parameter</th><th>Value</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="entry : ${unknownParams}">
+                                <td><code th:text="${entry.key}">name</code></td>
+                                <td style="word-break: break-all"><code th:text="${#strings.listJoin(entry.value, ', ')}">value</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p th:if="${unknownParams.isEmpty()}" class="text-muted">
+                        None &ndash; every parameter sent is part of OAuth 2.0 or OpenID Connect.
+                    </p>
+
+                    <h6 class="mt-4">Request headers</h6>
+                    <table class="table table-sm table-bordered">
+                        <thead class="thead-light">
+                            <tr><th style="width: 30%">Header</th><th>Value</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="entry : ${headers}">
+                                <td><code th:text="${entry.key}">name</code></td>
+                                <td style="word-break: break-all"><code th:text="${#strings.listJoin(entry.value, ', ')}">value</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="text-muted small">
+                        Values of <code>Authorization</code> and <code>Cookie</code> headers are masked:
+                        the scheme and length are recorded, the credential is not.
+                    </p>
+
+                    <div class="alert alert-info mt-4" role="alert">
+                        This capture has also been written to the MLEAProxy log, both as a readable
+                        block and as a single JSON line prefixed
+                        <code>OAUTH_AUTHORIZE_CAPTURE</code>. To extract it:
+                        <pre class="mb-0 mt-2">grep OAUTH_AUTHORIZE_CAPTURE mleaproxy.log | tail -1</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

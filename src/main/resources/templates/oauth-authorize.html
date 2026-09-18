@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <title>MarkLogic OAuth 2.0 Authentication Test Tool</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+<div class="container bg-light mt-4">
+    <div class="card-body">
+        <h5 class="card-title">MarkLogic OAuth 2.0 Authentication Test Tool</h5>
+        <p class="card-text">
+            Enter the Userid and Roles to issue an access token for, then approve the request.
+            Credentials are <strong>not</strong> verified &ndash; whatever you enter here is what
+            MarkLogic will see.
+        </p>
+        <p class="mb-0 text-muted">
+            Requesting client: <code th:text="${clientId}">client</code>
+            &middot; response_type <code th:text="${responseType}">code</code>
+            &middot; delivery <code th:text="${responseMode} ?: 'query'">form_post</code>
+        </p>
+    </div>
+</div>
+
+<div class="container mt-3">
+    <div th:if="${pkcePresent}" class="alert alert-success" role="alert">
+        <i class="fa fa-lock"></i> PKCE in use
+        (<code th:text="${codeChallengeMethod} ?: 'plain'">S256</code>) &ndash; the
+        <code>code_verifier</code> will be checked when the code is exchanged.
+    </div>
+    <div th:unless="${pkcePresent}" class="alert alert-secondary" role="alert">
+        <i class="fa fa-unlock"></i> No PKCE challenge was sent by this client.
+    </div>
+
+    <form th:action="@{/oauth/authorize}" method="post">
+        <div class="form-group row">
+            <label for="username" class="col-4 col-form-label">Userid</label>
+            <div class="col-8">
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <div class="input-group-text"><i class="fa fa-user"></i></div>
+                    </div>
+                    <input id="username" name="username" type="text" class="form-control" autofocus>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <label for="roles" class="col-4 col-form-label">Roles</label>
+            <div class="col-8">
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <div class="input-group-text"><i class="fa fa-users"></i></div>
+                    </div>
+                    <input id="roles" name="roles" type="text" class="form-control"
+                           aria-describedby="rolesHelpBlock">
+                </div>
+                <span id="rolesHelpBlock" class="form-text text-muted">
+                    Comma separated list of roles for the <code>roles</code> claim. Leave blank to
+                    use the roles from <code>users.json</code>, or the default
+                    (<span th:text="${defaultRoles}">user</span>) if the user is not listed.
+                </span>
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <label for="token_lifetime" class="col-4 col-form-label">Token lifetime</label>
+            <div class="col-8">
+                <input id="token_lifetime" name="token_lifetime" type="number"
+                       class="form-control" th:value="${tokenLifetime}"
+                       aria-describedby="lifetimeHelpBlock">
+                <span id="lifetimeHelpBlock" class="form-text text-muted">
+                    Seconds. Set a negative value to mint an already-expired token, which is a
+                    useful way to see how MarkLogic reports rejection.
+                </span>
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <label for="outcome" class="col-4 col-form-label">Outcome</label>
+            <div class="col-8">
+                <select id="outcome" name="outcome" required="required" class="custom-select">
+                    <option value="approve">Approve &ndash; issue an authorization code</option>
+                    <option value="deny">Deny &ndash; return access_denied</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Echoed back so the POST can complete the flow without server-side session state. -->
+        <input type="hidden" name="client_id" th:value="${clientId}">
+        <input type="hidden" name="redirect_uri" th:value="${redirectUri}">
+        <input type="hidden" name="state" th:value="${state}">
+        <input type="hidden" name="scope" th:value="${scope}">
+        <input type="hidden" name="response_mode" th:value="${responseMode}">
+        <input type="hidden" name="code_challenge" th:value="${codeChallenge}">
+        <input type="hidden" name="code_challenge_method" th:value="${codeChallengeMethod}">
+
+        <div class="form-group row">
+            <div class="offset-4 col-8">
+                <button name="submit" type="submit" class="btn btn-primary">Submit</button>
+            </div>
+        </div>
+    </form>
+
+    <hr>
+    <h6>Request details</h6>
+    <table class="table table-sm table-bordered">
+        <tbody>
+            <tr><td style="width: 30%"><code>client_id</code></td>
+                <td><code th:text="${clientId}"></code></td></tr>
+            <tr><td><code>redirect_uri</code></td>
+                <td style="word-break: break-all">
+                    <code th:if="${redirectUri}" th:text="${redirectUri}"></code>
+                    <span th:unless="${redirectUri}" class="text-danger">
+                        not supplied &ndash; the code cannot be returned
+                    </span>
+                </td></tr>
+            <tr><td><code>state</code></td>
+                <td style="word-break: break-all"><code th:text="${state}"></code></td></tr>
+            <tr><td><code>scope</code></td>
+                <td><code th:text="${scope}"></code>
+                    <span th:if="${#strings.isEmpty(scope)}" class="text-muted">(empty)</span></td></tr>
+            <tr><td><code>code_challenge</code></td>
+                <td style="word-break: break-all"><code th:text="${codeChallenge}"></code></td></tr>
+        </tbody>
+    </table>
+    <p class="text-muted small">
+        The authorization code is single use and expires after
+        <span th:text="${codeTtlSeconds}">60</span> seconds.
+    </p>
+</div>
+</body>
+</html>

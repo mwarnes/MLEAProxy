@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <title>OAuth 2.0 Redirect</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
+</head>
+<body>
+<div class="container">
+    <div class="d-flex justify-content-center mt-5">
+        <span>Returning to MarkLogic.....<br></span>
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Redirecting...</span>
+        </div>
+    </div>
+
+    <!-- OAuth 2.0 Form Post Response Mode: MarkLogic asks for response_mode=form_post,
+         so the authorization response is POSTed to the redirect URI rather than being
+         appended to a 302 Location. Mirrors the SAML handler's redirect template. -->
+    <form th:action="${formAction}" method="post">
+        <input th:each="field : ${formFields}" type="hidden"
+               th:name="${field.key}" th:value="${field.value}">
+        <noscript>
+            <p>JavaScript is disabled. Press the button to continue.</p>
+            <button type="submit" class="btn btn-primary">Continue</button>
+        </noscript>
+    </form>
+
+    <script>window.onload = function () {
+        document.forms[0].submit()
+    };</script>
+</div>
+</body>
+</html>
