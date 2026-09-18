@@ -1,5 +1,6 @@
 package com.marklogic.handlers;
 
+import com.marklogic.EphemeralLdapPorts;
 import com.unboundid.ldap.listener.InMemoryDirectoryServer;
 import com.unboundid.ldap.listener.InMemoryDirectoryServerConfig;
 import com.unboundid.ldap.listener.InMemoryListenerConfig;
@@ -14,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive test suite for LDAP Proxy Handler
  * Tests LDAP connection, bind operations, search operations, and group membership
  */
+@EphemeralLdapPorts
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "spring.profiles.active=test")
 @DisplayName("LDAP Request Handler Tests")
 class LDAPRequestHandlerTest {
@@ -27,7 +29,9 @@ class LDAPRequestHandlerTest {
         InMemoryDirectoryServerConfig config = new InMemoryDirectoryServerConfig("dc=marklogic,dc=local");
         config.addAdditionalBindCredentials("cn=manager,ou=users,dc=marklogic,dc=local", "password");
         
-        InMemoryListenerConfig listenerConfig = InMemoryListenerConfig.createLDAPConfig("test-ldap", 10389);
+        // Port 0 lets the SDK pick a free port; a fixed port collides with the
+        // application's own LDAP proxy listener started in the Spring test context.
+        InMemoryListenerConfig listenerConfig = InMemoryListenerConfig.createLDAPConfig("test-ldap", 0);
         config.setListenerConfigs(listenerConfig);
         
         testLDAPServer = new InMemoryDirectoryServer(config);
@@ -89,7 +93,7 @@ class LDAPRequestHandlerTest {
     @BeforeEach
     void setUp() throws Exception {
         // Connect to test LDAP server
-        connection = new LDAPConnection("localhost", 10389);
+        connection = new LDAPConnection("localhost", testLDAPServer.getListenPort());
     }
 
     @AfterEach

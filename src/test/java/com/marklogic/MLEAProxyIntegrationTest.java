@@ -22,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Integration tests for MLEAProxy
  * Tests end-to-end workflows combining multiple components
  */
+@EphemeralLdapPorts
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @DisplayName("MLEAProxy Integration Tests")
