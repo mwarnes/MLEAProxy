@@ -21,6 +21,7 @@ This folder contains all user-facing documentation for MLEAProxy, including conf
 
 #### OAuth 2.0
 - **[OAUTH_GUIDE.md](./OAUTH_GUIDE.md)** - OAuth 2.0 JWT token generation and endpoints
+- [MarkLogic Authorization Code Flow Guide](./MARKLOGIC_AUTHORIZATION_CODE_GUIDE.md) - OAuth 2.0 browser login for MarkLogic 12.1+ Admin UI and Query Console, with a troubleshooting matrix
 
 #### SAML 2.0
 - **[SAML_GUIDE.md](./SAML_GUIDE.md)** - SAML 2.0 Identity Provider implementation guide

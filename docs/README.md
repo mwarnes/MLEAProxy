@@ -13,6 +13,7 @@ User-facing documentation including configuration guides, protocol guides, and q
 - [Configuration Guide](./user/CONFIGURATION_GUIDE.md)
 - [LDAP Guide](./user/LDAP_GUIDE.md)
 - [OAuth Guide](./user/OAUTH_GUIDE.md)
+- [MarkLogic Authorization Code Flow Guide](./user/MARKLOGIC_AUTHORIZATION_CODE_GUIDE.md) 🆕 **MarkLogic 12.1+**
 - [SAML Guide](./user/SAML_GUIDE.md)
 - [Kerberos Guide](./user/KERBEROS_GUIDE.md)
 

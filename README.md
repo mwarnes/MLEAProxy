@@ -20,6 +20,7 @@
 | **[README.md](./README.md)** | This file - General overview | 2025 |
 | **[docs/user/LDAP_GUIDE.md](./docs/user/LDAP_GUIDE.md)** | Complete LDAP/LDAPS guide (includes in-memory server) | 2025 |
 | **[docs/user/OAUTH_GUIDE.md](./docs/user/OAUTH_GUIDE.md)** | Complete OAuth 2.0 guide | 2025 |
+| **[docs/user/MARKLOGIC_AUTHORIZATION_CODE_GUIDE.md](./docs/user/MARKLOGIC_AUTHORIZATION_CODE_GUIDE.md)** | MarkLogic 12.1+ Authorization Code flow setup and troubleshooting | 2026 |
 | **[docs/user/SAML_GUIDE.md](./docs/user/SAML_GUIDE.md)** | Complete SAML 2.0 guide | 2025 |
 | **[docs/user/KERBEROS_GUIDE.md](./docs/user/KERBEROS_GUIDE.md)** | Complete Kerberos implementation | 2025 |
 | **[docs/user/TESTING_GUIDE.md](./docs/user/TESTING_GUIDE.md)** | Testing procedures | 2025 |
@@ -64,6 +65,7 @@ You would need to:
 
 - **LDAP/LDAPS**: Proxy mode, load balancing, standalone server, in-memory or JSON directory.
 - **OAuth 2.0**: JWT token generation, JWKS endpoint, RFC 8414 metadata, 3-tier role resolution, refresh tokens
+- **OAuth 2.0 Authorization Code flow**: browser login page with PKCE for **MarkLogic 12.1+** Admin UI and Query Console sign-in, over a built-in HTTPS listener
 - **SAML 2.0**: Full IdP implementation, metadata endpoint, digital signatures, 3-tier role resolution
 - **Kerberos**: Embedded KDC, SPNEGO authentication, OAuth/SAML protocol bridges, LDAP integration (Phase 4)
 - **Modern Stack**: Java 21, Spring Boot 3.3.5, Jackson JSON processing, Apache Kerby 2.0.3

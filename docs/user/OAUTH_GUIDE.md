@@ -9,6 +9,8 @@ Complete guide for OAuth 2.0 token generation and JWT verification in MLEAProxy.
 - [Overview](#overview)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
+- [Authorization Code Flow](#authorization-code-flow)
+- [HTTPS and the CA Certificate](#https-and-the-ca-certificate)
 - [Configuration Reference](#configuration-reference)
 - [Token Generation Examples](#token-generation-examples)
 - [JWKS and Discovery Endpoints](#jwks-and-discovery-endpoints)
@@ -29,7 +31,10 @@ MLEAProxy provides OAuth 2.0 authorization server functionality with JWT token g
 - **Token Generation**: JWT access tokens with RSA-256 signatures
 - **JWKS Endpoint**: Public key discovery for JWT verification (RFC 7517)
 - **Server Metadata**: OAuth 2.0 authorization server metadata (RFC 8414)
-- **Grant Types**: Password and client credentials flows
+- **Grant Types**: Password, client credentials and authorization code flows
+- **Authorization Code Flow**: Browser login page for MarkLogic 12.1 Admin UI and Query Console
+- **PKCE**: `S256` and `plain` code challenge verification (RFC 7636)
+- **HTTPS Listener**: Additional TLS listener with a generated private CA
 - **Role Support**: Custom claims for user roles and permissions
 - **Refresh Tokens**: Optional refresh token support with configurable expiry
 
@@ -37,9 +42,16 @@ MLEAProxy provides OAuth 2.0 authorization server functionality with JWT token g
 
 | Endpoint | Method | Purpose | RFC |
 | ---------- | -------- | --------- | ----- |
+| `/oauth/authorize` | GET, POST | Login page and authorization code issuance | RFC 6749 |
 | `/oauth/token` | POST | Generate JWT access tokens | RFC 6749 |
 | `/oauth/jwks` | GET | Public key discovery (JWKS) | RFC 7517 |
-| `/oauth/.well-known/config` | GET | Server metadata | RFC 8414 |
+| `/.well-known/openid-configuration` | GET | Server metadata (standard path) | OIDC Discovery |
+| `/.well-known/oauth-authorization-server` | GET | Server metadata (standard path) | RFC 8414 |
+| `/oauth/.well-known/config` | GET | Server metadata (MLEAProxy path) | RFC 8414 |
+| `/tls/ca` | GET | Download the HTTPS listener's CA certificate | - |
+
+All three discovery paths return identical content. `/oauth/authorize` is served by the
+HTTPS listener; see [HTTPS and the CA Certificate](#https-and-the-ca-certificate).
 
 ---
 
@@ -143,6 +155,166 @@ echo "$TOKEN" | cut -d'.' -f2 | base64 -d 2>/dev/null | jq .
   "roles": ["admin"]
 }
 ```
+
+---
+
+## Authorization Code Flow
+
+> ### ⚠️ MarkLogic 12.1 or later only
+>
+> The Authorization Code flow exists to serve **MarkLogic 12.1+**, which can redirect
+> Admin UI and Query Console users to an Authorization Server to sign in. Earlier
+> MarkLogic releases support OAuth 2.0 only as a **Resource Server**, where a JWT obtained
+> elsewhere is presented as a `Bearer` token. On MarkLogic 12.0 or earlier this flow is of
+> no use - use the password or client credentials grants instead.
+>
+> For step-by-step MarkLogic configuration, see the
+> **[MarkLogic Authorization Code Flow Guide](./MARKLOGIC_AUTHORIZATION_CODE_GUIDE.md)**.
+
+### The login page
+
+`GET /oauth/authorize` renders a login page in the same spirit as the SAML authentication
+page: **credentials are not verified**. You enter the username and roles you want the
+issued token to represent, which is what makes MLEAProxy useful for exercising an
+application's authorization behaviour without maintaining real accounts.
+
+| Field | Purpose |
+| ------- | --------- |
+| Userid | Becomes the `sub` and `username` claims |
+| Roles | Comma separated; becomes the `roles` claim. Blank falls back to `users.json`, then `oauth.default.roles` |
+| Token lifetime | Seconds. A **negative** value mints an already-expired token, to demonstrate rejection |
+| Outcome | Approve issues a code; Deny returns `error=access_denied` |
+
+A request that is not a usable authorization request - no `response_type` or no
+`client_id` - renders a **diagnostic capture page** instead, listing every parameter and
+header received, split into those defined by OAuth 2.0/OIDC and those that are not. This
+is the quickest way to profile an unfamiliar client.
+
+Every authorize request is also logged twice: as a readable block, and as a single JSON
+line prefixed `OAUTH_AUTHORIZE_CAPTURE`:
+
+```bash
+grep OAUTH_AUTHORIZE_CAPTURE mleaproxy.log | tail -1
+```
+
+### Authorization codes
+
+Codes are opaque, **single use**, and expire after 60 seconds by default
+(`oauth.authorization-code.ttl-seconds`). A replayed code is rejected with
+`invalid_grant`, which makes replay protection demonstrable rather than theoretical.
+
+### Response modes
+
+| `response_mode` | Behaviour |
+| ----------------- | ----------- |
+| `form_post` | The response is delivered as a self-submitting HTML form POST to the redirect URI. **MarkLogic 12.1 requires this.** |
+| omitted or anything else | A 302 redirect with the code appended as query parameters |
+
+`state` is always returned verbatim.
+
+### PKCE
+
+PKCE (RFC 7636) is verified when the authorize request includes a `code_challenge`:
+
+- `S256` - the `code_verifier` is SHA-256 hashed and base64url compared
+- `plain` - compared directly
+- absent - no verification, and the exchange needs no `code_verifier`
+
+MarkLogic 12.1 always sends `S256`.
+
+### Exchanging the code
+
+```bash
+curl -s --cacert ca-certificate.pem \
+  -X POST https://mleaproxy.example.com:8443/oauth/token \
+  -d "grant_type=authorization_code" \
+  -d "code=<code>" \
+  -d "redirect_uri=https://app.example.com:8000" \
+  -d "client_id=marklogic-qconsole" \
+  -d "client_secret=secret" \
+  -d "code_verifier=<verifier>"
+```
+
+The exchange is rejected with `invalid_grant` if the code is unknown, expired or already
+used, if `redirect_uri` does not match the authorization request, if `client_id` differs
+from the one the code was issued to, or if PKCE verification fails.
+
+Both `client_secret_post` and `client_secret_basic` are accepted. Client secrets are
+**not validated by value** - MLEAProxy has no client registry. See
+[Security Best Practices](#security-best-practices).
+
+### The issued token
+
+```json
+{
+  "iss": "mleaproxy-oauth-server",
+  "sub": "martin",
+  "aud": "marklogic-qconsole",
+  "iat": 1789741594,
+  "exp": 1789745194,
+  "jti": "32bb1056-982f-4315-bbe6-cbd34d359b2a",
+  "client_id": "marklogic-qconsole",
+  "grant_type": "authorization_code",
+  "username": "martin",
+  "roles": ["marklogic-admin"],
+  "roles_string": "marklogic-admin"
+}
+```
+
+`aud` is emitted as a **single string**, not an array. RFC 7519 §4.1.3 permits either, but
+MarkLogic 12.1 fails with `XDMP-INTERNAL: Internal error: std::bad_cast` on an array.
+`roles` remains an array, with `roles_string` alongside for consumers wanting a flat value.
+
+---
+
+## HTTPS and the CA Certificate
+
+The Authorization Code flow redirects a browser to the login page, and MarkLogic requires
+HTTPS for the token and JWKS endpoints. MLEAProxy therefore runs an HTTPS listener
+**in addition to** the plain HTTP listener, so existing Resource Server setups are
+unaffected.
+
+```properties
+mleaproxy.https.enabled=true
+mleaproxy.https.port=8443
+mleaproxy.https.address=0.0.0.0
+mleaproxy.https.subject-alt-names=marklogic.example.com,192.168.1.50
+
+mleaproxy.https.certificate=./certificates/tls-certificate.pem
+mleaproxy.https.private-key=./certificates/tls-privkey.pem
+mleaproxy.https.ca-certificate=./certificates/ca-certificate.pem
+mleaproxy.https.ca-private-key=./certificates/ca-privkey.pem
+```
+
+Set `mleaproxy.https.enabled=false`, or the port to `0`, to disable it. A TLS configuration
+failure is logged but **not fatal**: HTTP and the LDAP, SAML and Kerberos protocols
+continue to work.
+
+### Generated certificates
+
+If any of the four files is missing, MLEAProxy generates a **private CA** plus a server
+certificate signed by it. The two-tier arrangement matters: a trust store such as
+MarkLogic's Certificate Authorities needs a `CA:TRUE` anchor, and a self-signed leaf will
+not do. Importing the CA once also means the server certificate can be reissued later -
+for a new hostname, say - without re-importing anything.
+
+`subjectAltName` always covers the detected hostname, `localhost`, `127.0.0.1` and `::1`,
+plus anything in `subject-alt-names`. Private keys are written `0600`.
+
+> The SAML signing certificate at `static/certificates/certificate.pem` is **not** usable
+> for TLS: it has no `subjectAltName` and no `serverAuth` extended key usage.
+
+### Downloading the CA
+
+Any client that must trust MLEAProxy over HTTPS needs the CA:
+
+```bash
+# Over plain HTTP, avoiding the need to trust the CA in order to fetch it
+curl -O http://mleaproxy.example.com:9080/tls/ca
+```
+
+The status page at `/status` shows the CA's subject, SHA-256 fingerprint, expiry, path and
+full PEM with a copy button. Only the CA is ever served; no private key is exposed.
 
 ---
 
@@ -508,6 +680,22 @@ oauth.signing.key.path=/etc/mleaproxy/keys/privkey.pem
 oauth.server.base.url=https://auth.example.com
 ```
 
+### What MLEAProxy does not enforce
+
+MLEAProxy is a **test and teaching tool**, and is permissive by design so that any client
+can point at it without reconfiguration. It is not an Authorization Server implementation
+to build on:
+
+| Not enforced | Consequence |
+| -------------- | ------------- |
+| **Client secrets** | `client_id` and `client_secret` must be *present* but are never compared against anything. Any value is accepted. |
+| **Client registration** | There is no client registry, so any `client_id` works. |
+| **Redirect URI whitelisting** | The `redirect_uri` supplied by the client is used as given. A real Authorization Server validates it against a registered list; without that it is an open redirect. |
+| **User credentials** | The login page does not verify passwords. Whoever reaches it can issue a token for any username and roles. |
+
+Treat an MLEAProxy instance as granting anyone who can reach it the ability to mint a token
+for any identity. Run it on a trusted network, never as production authentication.
+
 ### Production Checklist
 
 - [ ] Use HTTPS for all OAuth endpoints
@@ -591,6 +779,22 @@ Resource servers should validate:
 ---
 
 ## MarkLogic Integration
+
+MarkLogic can use MLEAProxy in two distinct ways, and which one applies depends on the
+MarkLogic version:
+
+| MarkLogic acts as | Version | Flow | Covered in |
+| ------------------- | --------- | ------ | ------------ |
+| **Resource Server** | Any | A JWT obtained elsewhere is presented as a `Bearer` token; MarkLogic verifies it via JWKS | This section |
+| **OAuth client** | **12.1+** | A browser with no JWT is redirected to MLEAProxy to sign in, for Admin UI and Query Console | **[MarkLogic Authorization Code Flow Guide](./MARKLOGIC_AUTHORIZATION_CODE_GUIDE.md)** |
+
+> The Authorization Code flow is **only available from MarkLogic 12.1**. On earlier
+> releases, only the Resource Server configuration below applies.
+>
+> That guide also carries a troubleshooting matrix for MarkLogic's OAuth errors, several of
+> which report something other than the actual fault - for example
+> `SVC-SOCCONN: Certificate verify failed` most often means an HTTPS URI pointing at a
+> plain-HTTP port rather than a missing CA.
 
 ### Configure MarkLogic External Security
 

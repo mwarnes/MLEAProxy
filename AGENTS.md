@@ -101,7 +101,8 @@ Properties are loaded in priority order (lowest to highest):
 
 All HTTP endpoints share the web server port (default 8080):
 
-- **OAuth**: `/oauth/token`, `/oauth/jwks`, `/.well-known/openid-configuration`
+- **OAuth**: `/oauth/authorize` (login page and code issuance, HTTPS listener), `/oauth/token`, `/oauth/jwks`, `/.well-known/openid-configuration`, `/.well-known/oauth-authorization-server`, `/oauth/.well-known/config`
+- **TLS**: `/tls/ca` serves the HTTPS listener's CA certificate for import into MarkLogic
 - **SAML**: `/saml/auth`, `/saml/metadata`, `/saml/wrapassertion`, `/saml/cacerts`
 - **Kerberos**: `/kerberos/auth`, `/kerberos/oauth`, `/kerberos/saml`
 - **Utility**: `/b64encode`, `/b64decode`
@@ -121,7 +122,31 @@ LDAP listeners run on separate ports (default: 10389 proxy, 61389 in-memory).
 
 ### Testing
 
-9 test classes with 107 tests total (JUnit 5, Spring Boot Test). Tests use `@SpringBootTest(webEnvironment = RANDOM_PORT)` with `MockMvc`. Test classes mirror the main source structure under `src/test/java/com/marklogic/`.
+15 test classes with 154 tests total (JUnit 5, Spring Boot Test). Tests use `@SpringBootTest(webEnvironment = RANDOM_PORT)` with `MockMvc`. Test classes mirror the main source structure under `src/test/java/com/marklogic/`.
+
+**Every `@SpringBootTest` class must carry `@EphemeralServerPorts`.** Each Spring test context starts the configured LDAP servers and HTTPS listener, so fixed ports (60389, 10389, 8443) would be contended across contexts; the annotation overrides them to ephemeral or disabled. A class that genuinely needs HTTPS enabled sets the properties inline instead, since `@TestPropertySource` takes precedence over class-level `properties` - see `OAuthDiscoveryHttpsTest`.
+
+### OAuth 2.0 Authorization Code Flow
+
+`OAuthAuthorizeHandler` serves the browser-facing half for MarkLogic 12.1+:
+`GET /oauth/authorize` renders a login page (no credential verification, matching the SAML
+handler's approach), and `POST` issues an opaque single-use code via
+`AuthorizationCodeStore` (60s TTL, in memory). Delivery honours `response_mode=form_post`,
+which MarkLogic requires. `OAuthTokenHandler` exchanges the code, verifying single use,
+`redirect_uri`, client match and PKCE `S256`.
+
+Two MarkLogic-driven constraints are load bearing and easy to undo by accident:
+
+- `aud` must be a **single string**, not an array. `audience().single()` in JJWT, not
+  `add()`. An array fails with `XDMP-INTERNAL: std::bad_cast`.
+- Token, JWKS and discovery URLs are advertised over **HTTPS** when the HTTPS listener is
+  enabled, because MarkLogic rejects `http://` for those.
+
+`HttpsListenerConfig` adds a second Undertow listener (8443) rather than converting the
+primary connector, so existing HTTP setups are unaffected. `TlsCertificateService`
+generates a private CA plus a server certificate signed by it; MarkLogic's trust store
+needs a `CA:TRUE` anchor, and the bundled SAML signing certificate has no subjectAltName
+so cannot be reused.
 
 ## Documentation
 
