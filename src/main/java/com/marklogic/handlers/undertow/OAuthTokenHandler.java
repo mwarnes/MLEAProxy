@@ -581,7 +581,10 @@ public class OAuthTokenHandler {
         var builder = Jwts.builder()
             .issuer(jwtIssuer)
             .subject(username != null ? username : clientId)
-            .audience().add(clientId).and()
+            // Single string rather than an array. RFC 7519 allows either, but MarkLogic
+            // 12.1 only handles the string form: an array makes it fail with
+            // "XDMP-INTERNAL: Internal error: std::bad_cast" while extracting the token.
+            .audience().single(clientId)
             .issuedAt(Date.from(now))
             .expiration(Date.from(expiration))
             .id(UUID.randomUUID().toString())
