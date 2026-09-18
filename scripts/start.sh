@@ -36,17 +36,17 @@ check_prerequisites() {
     
     # Check for JAR in distribution or build locations
     JAR_FILE=""
-    if [ -f "$PROJECT_ROOT/mlesproxy-2.0.3.jar" ]; then
-        JAR_FILE="$PROJECT_ROOT/mlesproxy-2.0.3.jar"
-    elif [ -f "$PROJECT_ROOT/target/mlesproxy-2.0.3.jar" ]; then
-        JAR_FILE="$PROJECT_ROOT/target/mlesproxy-2.0.3.jar"
-    elif [ -f "$PROJECT_ROOT/release/mlesproxy-2.0.3.jar" ]; then
-        JAR_FILE="$PROJECT_ROOT/release/mlesproxy-2.0.3.jar"
+    if [ -f "$PROJECT_ROOT/mlesproxy-2.0.4.jar" ]; then
+        JAR_FILE="$PROJECT_ROOT/mlesproxy-2.0.4.jar"
+    elif [ -f "$PROJECT_ROOT/target/mlesproxy-2.0.4.jar" ]; then
+        JAR_FILE="$PROJECT_ROOT/target/mlesproxy-2.0.4.jar"
+    elif [ -f "$PROJECT_ROOT/release/mlesproxy-2.0.4.jar" ]; then
+        JAR_FILE="$PROJECT_ROOT/release/mlesproxy-2.0.4.jar"
     fi
     
     if [ -z "$JAR_FILE" ]; then
         echo -e "${RED}✗ JAR file not found${NC}"
-        echo "  Expected: mlesproxy-2.0.3.jar"
+        echo "  Expected: mlesproxy-2.0.4.jar"
         exit 2
     fi
     

@@ -11,10 +11,10 @@ This guide provides working examples for all protocols with configuration, expec
 ./build.sh clean package
 
 # Verify the JAR was created
-ls -la target/mlesproxy-2.0.3.jar
+ls -la target/mlesproxy-2.0.4.jar
 
 # Set JAR variable for examples
-JAR=target/mlesproxy-2.0.3.jar
+JAR=target/mlesproxy-2.0.4.jar
 ```
 
 ---
@@ -32,7 +32,7 @@ MLEAProxy includes a working default configuration in `src/main/resources/mleapr
 ### 1.2 Start the Server
 
 ```bash
-java -jar target/mlesproxy-2.0.3.jar
+java -jar target/mlesproxy-2.0.4.jar
 ```
 
 ### 1.3 Expected Startup Output
@@ -385,7 +385,7 @@ mleaproxy.kerberos.ldap-base-dn=dc=MarkLogic,dc=Local
 ### 4.2 Start with Kerberos Enabled
 
 ```bash
-java -jar target/mlesproxy-2.0.3.jar \
+java -jar target/mlesproxy-2.0.4.jar \
   --mleaproxy.kerberos.enabled=true
 ```
 
@@ -452,7 +452,7 @@ Run all basic verification tests:
 # Save as verify-mleaproxy.sh
 
 echo "=== Starting MLEAProxy ==="
-java -jar target/mlesproxy-2.0.3.jar &
+java -jar target/mlesproxy-2.0.4.jar &
 PID=$!
 sleep 6
 
@@ -501,24 +501,24 @@ Override any property at runtime:
 
 ```bash
 # Change HTTP port
-java -jar target/mlesproxy-2.0.3.jar --server.port=9090
+java -jar target/mlesproxy-2.0.4.jar --server.port=9090
 
 # Change LDAP listener port
-java -jar target/mlesproxy-2.0.3.jar \
+java -jar target/mlesproxy-2.0.4.jar \
   --mleaproxy.ldap-listeners.proxy.port=20389
 
 # Enable debug logging
-java -jar target/mlesproxy-2.0.3.jar \
+java -jar target/mlesproxy-2.0.4.jar \
   --mleaproxy.ldap-debug=true \
   --mleaproxy.saml-debug=true
 
 # Enable Kerberos
-java -jar target/mlesproxy-2.0.3.jar \
+java -jar target/mlesproxy-2.0.4.jar \
   --mleaproxy.kerberos.enabled=true \
   --mleaproxy.kerberos.realm=MYCOMPANY.COM
 
 # Multiple overrides
-java -jar target/mlesproxy-2.0.3.jar \
+java -jar target/mlesproxy-2.0.4.jar \
   --server.port=9090 \
   --mleaproxy.ldap-listeners.proxy.port=20389 \
   --mleaproxy.kerberos.enabled=true
@@ -561,7 +561,7 @@ curl -v http://localhost:8080/oauth/jwks
 
 ```bash
 # Run with debug logging
-java -jar target/mlesproxy-2.0.3.jar \
+java -jar target/mlesproxy-2.0.4.jar \
   --logging.level.com.marklogic=DEBUG
 ```
 

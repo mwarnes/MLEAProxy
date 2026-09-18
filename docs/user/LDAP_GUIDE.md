@@ -59,7 +59,7 @@ Expected output: `openjdk version "21.x.x"` or similar.
 
 ### Option 1: Download Pre-built JAR
 
-Download `mlesproxy-2.0.3.jar` from the releases page.
+Download `mlesproxy-2.0.4.jar` from the releases page.
 
 ### Option 2: Build from Source
 
@@ -69,12 +69,12 @@ cd MLEAProxy
 ./build.sh clean package
 ```
 
-The built JAR is located at `target/mlesproxy-2.0.3.jar`.
+The built JAR is located at `target/mlesproxy-2.0.4.jar`.
 
 ### Verify Installation
 
 ```bash
-java -jar mlesproxy-2.0.3.jar --help
+java -jar mlesproxy-2.0.4.jar --help
 ```
 
 ---
@@ -111,7 +111,7 @@ mleaproxy.request-processors.jsonauth.auth-class=com.marklogic.processors.JsonRe
 **2. Start MLEAProxy:**
 
 ```bash
-java -jar mlesproxy-2.0.3.jar
+java -jar mlesproxy-2.0.4.jar
 ```
 
 **3. Verify with ldapsearch:**
@@ -135,7 +135,7 @@ memberOf: admin
 Override any property via command line:
 
 ```bash
-java -jar mlesproxy-2.0.3.jar --mleaproxy.ldap-debug=true --mleaproxy.ldap-listeners.ldapjson.port=30389
+java -jar mlesproxy-2.0.4.jar --mleaproxy.ldap-debug=true --mleaproxy.ldap-listeners.ldapjson.port=30389
 ```
 
 ---
@@ -549,7 +549,7 @@ mleaproxy.directory-servers.marklogic.admin-password=password
 **Start:**
 
 ```bash
-java -jar mlesproxy-2.0.3.jar
+java -jar mlesproxy-2.0.4.jar
 ```
 
 **Test:**
@@ -656,7 +656,7 @@ Features:
 ### Enable Debug Logging
 
 ```bash
-java -jar mlesproxy-2.0.3.jar --mleaproxy.ldap-debug=true
+java -jar mlesproxy-2.0.4.jar --mleaproxy.ldap-debug=true
 ```
 
 Or in configuration:

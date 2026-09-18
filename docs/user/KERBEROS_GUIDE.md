@@ -87,7 +87,7 @@ Use MIT Kerberos for Windows or Windows native Kerberos with a properly configur
 ```bash
 # Start with Kerberos enabled
 java -Dmleaproxy.kerberos.enabled=true \
-     -jar target/mlesproxy-2.0.3.jar
+     -jar target/mlesproxy-2.0.4.jar
 ```
 
 Or use a properties file:
@@ -103,7 +103,7 @@ EOF
 
 # Start MLEAProxy
 java -Dmleaproxy.properties=./kerberos-test.properties \
-     -jar target/mlesproxy-2.0.3.jar
+     -jar target/mlesproxy-2.0.4.jar
 ```
 
 ### 2. Configure Kerberos Client
@@ -612,7 +612,7 @@ Run with debug:
 ```bash
 java -Dsun.security.krb5.debug=true \
      -Dmleaproxy.kerberos.debug=true \
-     -jar target/mlesproxy-2.0.3.jar
+     -jar target/mlesproxy-2.0.4.jar
 ```
 
 ### Verify KDC is Running

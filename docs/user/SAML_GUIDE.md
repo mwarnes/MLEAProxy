@@ -56,7 +56,7 @@ MLEAProxy provides complete SAML 2.0 Identity Provider (IdP) functionality for S
 
 ```bash
 # Download the latest release
-wget https://github.com/marklogic/mleaproxy/releases/download/v2.0.3/mlesproxy-2.0.3.jar
+wget https://github.com/marklogic/mleaproxy/releases/download/v2.0.4/mlesproxy-2.0.4.jar
 
 # Or build from source
 git clone https://github.com/marklogic/mleaproxy.git
@@ -71,7 +71,7 @@ cd mleaproxy
 java -version
 
 # Run MLEAProxy
-java -jar mlesproxy-2.0.3.jar
+java -jar mlesproxy-2.0.4.jar
 
 # Verify SAML endpoints are available
 curl -s http://localhost:8080/saml/idp-metadata | head -5
@@ -84,7 +84,7 @@ curl -s http://localhost:8080/saml/idp-metadata | head -5
 ### Step 1: Start MLEAProxy
 
 ```bash
-java -jar mlesproxy-2.0.3.jar
+java -jar mlesproxy-2.0.4.jar
 ```
 
 ### Step 2: Get IdP Metadata
@@ -160,7 +160,7 @@ echo "Open: http://localhost:8080/saml/auth?SAMLRequest=$SAML_REQUEST"
 Create `saml.properties` or add to `mleaproxy.properties`:
 
 ```bash
-java -jar mlesproxy-2.0.3.jar --spring.config.additional-location=./saml.properties
+java -jar mlesproxy-2.0.4.jar --spring.config.additional-location=./saml.properties
 ```
 
 ### SAML Properties
@@ -416,7 +416,7 @@ openssl req -x509 -newkey rsa:2048 \
   -subj "/CN=mleaproxy.example.com/O=Example/C=US"
 
 # Start with custom certificates
-java -jar mlesproxy-2.0.3.jar \
+java -jar mlesproxy-2.0.4.jar \
   --mleaproxy.saml-ca-path=./saml-cert.pem \
   --mleaproxy.saml-key-path=./saml-key.pem
 ```
@@ -425,7 +425,7 @@ java -jar mlesproxy-2.0.3.jar \
 
 ```bash
 # Via command line
-java -jar mlesproxy-2.0.3.jar --mleaproxy.saml-debug=true
+java -jar mlesproxy-2.0.4.jar --mleaproxy.saml-debug=true
 
 # Via properties file
 cat > saml.properties << 'EOF'
@@ -433,7 +433,7 @@ mleaproxy.saml-debug=true
 logging.level.com.marklogic.handlers.undertow.SAMLAuthHandler=DEBUG
 EOF
 
-java -jar mlesproxy-2.0.3.jar --spring.config.additional-location=./saml.properties
+java -jar mlesproxy-2.0.4.jar --spring.config.additional-location=./saml.properties
 ```
 
 ---
@@ -450,10 +450,10 @@ java -jar mlesproxy-2.0.3.jar --spring.config.additional-location=./saml.propert
 
 ```bash
 # Verify bundled certificates exist
-java -jar mlesproxy-2.0.3.jar --mleaproxy.saml-debug=true 2>&1 | grep -i certificate
+java -jar mlesproxy-2.0.4.jar --mleaproxy.saml-debug=true 2>&1 | grep -i certificate
 
 # Or provide custom certificates
-java -jar mlesproxy-2.0.3.jar \
+java -jar mlesproxy-2.0.4.jar \
   --mleaproxy.saml-ca-path=/path/to/cert.pem \
   --mleaproxy.saml-key-path=/path/to/key.pem
 ```
@@ -489,7 +489,7 @@ diff idp-cert.pem idp-cert-new.pem
 cat users.json | jq '.users[] | {username, roles}'
 
 # Set default roles
-java -jar mlesproxy-2.0.3.jar --mleaproxy.saml-default-roles=user,reader
+java -jar mlesproxy-2.0.4.jar --mleaproxy.saml-default-roles=user,reader
 ```
 
 #### 4. Redirect Loop
@@ -506,7 +506,7 @@ java -jar mlesproxy-2.0.3.jar --mleaproxy.saml-default-roles=user,reader
 
 ```bash
 # Enable verbose logging
-java -jar mlesproxy-2.0.3.jar \
+java -jar mlesproxy-2.0.4.jar \
   --mleaproxy.saml-debug=true \
   --logging.level.com.marklogic=DEBUG
 

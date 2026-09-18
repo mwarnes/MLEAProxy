@@ -168,7 +168,7 @@ After creating a release, decide on next development version:
 **Option 2: Bump to next version with SNAPSHOT**
 
 ```bash
-# Update pom.xml to 2.0.3-SNAPSHOT
+# Update pom.xml to 2.0.5-SNAPSHOT
 # Indicates ongoing development
 ```
 

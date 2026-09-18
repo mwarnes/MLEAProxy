@@ -48,7 +48,7 @@ MLEAProxy provides OAuth 2.0 authorization server functionality with JWT token g
 ### Requirements
 
 - Java 21 or later
-- MLEAProxy 2.0.3 JAR file
+- MLEAProxy 2.0.4 JAR file
 - (Optional) `jq` for JSON parsing in examples
 - (Optional) Custom RSA private key for production
 
@@ -56,7 +56,7 @@ MLEAProxy provides OAuth 2.0 authorization server functionality with JWT token g
 
 ```bash
 # Download the release JAR
-# Place mlesproxy-2.0.3.jar in your working directory
+# Place mlesproxy-2.0.4.jar in your working directory
 
 # Verify Java version
 java -version
@@ -70,7 +70,7 @@ java -version
 ### 1. Start MLEAProxy
 
 ```bash
-java -jar mlesproxy-2.0.3.jar
+java -jar mlesproxy-2.0.4.jar
 ```
 
 ### 2. Generate a Token
@@ -195,7 +195,7 @@ oauth.refresh.token.enabled=true
 Override any property at startup:
 
 ```bash
-java -jar mlesproxy-2.0.3.jar \
+java -jar mlesproxy-2.0.4.jar \
   --oauth.token.expiration.seconds=7200 \
   --oauth.jwt.issuer=my-custom-issuer \
   --oauth.default.roles=guest,readonly
@@ -378,7 +378,7 @@ Users are defined in `users.json`:
 ### Custom User Repository Location
 
 ```bash
-java -jar mlesproxy-2.0.3.jar --users=/path/to/custom/users.json
+java -jar mlesproxy-2.0.4.jar --users=/path/to/custom/users.json
 ```
 
 ---
