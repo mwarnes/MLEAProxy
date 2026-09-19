@@ -35,7 +35,7 @@ MLEAProxy uses Spring Boot's configuration system with all mleaproxy-specific pr
 
 ```bash
 # Clone and build
-git clone https://github.com/marklogic/MLEAProxy.git
+git clone https://github.com/mwarnes/MLEAProxy.git
 cd MLEAProxy
 ./build.sh clean package
 

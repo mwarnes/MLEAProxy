@@ -6,6 +6,9 @@
 # Java/Maven Build Artifacts
 # ----------------------------------------------------------------
 target/
+# Finder/sync duplicates such as "target 2" are build output too, but the
+# pattern above does not match them - which is how one got committed.
+target [0-9]*/
 !.mvn/wrapper/maven-wrapper.jar
 *.class
 *.jar

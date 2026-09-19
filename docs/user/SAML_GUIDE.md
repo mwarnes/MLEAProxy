@@ -56,10 +56,10 @@ MLEAProxy provides complete SAML 2.0 Identity Provider (IdP) functionality for S
 
 ```bash
 # Download the latest release
-wget https://github.com/marklogic/mleaproxy/releases/download/v2.0.5/mlesproxy-2.0.5.jar
+wget https://github.com/mwarnes/MLEAProxy/releases/download/v2.0.5/mlesproxy-2.0.5.jar
 
 # Or build from source
-git clone https://github.com/marklogic/mleaproxy.git
+git clone https://github.com/mwarnes/MLEAProxy.git
 cd mleaproxy
 ./build.sh clean package
 ```

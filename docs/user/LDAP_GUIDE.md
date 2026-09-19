@@ -64,7 +64,7 @@ Download `mlesproxy-2.0.5.jar` from the releases page.
 ### Option 2: Build from Source
 
 ```bash
-git clone https://github.com/marklogic/MLEAProxy.git
+git clone https://github.com/mwarnes/MLEAProxy.git
 cd MLEAProxy
 ./build.sh clean package
 ```
