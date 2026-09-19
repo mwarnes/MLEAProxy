@@ -26,6 +26,9 @@
         <maven.compiler.target>21</maven.compiler.target>
         <java.version>21</java.version>
         <start-class>com.marklogic.MLEAProxy</start-class>
+        <!-- One property for all three Bouncy Castle artifacts: they are built and
+             released together and mixing versions is unsupported. -->
+        <bouncycastle.version>1.86</bouncycastle.version>
     </properties>
 
     <repositories>
@@ -126,17 +129,17 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
-            <version>1.84</version>
+            <version>${bouncycastle.version}</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk18on</artifactId>
-            <version>1.84</version>
+            <version>${bouncycastle.version}</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcutil-jdk18on</artifactId>
-            <version>1.84</version>
+            <version>${bouncycastle.version}</version>
         </dependency>
         <!-- OpenSAML 4.x - Java 21 Compatible with proper Shibboleth repository -->
         <dependency>
