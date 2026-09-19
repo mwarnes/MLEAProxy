@@ -14,8 +14,11 @@ NC='\033[0m'
 
 # Configuration
 GITHUB_REPO="mwarnes/MLEAProxy"
-LOCAL_JAR="release/mlesproxy-2.0.0.jar"
 POM_FILE="pom.xml"
+# LOCAL_JAR is derived from the pom version below rather than hardcoded: pinning a
+# filename here meant it silently went stale for four releases and the JAR section
+# simply stopped appearing.
+LOCAL_JAR=""
 
 echo -e "${BLUE}═══════════════════════════════════════════════════════════════════════════${NC}"
 echo -e "${BLUE}                    MLEAProxy Version Check${NC}"
@@ -30,6 +33,10 @@ if [ -f "$POM_FILE" ]; then
     echo -e "${CYAN}📦 Local Project Version:${NC}"
     echo "  Version: $LOCAL_VERSION"
     echo "  Source: pom.xml"
+    LOCAL_JAR="release/mlesproxy-${LOCAL_VERSION}.jar"
+    if [ ! -f "$LOCAL_JAR" ] && [ -f "target/mlesproxy-${LOCAL_VERSION}.jar" ]; then
+        LOCAL_JAR="target/mlesproxy-${LOCAL_VERSION}.jar"
+    fi
 else
     echo -e "${RED}Error: pom.xml not found${NC}"
     exit 1

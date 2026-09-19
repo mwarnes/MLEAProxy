@@ -30,12 +30,12 @@ get_hostname() {
 HOSTNAME=$(get_hostname)
 
 # Find JAR file (check distribution location first)
-if [ -f "mlesproxy-2.0.4.jar" ]; then
-    JAR_FILE="mlesproxy-2.0.4.jar"
-elif [ -f "target/mlesproxy-2.0.4.jar" ]; then
-    JAR_FILE="target/mlesproxy-2.0.4.jar"
-elif [ -f "release/mlesproxy-2.0.4.jar" ]; then
-    JAR_FILE="release/mlesproxy-2.0.4.jar"
+if [ -f "mlesproxy-2.0.5.jar" ]; then
+    JAR_FILE="mlesproxy-2.0.5.jar"
+elif [ -f "target/mlesproxy-2.0.5.jar" ]; then
+    JAR_FILE="target/mlesproxy-2.0.5.jar"
+elif [ -f "release/mlesproxy-2.0.5.jar" ]; then
+    JAR_FILE="release/mlesproxy-2.0.5.jar"
 else
     echo -e "${RED}Error: MLEAProxy JAR not found${NC}"
     echo "Please build the project first: ./build.sh clean package"

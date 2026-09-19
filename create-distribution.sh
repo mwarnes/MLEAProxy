@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-VERSION="2.0.4"
+VERSION="2.0.5"
 DIST_DIR="dist-temp"
 PACKAGE_NAME="mleaproxy-${VERSION}"
 ZIP_NAME="${PACKAGE_NAME}-distribution.zip"
@@ -136,7 +136,7 @@ echo ""
 echo "Step 5: Generating README.txt..."
 
 cat > "$DIST_DIR/$PACKAGE_NAME/README.txt" << 'READMEEOF'
-MLEAProxy 2.0.4 - Quick Start Guide
+MLEAProxy 2.0.5 - Quick Start Guide
 ====================================
 
 PREREQUISITES
@@ -214,7 +214,7 @@ SUPPORT
 For issues or questions, see documentation in docs/
 
 VERSION
-2.0.4
+2.0.5
 READMEEOF
 
 echo -e "${GREEN}✓ README.txt created${NC}"

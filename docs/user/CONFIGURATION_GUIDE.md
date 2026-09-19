@@ -40,14 +40,14 @@ cd MLEAProxy
 ./build.sh clean package
 
 # Verify build
-ls -la target/mlesproxy-2.0.4.jar
+ls -la target/mlesproxy-2.0.5.jar
 ```
 
 ### Run the Application
 
 ```bash
 # Basic startup (uses ./application.properties or ./mleaproxy.properties)
-java -jar target/mlesproxy-2.0.4.jar
+java -jar target/mlesproxy-2.0.5.jar
 
 # With Spring Boot dev mode
 mvn spring-boot:run
@@ -396,7 +396,7 @@ Spring Boot's relaxed binding supports environment variables. Convert property n
 export MLEAPROXY_LDAP_DEBUG=true
 export MLEAPROXY_KERBEROS_ENABLED=true
 export MLEAPROXY_KERBEROS_REALM=CORP.EXAMPLE.COM
-java -jar target/mlesproxy-2.0.4.jar
+java -jar target/mlesproxy-2.0.5.jar
 ```
 
 ## Command-Line Overrides
@@ -406,7 +406,7 @@ Spring Boot supports two methods for runtime property overrides:
 ### Using `--` Arguments (Recommended)
 
 ```bash
-java -jar target/mlesproxy-2.0.4.jar --mleaproxy.ldap-debug=true
+java -jar target/mlesproxy-2.0.5.jar --mleaproxy.ldap-debug=true
 ```
 
 The `--` syntax is preferred because:
@@ -418,7 +418,7 @@ The `--` syntax is preferred because:
 ### Using `-D` System Properties
 
 ```bash
-java -Dmleaproxy.ldap-debug=true -jar target/mlesproxy-2.0.4.jar
+java -Dmleaproxy.ldap-debug=true -jar target/mlesproxy-2.0.5.jar
 ```
 
 ### Combining Both
@@ -426,7 +426,7 @@ java -Dmleaproxy.ldap-debug=true -jar target/mlesproxy-2.0.4.jar
 ```bash
 # -- takes precedence over -D
 java -Dmleaproxy.ldap-debug=false \
-     -jar target/mlesproxy-2.0.4.jar \
+     -jar target/mlesproxy-2.0.5.jar \
      --mleaproxy.ldap-debug=true
 # Result: ldap-debug will be true
 ```
@@ -436,7 +436,7 @@ java -Dmleaproxy.ldap-debug=false \
 **Enable debug logging:**
 
 ```bash
-java -jar target/mlesproxy-2.0.4.jar \
+java -jar target/mlesproxy-2.0.5.jar \
     --mleaproxy.ldap-debug=true \
     --mleaproxy.saml-debug=true \
     --logging.level.com.marklogic=TRACE
@@ -445,28 +445,28 @@ java -jar target/mlesproxy-2.0.4.jar \
 **Change listener port:**
 
 ```bash
-java -jar target/mlesproxy-2.0.4.jar \
+java -jar target/mlesproxy-2.0.5.jar \
     --mleaproxy.ldap-listeners.proxy.port=20389
 ```
 
 **Switch backend server:**
 
 ```bash
-java -jar target/mlesproxy-2.0.4.jar \
+java -jar target/mlesproxy-2.0.5.jar \
     --mleaproxy.ldap-servers.server1.host=backup-ldap.example.com
 ```
 
 **Override web server port:**
 
 ```bash
-java -jar target/mlesproxy-2.0.4.jar \
+java -jar target/mlesproxy-2.0.5.jar \
     --server.port=9090
 ```
 
 **Multiple overrides:**
 
 ```bash
-java -jar target/mlesproxy-2.0.4.jar \
+java -jar target/mlesproxy-2.0.5.jar \
     --mleaproxy.ldap-debug=true \
     --mleaproxy.ldap-listeners.proxy.port=20389 \
     --mleaproxy.ldap-listeners.proxy.ip-address=127.0.0.1 \
@@ -704,7 +704,7 @@ mleaproxy.kerberos.kdc-port=8088
 
 ```dockerfile
 FROM eclipse-temurin:21-jre
-COPY target/mlesproxy-2.0.4.jar /app/mlesproxy.jar
+COPY target/mlesproxy-2.0.5.jar /app/mlesproxy.jar
 WORKDIR /app
 ENTRYPOINT ["java", "-jar", "mlesproxy.jar"]
 ```
@@ -770,7 +770,7 @@ spec:
     spec:
       containers:
       - name: mleaproxy
-        image: mleaproxy:2.0.4
+        image: mleaproxy:2.0.5
         ports:
         - containerPort: 8080
         - containerPort: 10389
@@ -791,7 +791,7 @@ spec:
 Enable debug logging to see configuration values:
 
 ```bash
-java -jar target/mlesproxy-2.0.4.jar \
+java -jar target/mlesproxy-2.0.5.jar \
     --logging.level.org.springframework.boot.context.properties=DEBUG
 ```
 
@@ -806,7 +806,7 @@ java -jar target/mlesproxy-2.0.4.jar \
 ### SSL Certificate Issues
 
 ```bash
-java -jar target/mlesproxy-2.0.4.jar \
+java -jar target/mlesproxy-2.0.5.jar \
     --mleaproxy.ssl-verify-certificates=false \
     --mleaproxy.ldap-debug=true
 ```
@@ -816,7 +816,7 @@ java -jar target/mlesproxy-2.0.4.jar \
 Enable debug logging and check backend server configuration:
 
 ```bash
-java -jar target/mlesproxy-2.0.4.jar \
+java -jar target/mlesproxy-2.0.5.jar \
     --mleaproxy.ldap-debug=true \
     --logging.level.com.marklogic=TRACE
 ```
@@ -826,7 +826,7 @@ java -jar target/mlesproxy-2.0.4.jar \
 Check startup logs for configuration summary:
 
 ```bash
-java -jar target/mlesproxy-2.0.4.jar 2>&1 | grep -i "listener\|server\|directory"
+java -jar target/mlesproxy-2.0.5.jar 2>&1 | grep -i "listener\|server\|directory"
 ```
 
 ## Best Practices

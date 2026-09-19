@@ -25,7 +25,7 @@ Each test creates a MarkLogic AppServer configured with MLEAProxy external secur
 
 ### 2. MLEAProxy Running
 
-- Built and started: `java -jar target/mlesproxy-2.0.4.jar`
+- Built and started: `java -jar target/mlesproxy-2.0.5.jar`
 - Accessible at `http://localhost:8080`
 - Test users available in `users.json` (admin, user1, user2, etc.)
 - Default password: `password`
@@ -185,7 +185,7 @@ kinit mluser1@MARKLOGIC.LOCAL
 **Solution:** Start MLEAProxy:
 ```bash
 cd /path/to/MLEAProxy
-java -jar target/mlesproxy-2.0.4.jar
+java -jar target/mlesproxy-2.0.5.jar
 ```
 
 ### No Kerberos Ticket (Kerberos test)

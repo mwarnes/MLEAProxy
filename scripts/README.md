@@ -72,7 +72,7 @@ This directory contains convenience scripts for starting MLEAProxy in different 
 ### Prerequisites
 
 All scripts assume:
-- MLEAProxy JAR is at: `target/mlesproxy-2.0.0.jar`
+- MLEAProxy JAR is at: `target/mlesproxy-2.0.5.jar`
 - Configuration files are in project root
 - Java 21+ is installed and in PATH
 
@@ -82,7 +82,7 @@ Edit the scripts to change JAR path:
 
 ```bash
 # Default
-JAR_FILE="target/mlesproxy-2.0.0.jar"
+JAR_FILE="target/mlesproxy-2.0.5.jar"
 
 # Custom
 JAR_FILE="/path/to/mlesproxy.jar"

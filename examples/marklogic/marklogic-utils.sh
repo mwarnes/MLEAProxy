@@ -73,7 +73,7 @@ check_prerequisites() {
         log_success "MLEAProxy running (${MLEAPROXY_BASE})"
     else
         log_error "MLEAProxy not running at ${MLEAPROXY_BASE}"
-        log_error "Start MLEAProxy: java -jar target/mlesproxy-2.0.4.jar"
+        log_error "Start MLEAProxy: java -jar target/mlesproxy-2.0.5.jar"
         exit 3
     fi
     

@@ -384,7 +384,7 @@ at the token contents.
 To test individual claim shapes, extract the signing key and mint variants:
 
 ```bash
-unzip -p mlesproxy-2.0.4.jar \
+unzip -p mlesproxy-2.0.5.jar \
   BOOT-INF/classes/static/certificates/privkey.pem > signkey.pem
 ```
 
