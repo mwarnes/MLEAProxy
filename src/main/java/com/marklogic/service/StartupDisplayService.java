@@ -45,6 +45,9 @@ public class StartupDisplayService {
     @Value("${mleaproxy.https.ca-certificate:./certificates/ca-certificate.pem}")
     private String caCertificatePath;
 
+    @Value("${mleaproxy.https.certificate:./certificates/tls-certificate.pem}")
+    private String serverCertificatePath;
+
     /**
      * Displays comprehensive startup summary including server info, endpoints, and users.
      */
@@ -102,6 +105,10 @@ public class StartupDisplayService {
         info.put("httpsEnabled", httpsBaseUrl != null);
         info.put("httpsBaseUrl", httpsBaseUrl == null ? "" : httpsBaseUrl);
         info.put("caDownloadUrl", httpsBaseUrl == null ? "" : httpsBaseUrl + "/tls/ca");
+        // Relative, so the status page links to /tls/ca on whichever listener is being
+        // browsed. The absolute HTTPS URL above cannot be followed from a browser that
+        // does not yet trust this CA, which is precisely when the CA is needed.
+        info.put("caDownloadPath", "/tls/ca");
         info.put("caPresent", false);
         info.put("caPath", caCertificatePath == null ? "" : caCertificatePath);
 
@@ -119,6 +126,20 @@ public class StartupDisplayService {
             info.put("caFingerprint", ca.fingerprint());
             info.put("caValidUntil", ca.validUntil());
             info.put("caPem", ca.pem());
+        }
+
+        // The names in the server certificate decide whether a client accepts it, so they
+        // are shown alongside the CA: importing the CA is necessary but not sufficient if
+        // MarkLogic dials a hostname the certificate does not cover.
+        var server = tlsCertificateService.describeServerCertificate(
+            java.nio.file.Paths.get(serverCertificatePath));
+        info.put("serverPresent", server.isPresent());
+        if (server.isPresent()) {
+            var cert = server.get();
+            info.put("serverPath", cert.path());
+            info.put("serverSubject", cert.subject());
+            info.put("serverValidUntil", cert.validUntil());
+            info.put("serverSans", String.join(", ", cert.subjectAltNames()));
         }
         return info;
     }
@@ -557,6 +578,9 @@ public class StartupDisplayService {
         logger.info("--------------------------------------------------------------------------------");
         logger.info("Base URL:                 {}", tls.get("httpsBaseUrl"));
 
+        if (Boolean.TRUE.equals(tls.get("serverPresent"))) {
+            logger.info("Certificate Valid For:     {}", tls.get("serverSans"));
+        }
         if (Boolean.TRUE.equals(tls.get("caPresent"))) {
             logger.info("CA Certificate:           {}", tls.get("caPath"));
             logger.info("CA Download URL:          {}", tls.get("caDownloadUrl"));

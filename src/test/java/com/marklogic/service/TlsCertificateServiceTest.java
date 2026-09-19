@@ -214,4 +214,32 @@ class TlsCertificateServiceTest {
                 "server certificate should be reissued by the new CA");
         loadCertificate(cert).verify(loadCertificate(caCert).getPublicKey());
     }
+
+    @Test
+    @DisplayName("Should report the names the server certificate is valid for")
+    void testDescribeServerCertificate(@TempDir Path dir) throws Exception {
+        Path cert = dir.resolve("tls-certificate.pem");
+        Path key = dir.resolve("tls-privkey.pem");
+        Path caCert = dir.resolve("ca-certificate.pem");
+        Path caKey = dir.resolve("ca-privkey.pem");
+        service.ensureCertificate(caCert, caKey, cert, key, List.of("mleaproxy.example.com", "10.0.0.5"));
+
+        var described = service.describeServerCertificate(cert);
+
+        assertTrue(described.isPresent(), "the server certificate should be described");
+        List<String> sans = described.get().subjectAltNames();
+        // These are the names a TLS client will accept, which is what the status page
+        // reports so that a mismatch with MarkLogic's configuration is visible.
+        assertTrue(sans.contains("mleaproxy.example.com"), "extra DNS name should be listed: " + sans);
+        assertTrue(sans.contains("10.0.0.5"), "extra IP address should be listed: " + sans);
+        assertTrue(sans.contains("localhost"), "localhost should always be listed: " + sans);
+        assertTrue(described.get().subject().contains("MLEAProxy HTTPS Listener"));
+    }
+
+    @Test
+    @DisplayName("Should report no server certificate when the file is absent")
+    void testDescribeServerCertificateAbsent(@TempDir Path dir) {
+        assertTrue(service.describeServerCertificate(dir.resolve("nothing.pem")).isEmpty());
+        assertTrue(service.describeServerCertificate(null).isEmpty());
+    }
 }

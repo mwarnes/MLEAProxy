@@ -129,6 +129,8 @@ public class TlsCertificateService {
      * @param validUntil   end of the validity window
      * @param path         absolute path of the PEM file
      * @param pem          the PEM text itself
+     * @param subjectAltNames the hostnames and IP addresses the certificate is valid for,
+     *                     empty for a CA certificate
      */
     public record CertificateInfo(
             String subject,
@@ -137,7 +139,8 @@ public class TlsCertificateService {
             Date validFrom,
             Date validUntil,
             String path,
-            String pem) {
+            String pem,
+            List<String> subjectAltNames) {
     }
 
     /**
@@ -152,23 +155,73 @@ public class TlsCertificateService {
      * @return the description, or empty when the file is absent or unreadable
      */
     public Optional<CertificateInfo> describeCaCertificate(Path caCertPath) {
-        if (caCertPath == null || !Files.exists(caCertPath)) {
+        return describeCertificate(caCertPath, "CA");
+    }
+
+    /**
+     * Describes the server certificate, if it exists.
+     *
+     * <p>Its {@link CertificateInfo#subjectAltNames()} are the names TLS clients will
+     * accept. A certificate that does not list the hostname MarkLogic was configured with
+     * fails the handshake no matter how correctly the CA was imported, so the names are
+     * surfaced rather than left to {@code openssl x509 -text} on the host.
+     *
+     * @param certPath path to the server certificate
+     * @return the description, or empty when the file is absent or unreadable
+     */
+    public Optional<CertificateInfo> describeServerCertificate(Path certPath) {
+        return describeCertificate(certPath, "server");
+    }
+
+    private Optional<CertificateInfo> describeCertificate(Path certPath, String label) {
+        if (certPath == null || !Files.exists(certPath)) {
             return Optional.empty();
         }
         try {
-            X509Certificate certificate = loadCertificate(caCertPath);
+            X509Certificate certificate = loadCertificate(certPath);
             return Optional.of(new CertificateInfo(
                     certificate.getSubjectX500Principal().toString(),
                     certificate.getIssuerX500Principal().toString(),
                     fingerprint(certificate),
                     certificate.getNotBefore(),
                     certificate.getNotAfter(),
-                    caCertPath.toAbsolutePath().normalize().toString(),
-                    Files.readString(caCertPath, StandardCharsets.UTF_8)));
+                    certPath.toAbsolutePath().normalize().toString(),
+                    Files.readString(certPath, StandardCharsets.UTF_8),
+                    subjectAltNames(certificate)));
         } catch (Exception e) {
-            logger.warn("Could not read the CA certificate at {}", caCertPath, e);
+            logger.warn("Could not read the {} certificate at {}", label, certPath, e);
             return Optional.empty();
         }
+    }
+
+    /**
+     * Extracts subjectAltName entries as plain text.
+     *
+     * <p>{@code getSubjectAlternativeNames} returns {@code [type, value]} pairs where the
+     * type is the GeneralName tag; only DNS (2) and IP address (7) are meaningful for
+     * server authentication, and the rest are skipped.
+     */
+    private List<String> subjectAltNames(X509Certificate certificate) {
+        List<String> names = new ArrayList<>();
+        try {
+            var entries = certificate.getSubjectAlternativeNames();
+            if (entries == null) {
+                return names;
+            }
+            for (List<?> entry : entries) {
+                if (entry.size() < 2) {
+                    continue;
+                }
+                Integer type = (Integer) entry.get(0);
+                Object value = entry.get(1);
+                if ((type == 2 || type == 7) && value instanceof String text) {
+                    names.add(text);
+                }
+            }
+        } catch (Exception e) {
+            logger.debug("Could not read subject alternative names", e);
+        }
+        return names;
     }
 
     /**

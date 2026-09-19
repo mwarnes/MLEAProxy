@@ -121,6 +121,7 @@ cp scripts/stop.sh "$DIST_DIR/$PACKAGE_NAME/scripts/"
 cp scripts/status.sh "$DIST_DIR/$PACKAGE_NAME/scripts/"
 cp scripts/start.sh "$DIST_DIR/$PACKAGE_NAME/scripts/"
 cp scripts/create-keytab.sh "$DIST_DIR/$PACKAGE_NAME/scripts/"
+cp scripts/generate-certificate.sh "$DIST_DIR/$PACKAGE_NAME/scripts/"
 echo -e "${GREEN}✓ Scripts${NC}"
 
 mkdir -p "$DIST_DIR/$PACKAGE_NAME/kerberos/keytabs"
@@ -140,23 +141,36 @@ MLEAProxy 2.0.4 - Quick Start Guide
 
 PREREQUISITES
 - Java 21 or higher
-- Ports available: 8080 (web), 10389 (LDAP), 8088 (Kerberos KDC)
+- Ports available: 8080 (web), 8443 (HTTPS), 10389 (LDAP), 8088 (Kerberos KDC)
 - For MarkLogic integration: MarkLogic Server running on port 8002
 
 FIRST RUN
-1. Start the server:
+1. Generate the HTTPS certificate for this host (optional but recommended):
+   ./scripts/generate-certificate.sh [hostname]
+
+   OAuth and SAML need HTTPS, and a TLS certificate is only accepted for the
+   name the client dialled. With no argument the host's own name is detected.
+   Omit this step and MLEAProxy generates one for the detected hostname on
+   first start.
+
+2. Start the server:
    ./scripts/start.sh
    
    This interactive launcher will ask which protocol(s) to start.
 
-2. Check status:
+3. Check status:
    ./scripts/status.sh
 
-3. Stop the server:
+4. Stop the server:
    ./scripts/stop.sh
 
-4. Access web interface:
+5. Access web interface:
    http://localhost:8080/status
+
+   The status page offers the CA certificate as a download. Import it into
+   MarkLogic under Security > Certificate Authorities, otherwise MarkLogic
+   rejects MLEAProxy's HTTPS endpoints with:
+   SVC-SOCCONN: Certificate verify failed
 
 ALTERNATIVE: Individual Protocol Scripts
 - All protocols:   ./scripts/start-all.sh

@@ -16,6 +16,7 @@ This directory contains convenience scripts for starting MLEAProxy in different 
 | **stop.sh** | Stop MLEAProxy (find and kill Java process) |
 | **status.sh** | Check MLEAProxy status |
 | **check-version.sh** | Check local version against latest GitHub release |
+| **generate-certificate.sh** | Generate the HTTPS certificate for a given hostname, signed by the MLEAProxy CA |
 
 **Note**: All startup scripts display comprehensive server information including endpoints, credentials, available users, and testing commands upon successful launch.
 
@@ -52,6 +53,16 @@ This directory contains convenience scripts for starting MLEAProxy in different 
 
 ```bash
 ./scripts/status.sh
+```
+
+### Generate the HTTPS Certificate
+
+```bash
+# For this host, detecting its name automatically
+./scripts/generate-certificate.sh
+
+# For a specific hostname
+./scripts/generate-certificate.sh mleaproxy.example.com
 ```
 
 ---
@@ -93,6 +104,69 @@ cp examples/ldap/01-standalone-json-server.properties ldap.properties
 ---
 
 ## 📖 Script Details
+
+### generate-certificate.sh
+
+Generates the TLS server certificate used by the HTTPS listener, signed by the MLEAProxy
+CA, and points `mleaproxy.properties` at it.
+
+OAuth 2.0 and SAML both need HTTPS: MarkLogic 12.1 rejects a plain-HTTP token or JWKS URI,
+and the Authorization Code flow redirects a browser to MLEAProxy's login page. A TLS client
+only accepts a certificate that lists the name it dialled, so the certificate has to match
+the hostname MarkLogic and the browser actually use.
+
+```bash
+# Detect this host's fully qualified name
+./scripts/generate-certificate.sh
+
+# Issue for a specific hostname
+./scripts/generate-certificate.sh mleaproxy.example.com
+
+# Add further names or addresses
+./scripts/generate-certificate.sh mleaproxy.example.com -a 192.168.1.50 -a mleaproxy
+
+# Reissue for a new hostname, keeping the CA MarkLogic already trusts
+./scripts/generate-certificate.sh newname.example.com --force
+```
+
+**Options**:
+
+| Option | Effect |
+|--------|--------|
+| `-a`, `--alt NAME` | Extra subjectAltName; repeatable. DNS names and IP addresses are classified automatically |
+| `-d`, `--dir DIR` | Output directory (default `./certificates`) |
+| `-p`, `--properties FILE` | Properties file to update (default `./mleaproxy.properties`) |
+| `--days N` | Server certificate lifetime (default 825) |
+| `--new-ca` | Replace the CA. Every MarkLogic server that imported the old one must reimport |
+| `-f`, `--force` | Replace an existing server certificate |
+| `-n`, `--no-config` | Write the certificates only; leave the properties alone |
+
+**Files written** (all under `./certificates`, which is not tracked by git):
+
+| File | Purpose |
+|------|---------|
+| `ca-certificate.pem` | The CA to import into MarkLogic. Created once and reused |
+| `ca-privkey.pem` | CA private key, kept so certificates can be reissued |
+| `tls-certificate.pem` | Server certificate presented by the HTTPS listener |
+| `tls-privkey.pem` | Server private key (PKCS#8, mode 0600) |
+
+`localhost`, `127.0.0.1` and `::1` are always included, so local testing keeps working
+whichever hostname is used. The CA is only created when there isn't one: reissuing the
+server certificate under the existing CA means MarkLogic's imported trust anchor stays
+valid.
+
+**After running**, restart MLEAProxy and import the CA into MarkLogic under
+*Security → Certificate Authorities*. The status page offers it as a download, or fetch it
+directly over plain HTTP:
+
+```bash
+curl -O http://<hostname>:8080/tls/ca
+```
+
+Requires `openssl`. Without it, start MLEAProxy with no certificate files present and it
+generates a certificate for the detected hostname itself.
+
+---
 
 ### start-ldap.sh
 

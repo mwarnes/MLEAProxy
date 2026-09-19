@@ -148,6 +148,23 @@
                     <dd class="col-sm-9"><code th:text="${tlsInfo.httpsBaseUrl}">https://host:8443</code></dd>
                 </dl>
 
+                <dl class="row" th:if="${tlsInfo.serverPresent}">
+                    <dt class="col-sm-3">Certificate valid for:</dt>
+                    <dd class="col-sm-9">
+                        <code th:text="${tlsInfo.serverSans}">host, localhost, 127.0.0.1</code>
+                        <div class="small text-muted mt-1">
+                            Clients reject the certificate for any other name. To reissue it
+                            for a different hostname, run
+                            <code>./scripts/generate-certificate.sh &lt;hostname&gt; --force</code>
+                            and restart MLEAProxy; the CA below is reused, so no reimport is
+                            needed.
+                        </div>
+                    </dd>
+
+                    <dt class="col-sm-3">Certificate expires:</dt>
+                    <dd class="col-sm-9" th:text="${tlsInfo.serverValidUntil}">2028-12-22</dd>
+                </dl>
+
                 <div th:unless="${tlsInfo.caPresent}" class="alert alert-secondary mb-0" role="alert">
                     No generated CA certificate &ndash; an externally supplied certificate is in use.
                     Import whichever CA signed it into MarkLogic.
@@ -165,8 +182,13 @@
                     <dl class="row">
                         <dt class="col-sm-3">Download:</dt>
                         <dd class="col-sm-9">
-                            <a th:href="${tlsInfo.caDownloadUrl}" th:text="${tlsInfo.caDownloadUrl}"
-                               class="btn btn-sm btn-primary">Download CA</a>
+                            <a th:href="@{/tls/ca}" class="btn btn-sm btn-primary">
+                                <i class="fa fa-download"></i> Download CA Certificate
+                            </a>
+                            <div class="small text-muted mt-1">
+                                Also at <code th:text="${tlsInfo.caDownloadUrl}">https://host:8443/tls/ca</code>,
+                                though that URL cannot be fetched until this CA is trusted.
+                            </div>
                         </dd>
 
                         <dt class="col-sm-3">File on server:</dt>

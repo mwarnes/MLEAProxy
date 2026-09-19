@@ -187,6 +187,8 @@ _site/
 # Runtime-generated TLS material for the HTTPS listener.
 # Contains a private key - must never be committed.
 /certificates/
+# Written by scripts/generate-certificate.sh; host specific, so not shared.
+/mleaproxy.properties
 tls-certificate.pem
 tls-privkey.pem
 ca-certificate.pem

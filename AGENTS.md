@@ -148,6 +148,13 @@ generates a private CA plus a server certificate signed by it; MarkLogic's trust
 needs a `CA:TRUE` anchor, and the bundled SAML signing certificate has no subjectAltName
 so cannot be reused.
 
+`scripts/generate-certificate.sh` produces the same two-tier material with openssl, for a
+hostname given on the command line or detected from the host, and writes the paths into
+`./mleaproxy.properties`. It reuses an existing CA so that reissuing the server
+certificate does not force a reimport into MarkLogic. Its extensions and validity periods
+are deliberately kept in step with `TlsCertificateService`, so material from either source
+is interchangeable.
+
 ## Documentation
 
 Protocol-specific guides are in `docs/user/`:

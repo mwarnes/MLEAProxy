@@ -113,6 +113,32 @@ The Authorization Code flow is browser-facing, and MarkLogic requires HTTPS for 
 and JWKS endpoints. The HTTPS listener is enabled by default on port 8443, in addition to
 the plain HTTP listener, so existing Resource Server setups keep working.
 
+The certificate has to match the hostname MarkLogic and the browser actually dial, so
+generate it for that name before the first start:
+
+```bash
+./scripts/generate-certificate.sh mleaproxy.example.com
+```
+
+The script creates the CA (or reuses the existing one), issues a server certificate signed
+by it, and writes the paths into `mleaproxy.properties`. With no hostname argument it
+detects the host's fully qualified name. Add any further names with `-a`:
+
+```bash
+./scripts/generate-certificate.sh mleaproxy.example.com -a 192.168.1.50 -a mleaproxy
+```
+
+Reissuing later reuses the CA, so MarkLogic does not have to reimport it:
+
+```bash
+./scripts/generate-certificate.sh newname.example.com --force
+```
+
+Run `./scripts/generate-certificate.sh --help` for the full set of options.
+
+Alternatively, configure it by hand and let MLEAProxy generate the material itself on
+first start:
+
 ```properties
 # mleaproxy.properties
 mleaproxy.https.enabled=true
@@ -123,16 +149,20 @@ mleaproxy.https.subject-alt-names=marklogic.example.com
 Set `subject-alt-names` to every name by which MarkLogic or a browser might reach
 MLEAProxy. The detected hostname, `localhost`, `127.0.0.1` and `::1` are always included.
 
-On first start MLEAProxy generates a private CA and a server certificate signed by it:
+Either way, startup reports the CA and the names the certificate covers:
 
 ```
 HTTPS Listener / TLS:
 Base URL:                 https://mleaproxy.example.com:8443
+Certificate Valid For:    mleaproxy.example.com, localhost, 127.0.0.1, 0:0:0:0:0:0:0:1
 CA Certificate:           ./certificates/ca-certificate.pem
 CA Download URL:          https://mleaproxy.example.com:8443/tls/ca
 CA Subject:               CN=MLEAProxy Development CA
 CA SHA-256:               B8:C1:B7:E7:...
 ```
+
+If *Certificate Valid For* does not list the name MarkLogic is configured with, the
+handshake will fail however the CA is imported. Reissue with that name.
 
 > The SAML signing certificate bundled at `static/certificates/certificate.pem` cannot be
 > reused for TLS. It has no `subjectAltName` and no `serverAuth` extended key usage, so
@@ -152,7 +182,9 @@ over a connection secured by that same CA:
 curl -O http://mleaproxy.example.com:9080/tls/ca
 ```
 
-Or copy the PEM from the status page: `http://mleaproxy.example.com:9080/status`
+Or use the **Download CA Certificate** button on the status page,
+`http://mleaproxy.example.com:9080/status`, which also shows the fingerprint and the
+hostnames the server certificate covers.
 
 Import in the Admin UI under **Security → Certificate Authorities → Import**.
 
