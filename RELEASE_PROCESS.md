@@ -48,13 +48,20 @@ Use the automated release script:
 
 **What it does:**
 
-1. ✓ Updates pom.xml version
+1. ✓ Updates the version across pom.xml, the scripts and the docs, then shows
+     the diff for review before going any further
 2. ✓ Builds JAR file
 3. ✓ Runs all tests
 4. ✓ Commits version change
 5. ✓ Creates git tag
 6. ✓ Pushes to GitHub
 7. ✓ Creates GitHub release with JAR attachment
+
+The sweep skips lines that read as history - `@since`, "or later", "Fixed in"
+and similar - but it cannot recognise every one. Sentences such as "v2.0.5
+covers everything back to v2.0.2", and the tag list in **Current State** above,
+will be rewritten and need correcting by hand at the review prompt. Answering
+`n` there reverts every file and leaves the tree untouched.
 
 ---
 
